@@ -28,6 +28,9 @@ where
     fn count_edges(&self) -> usize;
 }
 type GraphMatrix = DMatrix<f64>;
+type OrderedNodeSet = BTreeSet<NodeId>;
+type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
+type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
 
 /// Keeps track of a bipartite graph composed of "core" and "non-core" nodes. Only core ->
 /// non-core connections may exist in the graph. The neighbors of core nodes are non-cores, the
@@ -110,8 +113,8 @@ where
     ) -> CLQResult<TGraph>;
     // initializes nodes in the graph with empty neighbors fields.
     fn init_nodes(
-        core_ids: &Vec<NodeId>,
-        non_core_ids: &Vec<NodeId>,
+        core_ids: &[NodeId],
+        non_core_ids: &[NodeId],
         non_core_type_ids: &HashMap<NodeId, NodeTypeId>,
     ) -> HashMap<NodeId, Node> {
         let mut node_map: HashMap<NodeId, Node> = HashMap::new();
@@ -133,12 +136,12 @@ where
             );
             node_map.insert(id, node);
         }
-        return node_map;
+        node_map
     }
 
     /// given a set of initialized Nodes, populates the respective neighbors fields
     /// appropriately.
-    fn populate_edges(rows: &Vec<EdgeRow>, node_map: &mut HashMap<NodeId, Node>) -> CLQResult<()> {
+    fn populate_edges(rows: &[EdgeRow], node_map: &mut HashMap<NodeId, Node>) -> CLQResult<()> {
         for r in rows.iter() {
             assert!(node_map.contains_key(&r.source_id));
             assert!(node_map.contains_key(&r.target_id));
@@ -156,7 +159,7 @@ where
                     .push(NodeEdge::new(r.edge_type_id, r.source_id));
             }
         }
-        return Ok(());
+        Ok(())
     }
     /// Trims edges greedily, until all edges in the graph have degree at least min_degree.
     /// Note that this function does not delete any nodes -- just finds nodes to delete. It is
@@ -176,7 +179,7 @@ where
                     nodes_to_delete.insert(*node_id);
                 }
             }
-            if nodes_to_update.len() == 0 {
+            if nodes_to_update.is_empty() {
                 break;
             }
             for node_id in nodes_to_update.iter() {
@@ -188,14 +191,14 @@ where
                 }
             }
         }
-        return nodes_to_delete;
+        nodes_to_delete
     }
     /// creates a TGraph object from a vector of rows. Client must provide
     /// graph_id which must match with each row's graph_id. If min_degree
     /// is provided, the graph is additionally pruned.
     fn new(
         graph_id: GraphId,
-        rows: &Vec<EdgeRow>,
+        rows: &[EdgeRow],
         min_degree: Option<usize>,
     ) -> CLQResult<TGraph> {
         let mut source_ids: HashSet<NodeId> = HashSet::new();
@@ -221,7 +224,7 @@ where
         if let Some(min_degree) = min_degree {
             graph = Self::prune(graph, rows, min_degree)?;
         }
-        return Ok(graph);
+        Ok(graph)
     }
     /// Takes an already-built graph and the edge rows used to create it, returning a
     /// new graph, where all nodes are assured to have degree at least min_degree.
@@ -261,7 +264,7 @@ where
             .cloned()
             .collect();
         let filtered_rows: Vec<EdgeRow> = rows
-            .into_iter()
+            .iter()
             .filter(|x| {
                 !(exclude_nodes.contains(&x.source_id) || (exclude_nodes.contains(&x.target_id)))
             })
@@ -306,6 +309,7 @@ impl GraphBuilder<SimpleUndirectedGraph> for SimpleUndirectedGraphBuilder {
 impl SimpleUndirectedGraphBuilder {
     // builds a graph from a vector of IDs. Repeated edges are ignored.
     // Edges only need to be provided once (this being an undirected graph)
+    #[allow(clippy::ptr_arg)]
     pub fn from_vector(data: &Vec<(i64, i64)>) -> SimpleUndirectedGraph {
         let mut ids: BTreeMap<NodeId, HashSet<NodeId>> = BTreeMap::new();
         for (id1, id2) in data {
@@ -364,7 +368,7 @@ impl SimpleUndirectedGraph {
         let node: &Node = &self.nodes[&id];
         let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
         for ne in &node.neighbors {
-            neighbor_ids.insert(ne.target_id.clone());
+            neighbor_ids.insert(ne.target_id);
         }
         let num_neighbors: usize = neighbor_ids.len();
         if num_neighbors <= 1 {
@@ -413,8 +417,8 @@ impl SimpleUndirectedGraph {
         };
         for id in targets {
             queue.insert(&id);
-            dist.insert(id.clone(), None);
-            parents.insert(id.clone(), HashSet::new());
+            dist.insert(*id, None);
+            parents.insert(*id, HashSet::new());
         }
         *dist.get_mut(&source).unwrap() = Some(0);
 
@@ -424,11 +428,9 @@ impl SimpleUndirectedGraph {
             // find next node u to visit
             for maybe_u in &queue {
                 let d: Option<usize> = dist[maybe_u];
-                if d != None {
-                    if min_dist == None || d.unwrap() < min_dist.unwrap() {
-                        min_dist = Some(d.unwrap());
-                        u = Some(maybe_u);
-                    }
+                if d != None && (min_dist == None || d.unwrap() < min_dist.unwrap()) {
+                    min_dist = Some(d.unwrap());
+                    u = Some(maybe_u);
                 }
             }
             // remove u from queue
@@ -439,12 +441,12 @@ impl SimpleUndirectedGraph {
                     let alt = min_dist.unwrap() + 1;
                     if dist[v] == None || alt <= dist[v].unwrap() {
                         *dist.get_mut(v).unwrap() = Some(alt);
-                        parents.get_mut(v).unwrap().insert(u.unwrap().clone());
+                        parents.get_mut(v).unwrap().insert(*u.unwrap());
                     }
                 }
             }
         }
-        parents.get_mut(&source).unwrap().insert(source.clone());
+        parents.get_mut(&source).unwrap().insert(source);
         (dist, parents)
     }
 
@@ -456,37 +458,37 @@ impl SimpleUndirectedGraph {
     ) -> (
         Vec<NodeId>,                  // nodes in nondecreasing order by distance
         HashMap<NodeId, u32>,         // distances from source
-        HashMap<NodeId, Vec<NodeId>>, // immediate predecessors
+        NodePredecessors,             // immediate predecessors
     ) {
         // Predecessors of v (nodes immediately before v on shortest path from source to v)
-        let mut preds: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+        let mut preds: NodePredecessors = HashMap::new();
         // Count of shortest paths to from source to v
         let mut shortest_path_counts: HashMap<NodeId, u32> = HashMap::new();
         // Distances from source to v
         let mut dists: HashMap<NodeId, i32> = HashMap::new();
 
         for node_id in self.nodes.keys() {
-            preds.insert(node_id.clone(), Vec::new());
-            shortest_path_counts.insert(node_id.clone(), if node_id == &source { 1 } else { 0 });
-            dists.insert(node_id.clone(), if node_id == &source { 0 } else { -1 });
+            preds.insert(*node_id, Vec::new());
+            shortest_path_counts.insert(*node_id, if node_id == &source { 1 } else { 0 });
+            dists.insert(*node_id, if node_id == &source { 0 } else { -1 });
         }
 
         // A stack tracking the order in which we explored the nodes.
         let mut stack = Vec::new();
         // A queue tracking the remaining nodes to explore
         let mut queue = VecDeque::new();
-        queue.push_back(source.clone());
+        queue.push_back(source);
 
         while !queue.is_empty() {
-            let v = queue.pop_front().unwrap().clone();
-            stack.push(v.clone());
+            let v = queue.pop_front().unwrap();
+            stack.push(v);
             let node = &self.nodes[&v];
             for edge in &node.neighbors {
-                let neighbor_id = edge.target_id.clone();
+                let neighbor_id = edge.target_id;
                 // neighbor_id newly discovered
                 if dists[&neighbor_id] < 0 {
-                    queue.push_back(neighbor_id.clone());
-                    *dists.entry(neighbor_id.clone()).or_insert(0) = dists[&v] + 1;
+                    queue.push_back(neighbor_id);
+                    *dists.entry(neighbor_id).or_insert(0) = dists[&v] + 1;
                 }
                 // shortest path to neighbor_id via v?
                 if dists[&neighbor_id] == dists[&v] + 1 {
@@ -509,7 +511,7 @@ impl SimpleUndirectedGraph {
         for parent_id in parent_ids {
             for parent_path in &paths[parent_id] {
                 let mut new_path: Vec<NodeId> = parent_path.clone();
-                new_path.push(node_id.clone());
+                new_path.push(*node_id);
                 new_paths.push(new_path);
             }
         }
@@ -527,7 +529,7 @@ impl SimpleUndirectedGraph {
             if *node_id != destination {
                 let d = distance.unwrap();
                 nodes_by_distance.entry(d).or_insert_with(Vec::new);
-                nodes_by_distance.get_mut(&d).unwrap().push(node_id.clone());
+                nodes_by_distance.get_mut(&d).unwrap().push(*node_id);
             }
         }
         nodes_by_distance.insert(0 as usize, vec![destination]);
@@ -543,20 +545,20 @@ impl SimpleUndirectedGraph {
             for node_id in nodes {
                 let parent_ids = parents.get(node_id).unwrap();
                 let new_paths = self.retrace_parent_paths(node_id, &parent_ids, &paths);
-                paths.insert(node_id.clone(), new_paths);
+                paths.insert(*node_id, new_paths);
             }
         }
         paths
     }
 
-    pub fn visit_nodes_from_root(&self, root: &NodeId, visited: &mut BTreeSet<NodeId>) {
+    pub fn visit_nodes_from_root(&self, root: &NodeId, visited: &mut OrderedNodeSet) {
         let mut to_visit: Vec<NodeId> = Vec::new();
-        to_visit.push(root.clone());
+        to_visit.push(*root);
         while !to_visit.is_empty() {
-            let node_id = to_visit.pop().unwrap().clone();
+            let node_id = to_visit.pop().unwrap();
             let node = &self.nodes[&node_id];
             for edge in &node.neighbors {
-                let neighbor_id = edge.target_id.clone();
+                let neighbor_id = edge.target_id;
                 if !visited.contains(&neighbor_id) {
                     to_visit.push(neighbor_id);
                 }
@@ -565,7 +567,7 @@ impl SimpleUndirectedGraph {
         }
     }
     pub fn get_is_connected(&self) -> Result<bool, &'static str> {
-        let mut visited: BTreeSet<NodeId> = BTreeSet::new();
+        let mut visited: OrderedNodeSet = BTreeSet::new();
         if self.nodes.is_empty() {
             return Err("Graph is empty");
         }
@@ -593,14 +595,14 @@ impl SimpleUndirectedGraph {
         }
         let mut path_counts: HashMap<NodeId, f64> = HashMap::new();
         for node_id in self.nodes.keys() {
-            path_counts.insert(node_id.clone(), 0.0);
+            path_counts.insert(*node_id, 0.0);
         }
 
         for source in sources.iter() {
             let (dist, parents) =
-                self.get_shortest_paths(source.clone(), nodes_in_connected_component);
-            let shortest_paths = self.enumerate_shortest_paths(&dist, &parents, source.clone());
-            for (_dest, paths) in &shortest_paths {
+                self.get_shortest_paths(*source, nodes_in_connected_component);
+            let shortest_paths = self.enumerate_shortest_paths(&dist, &parents, *source);
+            for paths in shortest_paths.values() {
                 let weight: f64 = 0.5 / paths.len() as f64;
                 for path in paths {
                     for id in path.iter().skip(1).rev().skip(1) {
@@ -635,7 +637,7 @@ impl SimpleUndirectedGraph {
 
         let mut betweenness: HashMap<NodeId, f64> = HashMap::new();
         for node_id in self.nodes.keys() {
-            betweenness.insert(node_id.clone(), 0.0);
+            betweenness.insert(*node_id, 0.0);
         }
 
         for source in self.nodes.keys() {
@@ -643,13 +645,13 @@ impl SimpleUndirectedGraph {
 
             let mut dependencies: HashMap<NodeId, f64> = HashMap::new();
             for node_id in self.nodes.keys() {
-                dependencies.insert(node_id.clone(), 0.0);
+                dependencies.insert(*node_id, 0.0);
             }
 
             // Process nodes in order of nonincreasing distance from source to leverage
             // recurrence relation in accumulating pair dependencies.
             while !stack.is_empty() {
-                let w = stack.pop().unwrap().clone();
+                let w = stack.pop().unwrap();
                 for pred in &preds[&w] {
                     *dependencies.entry(*pred).or_insert(0.0) += (0.5 + dependencies[&w])
                         * (shortest_path_counts[&pred] as f64 / shortest_path_counts[&w] as f64)
@@ -675,7 +677,7 @@ impl SimpleUndirectedGraph {
         )
     }
 
-    pub fn get_adjacency_matrix_given_node_ids(&self, node_ids: &Vec<NodeId>) -> GraphMatrix {
+    pub fn get_adjacency_matrix_given_node_ids(&self, node_ids: &[NodeId]) -> GraphMatrix {
         let num_nodes = node_ids.len();
         let mut data: Vec<f64> = vec![0.0; num_nodes * num_nodes];
         let pos_map: HashMap<NodeId, usize> = node_ids
@@ -685,28 +687,27 @@ impl SimpleUndirectedGraph {
             .map(|(i, item)| (item, i))
             .collect();
 
-        for i in 0..num_nodes {
-            for e in &self.nodes[&node_ids[i]].neighbors {
+        for (i, node_id) in node_ids.iter().enumerate() {
+            for e in &self.nodes[node_id].neighbors {
                 let j = pos_map.get(&e.target_id).unwrap();
                 let pos = i * num_nodes + j;
                 data[pos] += 1.0;
             }
         }
-        let adj_mat = GraphMatrix::from_vec(num_nodes, num_nodes, data);
-        adj_mat
+        GraphMatrix::from_vec(num_nodes, num_nodes, data)
     }
     pub fn get_adjacency_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
         let node_ids = self.get_ordered_node_ids();
-        return (
+        (
             self.get_adjacency_matrix_given_node_ids(&node_ids),
             node_ids,
-        );
+        )
     }
 
     pub fn get_laplacian_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
         let (deg_mat, node_ids) = self.get_degree_matrix();
         let adj_mat = self.get_adjacency_matrix_given_node_ids(&node_ids);
-        return (deg_mat - adj_mat, node_ids);
+        (deg_mat - adj_mat, node_ids)
     }
     // Algebraic Connectivity, or the Fiedler Measure, is the second-smallest eigenvalue of the graph Laplacian.
     // The lower the value, the less decomposable the graph's adjacency matrix is. Thanks to the nalgebra
@@ -739,7 +740,7 @@ impl SimpleUndirectedGraph {
         for i in 0..n {
             ev.insert(node_ids[i], x1[i]);
         }
-        return ev;
+        ev
     }
     // returns a hashmap of the form node_id => component_id -- can be turned
     // in to a vector of node_ids inside _get_connected_components.
@@ -749,28 +750,28 @@ impl SimpleUndirectedGraph {
         ignore_edges: Option<&HashSet<(NodeId, NodeId)>>,
     ) -> (HashMap<NodeId, usize>, usize) {
         let mut components: HashMap<NodeId, usize> = HashMap::new();
-        let mut queue: BTreeSet<NodeId> = BTreeSet::new();
+        let mut queue: OrderedNodeSet = BTreeSet::new();
         for id in self.nodes.keys() {
             if ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(id) {
-                queue.insert(id.clone());
+                queue.insert(*id);
             }
         }
         let mut idx = 0;
-        while queue.len() > 0 {
+        while !queue.is_empty() {
             let id = queue.pop_first().unwrap();
             let distinct_nodes: Vec<NodeId> = self.nodes[&id]
                 .neighbors
                 .iter()
-                .map(|x| x.target_id.clone())
+                .map(|x| x.target_id)
                 .filter(|x| {
                     ignore_edges.is_none()
                         || (!ignore_edges.unwrap().contains(&(id, *x))
                             && !ignore_edges.unwrap().contains(&(*x, id)))
                 })
                 .collect();
-            let mut q2: BTreeSet<NodeId> = BTreeSet::from_iter(distinct_nodes.into_iter());
+            let mut q2: OrderedNodeSet = BTreeSet::from_iter(distinct_nodes.into_iter());
 
-            while q2.len() > 0 {
+            while !q2.is_empty() {
                 let nid = q2.pop_first().unwrap();
                 if ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(&nid) {
                     components.insert(nid, idx);
@@ -811,7 +812,7 @@ impl SimpleUndirectedGraph {
     }
 
     pub fn _get_k_cores(&self, k: usize, removed: &mut HashSet<NodeId>) -> Vec<Vec<NodeId>> {
-        let mut queue: BTreeSet<NodeId> = self.nodes.keys().cloned().collect();
+        let mut queue: OrderedNodeSet = self.nodes.keys().cloned().collect();
         let mut num_neighbors: HashMap<NodeId, usize> = self
             .nodes
             .values()
@@ -827,9 +828,9 @@ impl SimpleUndirectedGraph {
             let id = queue.pop_first().unwrap();
             // this assumes no multiple connections to neighbors
             if num_neighbors[&id] < k {
-                removed.insert(id.clone());
+                removed.insert(id);
                 for e in &self.nodes[&id].neighbors {
-                    let nid = e.target_id.clone();
+                    let nid = e.target_id;
                     if !removed.contains(&nid) {
                         queue.insert(nid);
                         *num_neighbors.get_mut(&id).unwrap() -= 1;
@@ -859,7 +860,7 @@ impl SimpleUndirectedGraph {
             for ids in &core_assignments[i] {
                 for id in ids {
                     if !coreness.contains_key(id) {
-                        coreness.insert(id.clone(), i + 1);
+                        coreness.insert(*id, i + 1);
                     }
                 }
             }
@@ -871,9 +872,9 @@ impl SimpleUndirectedGraph {
         &self,
         k: usize,
         ignore_nodes: &HashSet<NodeId>,
-    ) -> (Vec<BTreeSet<(NodeId, NodeId)>>, HashSet<BTreeSet<NodeId>>) {
+    ) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
         let mut neighbors: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
-        let mut edges: BTreeSet<(NodeId, NodeId)> = BTreeSet::new();
+        let mut edges: OrderedEdgeSet = BTreeSet::new();
         for node in self.nodes.values() {
             neighbors.insert(
                 node.node_id,
@@ -917,7 +918,7 @@ impl SimpleUndirectedGraph {
         }
         let (components, num_components) =
             self._get_connected_components_membership(None, Some(&ignore_edges));
-        let mut trusses: Vec<BTreeSet<(NodeId, NodeId)>> = vec![BTreeSet::new(); num_components];
+        let mut trusses: Vec<OrderedEdgeSet> = vec![BTreeSet::new(); num_components];
         for (id, idx) in &components {
             // reusing the neighbors sets from above
             for nid in &neighbors[&id] {
@@ -930,18 +931,18 @@ impl SimpleUndirectedGraph {
                 }
             }
         }
-        let filtered_trusses: Vec<BTreeSet<(NodeId, NodeId)>> =
+        let filtered_trusses: Vec<OrderedEdgeSet> =
             trusses.into_iter().filter(|x| !x.is_empty()).collect();
         let truss_nodes = filtered_trusses
             .iter()
             .map(|y| BTreeSet::from_iter(y.iter().map(|x| x.0).chain(y.iter().map(|x| x.1))))
-            .collect::<HashSet<BTreeSet<NodeId>>>();
+            .collect::<HashSet<OrderedNodeSet>>();
         (filtered_trusses, truss_nodes)
     }
     pub fn get_k_trusses(
         &self,
         k: usize,
-    ) -> (Vec<BTreeSet<(NodeId, NodeId)>>, HashSet<BTreeSet<NodeId>>) {
+    ) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
         // Basic algorithm: https://louridas.github.io/rwa/assignments/finding-trusses/
 
         // ignore_nodes will contain all the irrelevant nodes after

@@ -50,7 +50,7 @@ impl NonCoreTypeIds {
     fn insert(&mut self, type_str: &str, type_id: NodeTypeId) {
         if !self.data.contains_key(type_str) {
             self.data
-                .insert(type_str.to_owned(), NodeTypeId::from(type_id));
+                .insert(type_str.to_owned(), type_id);
         }
     }
 
@@ -93,15 +93,14 @@ impl Transformer {
     /// will then be used to process input rows.
     pub fn process_typespec(
         typespec: Vec<Vec<String>>,
-        core_type: &String,
+        core_type: &str,
         non_core_types: Vec<String>,
     ) -> CLQResult<NonCoreTypeIds> {
         let mut non_core_type_ids = NonCoreTypeIds::new();
         non_core_type_ids.insert(core_type, NodeTypeId::from(0 as usize));
 
         let should_be_only_this_core_type = &typespec[0][0].clone();
-        for non_core_type_ix in 0..non_core_types.len() {
-            let non_core_type: String = non_core_types[non_core_type_ix].clone();
+        for (non_core_type_ix, non_core_type) in non_core_types.iter().enumerate() {
             non_core_type_ids.insert(&non_core_type, NodeTypeId::from(non_core_type_ix + 1));
         }
         for item in typespec {
@@ -111,7 +110,7 @@ impl Transformer {
             let non_core_type_id: &mut NodeTypeId = non_core_type_ids.require_mut(non_core_type)?;
             non_core_type_id.increment_possible_edge_count();
         }
-        return Ok(non_core_type_ids);
+        Ok(non_core_type_ids)
     }
     /// Called by main.rs module to set up the beam search. Parameters are as follows:
     ///     - `typespec`: a command-line argument, of the form:
@@ -139,6 +138,7 @@ impl Transformer {
     ///     - `long_format`: whether to output results in long format, of the form:
     ///     `graph_id\tnode_id\tnode_type`, instead of the more user-friendly (but
     ///     machine-unfriendly) wide format.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         typespec: Vec<Vec<String>>,
         beam_size: usize,
@@ -163,7 +163,7 @@ impl Transformer {
         let non_core_type_ids: NonCoreTypeIds = Transformer::process_typespec(
             typespec,
             &core_type,
-            non_core_types.iter().map(|x| x.clone()).collect(),
+            non_core_types.to_vec(),
         )?;
         let transformer = Self {
             core_type,
@@ -182,7 +182,7 @@ impl Transformer {
             min_degree,
             long_format,
         };
-        return Ok(transformer);
+        Ok(transformer)
     }
 
     /// constructs a transformer from an ArgMatches object (to help with command line arguments).
@@ -220,12 +220,13 @@ impl Transformer {
             core_type,
             long_format,
         )?;
-        return Ok(transformer);
+        Ok(transformer)
     }
 
     /// builds graph, pruned to ensure all nodes have at least self.min_degree degree
     /// with other nodes in the graph. This is done via a greedy algorithm which removes
     /// low-degree nodes iteratively.
+    #[allow(clippy::ptr_arg)]
     pub fn build_pruned_graph<TGraphBuilder: GraphBuilder<TGraph>, TGraph: GraphBase>(
         &self,
         graph_id: GraphId,
@@ -247,10 +248,10 @@ impl Transformer {
     /// clique may be invalidated if it no longer meets cliqueness requirements
     /// as per the current search process.
     pub fn process_line(&self, line: String) -> CLQResult<Box<dyn Row>> {
-        let vec: Vec<&str> = line.split("\t").collect();
+        let vec: Vec<&str> = line.split('\t').collect();
         // this is an edge row if we have something on column 3
         assert!(vec.len() == 6);
-        let is_edge_row: bool = vec[3].len() > 0;
+        let is_edge_row: bool = !vec[3].is_empty();
         if is_edge_row {
             let graph_id: GraphId = vec[0].parse::<i64>()?.into();
             let core_id: NodeId = vec[1].parse::<i64>()?.into();
@@ -266,12 +267,12 @@ impl Transformer {
                 .into();
             let core_type_id: NodeTypeId = *self.non_core_type_ids.require(&self.core_type)?;
             return Ok(Box::new(EdgeRow {
-                graph_id: graph_id,
+                graph_id,
                 source_id: core_id,
                 target_id: non_core_id,
                 source_type_id: core_type_id,
                 target_type_id: non_core_type_id,
-                edge_type_id: edge_type_id,
+                edge_type_id,
             }));
         }
         let graph_id: GraphId = vec[0].parse::<i64>()?.into();
@@ -284,11 +285,11 @@ impl Transformer {
             let non_core_type_id: NodeTypeId = *self.non_core_type_ids.require(node_type)?;
             non_core_type = Some(non_core_type_id);
         }
-        return Ok(Box::new(CliqueRow {
-            graph_id: graph_id,
-            node_id: node_id,
+        Ok(Box::new(CliqueRow {
+            graph_id,
+            node_id,
             target_type: non_core_type,
-        }));
+        }))
     }
     /// Given a properly-built graph, runs the quasi-clique detection beam search on it.
     pub fn process_graph<'a, TGraph: GraphBase>(
@@ -310,13 +311,12 @@ impl Transformer {
             self.local_thresh,
             graph_id,
         )?;
-        let result = beam.run_search(
+        beam.run_search(
             self.num_to_search,
             self.beam_size,
             self.num_epochs,
             self.max_repeated_prior_scores,
-        );
-        return result;
+        )
     }
     /// Used to "seed" the beam search with an existing best (quasi-)clique (if any provided),
     /// and then run the search under the parameters specified in the constructor. 
@@ -351,7 +351,7 @@ impl Transformer {
                 )?;
             }
         }
-        return Ok(Some(result));
+        Ok(Some(result))
     }
     /// to be called by main.rs (or a test), using an input (such as stdin), 
     /// which must provide a lines() function, and an output (such as stdout), to
@@ -391,14 +391,8 @@ impl Transformer {
                         }
                     }
                     current_graph_id = Some(new_graph_id);
-                    match raw.as_edge_row() {
-                        Some(r) => edge_rows.push(r),
-                        None => {}
-                    };
-                    match raw.as_clique_row() {
-                        Some(r) => clique_rows.push(r),
-                        None => {}
-                    };
+                    if let Some(r) = raw.as_edge_row() { edge_rows.push(r) }
+                    if let Some(r) = raw.as_clique_row() { clique_rows.push(r) }
                 }
                 Err(error) => eprintln!("I/O error: {}", error),
             }
@@ -416,6 +410,6 @@ impl Transformer {
             )?;
             return Ok(());
         }
-        return Err("No input rows!".into());
+        Err("No input rows!".into())
     }
 }

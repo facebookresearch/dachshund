@@ -82,7 +82,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         candidate.add_node(node_id)?;
         let score = scorer.score(&candidate)?;
         candidate.set_score(score)?;
-        return Ok(candidate);
+        Ok(candidate)
     }
 
     /// creates a Candidate object from an array of CliqueRows.
@@ -91,7 +91,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         graph: &'a TGraph,
         scorer: &Scorer,
     ) -> CLQResult<Option<Self>> {
-        assert!(rows.len() > 0);
+        assert!(!rows.is_empty());
         let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph);
         for row in &rows {
             if graph.has_node(row.node_id) {
@@ -106,7 +106,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         }
         let score = scorer.score(&candidate)?;
         candidate.set_score(score)?;
-        return Ok(Some(candidate));
+        Ok(Some(candidate))
     }
 
     /// add node to the clique -- this results in the score being reset, and the
@@ -126,7 +126,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             self.non_core_ids.insert(node_id);
         }
         self.reset_score();
-        return Ok(());
+        Ok(())
     }
 
     /// returns sorted vector of core IDs -- useful for printing
@@ -174,7 +174,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     }
 
     /// encodes self as tab-separated "wide" format
-    pub fn to_printable_row(&self, target_types: &Vec<String>) -> CLQResult<String> {
+    pub fn to_printable_row(&self, target_types: &[String]) -> CLQResult<String> {
         let encode_err_handler = |e: json::EncoderError| Err(CLQError::from(e.to_string()));
 
         let cliqueness = self.get_cliqueness()?;
@@ -209,7 +209,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             &json::encode(&self.get_non_core_densities(target_types.len())?)
                 .or_else(encode_err_handler)?,
         );
-        return Ok(s);
+        Ok(s)
     }
 
     /// used for interaction with Transformer classes.
@@ -234,15 +234,15 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             };
             out.push(row);
         }
-        return Ok(out);
+        Ok(out)
     }
 
     /// convenience function, used for debugging and "long-format" printing
     pub fn print(
         &self,
         graph_id: GraphId,
-        target_types: &Vec<String>,
-        core_type: &String,
+        target_types: &[String],
+        core_type: &str,
         output: &mut Output,
     ) -> CLQResult<()> {
         for output_row in &self.get_output_rows(graph_id)? {
@@ -250,7 +250,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 // this is hacky -- when t is 0 it's an indication of this being the
                 // core type, but not for TypedGraphBuilder
                 Some(t) => target_types[t.value() - 1].clone(),
-                None => core_type.clone(),
+                None => core_type.to_string(),
             };
             output.print(format!(
                 "{}\t{}\t{}",
@@ -288,7 +288,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             assert!(!self.non_core_ids.contains(&node_id));
         }
         candidate.add_node(node_id)?;
-        return Ok(candidate);
+        Ok(candidate)
     }
 
     /// finds nodes that are already connected to the candidate's members, but not
@@ -327,7 +327,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         }
         assert!(self.checksum.unwrap() != 0);
         visited_candidates.insert(self.checksum.unwrap());
-        return Ok(expansion_candidates);
+        Ok(expansion_candidates)
     }
 
     /// finds (up to) num_to_search expansion candidates and scores them.
@@ -343,7 +343,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             let score = scorer.score(candidate)?;
             candidate.set_score(score)?;
         }
-        return Ok(expansion_candidates);
+        Ok(expansion_candidates)
     }
 
     /// used to find nodes that are "adjacent" -- i.e., connected with existing members,
@@ -368,7 +368,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 }
             }
         }
-        return Ok(node_set);
+        Ok(node_set)
     }
 
     /// Returns ``size'' of candidate, defined as the maximum number of edges
@@ -384,7 +384,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                     .max_edge_count_with_core_node()?
                     .ok_or_else(CLQError::err_none)?;
         }
-        return Ok(size);
+        Ok(size)
     }
 
     /// computes "cliqueness", the density of ties between core and non-core nodes.
@@ -396,13 +396,13 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         } else {
             1.0
         };
-        return Ok(cliqueness);
+        Ok(cliqueness)
     }
 
     /// checks if Candidate is a true clique, defined as a subgraph where the total number
     /// of ties between nodes is equal to the maximum number of ties between nodes.
     pub fn is_clique(&self) -> CLQResult<bool> {
-        return Ok(self.count_ties_between_nodes()? == self.get_size()?);
+        Ok(self.count_ties_between_nodes()? == self.get_size()?)
     }
 
     /// counts the total number of ties between candidate's core nodes and non_cores
@@ -411,7 +411,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         for &non_core_id in &self.non_core_ids {
             num_ties += self.get_node(non_core_id).count_ties_with_ids(&self.core_ids);
         }
-        return Ok(num_ties);
+        Ok(num_ties)
     }
 
     /// gets densities over each non-core type (useful to compute non-core diversity score)
@@ -425,14 +425,14 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             let max_density = non_core
                 .max_edge_count_with_core_node()?
                 .ok_or_else(CLQError::err_none)?;
-            non_core_max_counts[non_core_type_id.value()] += max_density * &self.core_ids.len();
+            non_core_max_counts[non_core_type_id.value()] += max_density * self.core_ids.len();
             non_core_out_counts[non_core_type_id.value()] += num_ties;
         }
         let mut non_core_density: Vec<f32> = Vec::new();
         for i in 1..non_core_max_counts.len() {
             non_core_density.push(non_core_out_counts[i] as f32 / non_core_max_counts[i] as f32);
         }
-        return Ok(non_core_density);
+        Ok(non_core_density)
     }
 
     /// gets core densities for each non-core node
@@ -453,6 +453,6 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             let num_ties: usize = node.count_ties_with_ids(&self.non_core_ids);
             counts.push(num_ties as f32 / max_size as f32);
         }
-        return counts;
+        counts
     }
 }

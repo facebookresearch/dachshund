@@ -72,13 +72,13 @@ pub trait Row {
 }
 impl Row for EdgeRow {
     fn get_graph_id(&self) -> GraphId {
-        return self.graph_id;
+        self.graph_id
     }
     fn as_edge_row(&self) -> Option<EdgeRow> {
-        return Some(*self);
+        Some(*self)
     }
     fn as_clique_row(&self) -> Option<CliqueRow> {
-        return None;
+        None
     }
     fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow> {
         None
@@ -86,13 +86,13 @@ impl Row for EdgeRow {
 }
 impl Row for CliqueRow {
     fn get_graph_id(&self) -> GraphId {
-        return self.graph_id;
+        self.graph_id
     }
     fn as_edge_row(&self) -> Option<EdgeRow> {
-        return None;
+        None
     }
     fn as_clique_row(&self) -> Option<CliqueRow> {
-        return Some(*self);
+        Some(*self)
     }
     fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow> {
         None

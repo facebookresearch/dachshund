@@ -20,13 +20,13 @@ impl NodeTypeId {
     pub fn is_core(&self) -> bool {
         self.core
     }
-    pub fn make_core(&mut self) -> () {
+    pub fn make_core(&mut self) {
         self.core = true;
     }
     pub fn max_edge_count_with_core_node(&self) -> Option<usize> {
         self.max_edge_count_with_core_node
     }
-    pub fn increment_possible_edge_count(&mut self) -> () {
+    pub fn increment_possible_edge_count(&mut self) {
         self.max_edge_count_with_core_node = Some(match self.max_edge_count_with_core_node {
             None => 1,
             Some(n) => n + 1,

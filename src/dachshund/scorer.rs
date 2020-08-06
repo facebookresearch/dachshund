@@ -32,17 +32,17 @@ impl Scorer {
         global_thresh: Option<f32>,
         local_thresh: Option<f32>,
     ) -> Scorer {
-        return Scorer {
+        Scorer {
             num_non_core_types,
             alpha,
             global_thresh,
             local_thresh,
-        };
+        }
     }
     // computes "cliqueness" score, i.e. the objective the search algorithm is maximizing.
     pub fn score<TGraph: GraphBase>(&self, candidate: &Candidate<TGraph>) -> CLQResult<f32> {
         // degenerate case where there are no edges.
-        if candidate.core_ids.len() == 0 || candidate.non_core_ids.len() == 0 {
+        if candidate.core_ids.is_empty() || candidate.non_core_ids.is_empty() {
             return Ok(-1.0);
         }
         // the more core nodes we have, the better
@@ -62,18 +62,18 @@ impl Scorer {
         // enforce a minimum density threshold for each core node.
         score *= self.get_local_thresh_score(candidate);
 
-        return Ok(score);
+        Ok(score)
     }
 
     pub fn get_global_thresh_score(&self, cliqueness: f32) -> f32 {
-        return match self.global_thresh {
+        match self.global_thresh {
             Some(n) => (cliqueness >= n) as i64 as f32,
             None => 1.0,
-        };
+        }
     }
     // used to ensure that each core node has at least % of ties with non-core nodes.
     pub fn get_local_thresh_score<TGraph: GraphBase>(&self, candidate: &Candidate<TGraph>) -> f32 {
-        return match self.local_thresh {
+        match self.local_thresh {
             Some(thresh) => {
                 if thresh == 0.0 {
                     return 1.0;
@@ -88,7 +88,7 @@ impl Scorer {
                             .unwrap()
                             .unwrap()
                     })
-                    .fold(0, |s, x| s + x);
+                    .sum();
                 for &node_id in &candidate.core_ids {
                     let score = candidate.get_node(node_id).get_local_thresh_score(
                         thresh,
@@ -99,10 +99,10 @@ impl Scorer {
                         return 0.0;
                     }
                 }
-                return 1.0;
+                1.0
             }
             None => 1.0,
-        };
+        }
     }
     /// returns a non-core diversity score that is higher with more diverse non-core types.
     pub fn get_non_core_diversity_score<TGraph: GraphBase>(
@@ -122,6 +122,6 @@ impl Scorer {
         for non_core_count in non_core_counts {
             score += (non_core_count as f32 + 1.0).ln();
         }
-        return Ok(score);
+        Ok(score)
     }
 }

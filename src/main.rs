@@ -101,7 +101,7 @@ fn get_command_line_args() -> ArgMatches<'static> {
                         all candidate nodes have at least this degree w/r to all other nodes in the \
                         graph"))
         .get_matches();
-    return matches;
+    matches
 }
 
 fn main() -> CLQResult<()> {
@@ -112,5 +112,5 @@ fn main() -> CLQResult<()> {
     let mut dummy: Vec<u8> = Vec::new();
     let mut output: Output = Output::console(&mut dummy);
     transformer.run::<TypedGraphBuilder, Graph>(input, &mut output)?;
-    return Ok(());
+    Ok(())
 }

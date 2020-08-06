@@ -66,6 +66,11 @@ impl LineProcessor {
         self.reverse_ids.read().unwrap()[local_id].clone()
     }
 }
+impl Default for LineProcessor {
+    fn default() -> Self {
+        LineProcessor::new()
+    }
+}
 pub struct SimpleTransformer {
     batch: Vec<SimpleEdgeRow>,
     line_processor: Arc<LineProcessor>,
@@ -195,6 +200,11 @@ impl SimpleTransformer {
         }
     }
 }
+impl Default for SimpleTransformer {
+    fn default() -> Self {
+        SimpleTransformer::new()
+    }
+}
 impl SimpleParallelTransformer {
     pub fn new() -> Self {
         Self {
@@ -202,6 +212,11 @@ impl SimpleParallelTransformer {
             line_processor: Arc::new(LineProcessor::new()),
             pool: ThreadPoolBuilder::new().build().unwrap(),
         }
+    }
+}
+impl Default for SimpleParallelTransformer {
+    fn default() -> Self {
+        SimpleParallelTransformer::new()
     }
 }
 

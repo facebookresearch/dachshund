@@ -13,7 +13,7 @@ use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::row::EdgeRow;
 use crate::dachshund::transformer::Transformer;
 
-pub fn gen_test_transformer<'a>(typespec: Vec<Vec<String>>, core_type: String) -> CLQResult<Transformer> {
+pub fn gen_test_transformer(typespec: Vec<Vec<String>>, core_type: String) -> CLQResult<Transformer> {
     let transformer: Transformer = Transformer::new(
         typespec,
         20,
@@ -28,7 +28,7 @@ pub fn gen_test_transformer<'a>(typespec: Vec<Vec<String>>, core_type: String) -
         core_type,
         false,
     )?;
-    return Ok(transformer);
+    Ok(transformer)
 }
 
 pub fn gen_test_typespec() -> Vec<Vec<String>> {
@@ -70,16 +70,16 @@ pub fn process_raw_vector(transformer: &Transformer, raw: Vec<String>) -> CLQRes
             .ok_or_else(CLQError::err_none)?;
         rows.push(row);
     }
-    return Ok(rows);
+    Ok(rows)
 }
 
 fn gen_clique(
     graph_id: GraphId,
-    core_ids: &Vec<NodeId>,
-    non_core_ids_and_types: &Vec<(NodeId, NodeTypeId)>,
-    non_core_types_as_strings: &Vec<String>,
+    core_ids: &[NodeId],
+    non_core_ids_and_types: &[(NodeId, NodeTypeId)],
+    non_core_types_as_strings: &[String],
     source_type: String,
-    edge_types: &Vec<String>,
+    edge_types: &[String],
 ) -> Vec<String> {
     let mut raw: Vec<String> = Vec::new();
     for core_id in core_ids {
@@ -102,7 +102,7 @@ fn gen_clique(
             }
         }
     }
-    return raw;
+    raw
 }
 
 pub fn gen_single_clique(
@@ -121,13 +121,11 @@ pub fn gen_single_clique(
     }
     let mut next_id: usize = core_ids.len();
 
-    let mut non_core_type: usize = 0;
-    for non_core_count in non_core_counts {
-        for i in 0..non_core_count {
+    for (non_core_type, non_core_count) in non_core_counts.iter().enumerate() {
+        for i in 0..*non_core_count {
             let non_core_id = next_id + i;
             non_core_ids.push((NodeId::from(non_core_id as i64), NodeTypeId::from(non_core_type)));
         }
-        non_core_type += 1;
         next_id += non_core_count;
     }
     let clique_rows: Vec<String> = gen_clique(
@@ -138,5 +136,5 @@ pub fn gen_single_clique(
         source_type,
         &edge_types,
     );
-    return (core_ids, non_core_ids, clique_rows);
+    (core_ids, non_core_ids, clique_rows)
 }

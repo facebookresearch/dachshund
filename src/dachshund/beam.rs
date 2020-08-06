@@ -38,7 +38,7 @@ where
     pub candidates: Vec<Candidate<'a, TGraph>>,
     pub graph: &'a TGraph,
     verbose: bool,
-    non_core_types: &'a Vec<String>,
+    non_core_types: &'a [String],
     visited_candidates: HashSet<u64>,
     scorer: Scorer,
 }
@@ -63,7 +63,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                 .target_id;
             current = next;
         }
-        return Ok(current);
+        Ok(current)
     }
 
     /// creates new beam for mining quasi-bicliques. The following parameters are required:
@@ -83,12 +83,13 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
     ///     must have at least `local_thresh` proportion of ties to other nodes in the candidate,
     ///     for the candidate to be considered valid.
     ///     - `graph_id`: uniquely identifies the graph currently being processed.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph: &'a TGraph,
         clique_rows: Vec<CliqueRow>,
         beam_size: usize,
         verbose: bool,
-        non_core_types: &'a Vec<String>,
+        non_core_types: &'a [String],
         num_non_core_types: usize,
         alpha: f32,
         global_thresh: Option<f32>,
@@ -107,7 +108,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         graph_id.hash(&mut seeder);
         let mut rng = StdRng::seed_from_u64(seeder.finish());
 
-        if clique_rows.len() > 0 {
+        if !clique_rows.is_empty() {
             let init_clique = Candidate::from_clique_rows(clique_rows, graph, &scorer)?;
             if init_clique != None {
                 candidates.push(init_clique.unwrap());
@@ -115,14 +116,14 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         }
 
         while candidates.len() < beam_size {
-            assert!(core_ids.len() > 0);
-            assert!(non_core_ids.len() > 0);
+            assert!(!core_ids.is_empty());
+            assert!(!non_core_ids.is_empty());
             let ids_vec = if rng.gen::<f32>() <= 0.5 {
                 &non_core_ids
             } else {
                 &core_ids
             };
-            assert!(ids_vec.len() > 0);
+            assert!(!ids_vec.is_empty());
             let root_id = ids_vec.choose(&mut rng).ok_or_else(|| {
                 format!("Problem finding root in graph_id: {}", graph_id.value())
             })?;
@@ -139,7 +140,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
             visited_candidates,
             scorer,
         };
-        return Ok(beam);
+        Ok(beam)
     }
 
     /// Try expanding each member of the beam and keep the top candidates.
@@ -205,7 +206,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                 }
             }
             bad_sort = true;
-            return std::cmp::Ordering::Equal;
+            std::cmp::Ordering::Equal
         });
         if bad_sort {
             return Err(CLQError::new(
@@ -222,7 +223,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
             }
         }
         self.candidates = new_candidates;
-        return Ok((self.candidates[0].replicate(true), can_continue));
+        Ok((self.candidates[0].replicate(true), can_continue))
     }
 
     /// runs one_step_search for `num_epochs` epochs, trying `num_to_search`
@@ -262,7 +263,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                 if self.verbose {
                     eprintln!("Score: {}, prior score: {}", score, prior_score);
                 }
-                if score == prior_score {
+                if (score - prior_score).abs() <= f32::EPSILON {
                     num_repeated_prior_scores += 1;
                 } else {
                     num_repeated_prior_scores = 0;

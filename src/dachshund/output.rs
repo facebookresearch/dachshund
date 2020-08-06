@@ -36,15 +36,15 @@ impl<'a> Output<'a> {
             return Ok(());
         }
         println!("{}", text);
-        return Ok(());
+        Ok(())
     }
 }
 impl<'a> Write for Output<'a> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
-        return self.destination.write(buf);
+        self.destination.write(buf)
     }
 
     fn flush(&mut self) -> Result<(), Error> {
-        return self.destination.flush();
+        self.destination.flush()
     }
 }

@@ -54,12 +54,12 @@ impl Node {
         non_core_type: Option<NodeTypeId>,
         neighbors: Vec<NodeEdge>,
     ) -> Node {
-        return Node {
+        Node {
             node_id,
             is_core,
             non_core_type,
             neighbors,
-        };
+        }
     }
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
@@ -71,7 +71,7 @@ impl Node {
                 num_ties += 1;
             }
         }
-        return num_ties;
+        num_ties
     }
     /// ensures that at least thresh % of ties with nodes represented by ids in the
     /// HashSet actually exist. Called by Scorer.
@@ -82,11 +82,11 @@ impl Node {
         total_ties: usize,
     ) -> f32 {
         let num_ties_with_ids = self.count_ties_with_ids(ids);
-        return if (num_ties_with_ids as f32) / (total_ties as f32) >= thresh {
+        if (num_ties_with_ids as f32) / (total_ties as f32) >= thresh {
             1.0
         } else {
             0.0
-        };
+        }
     }
     pub fn is_core(&self) -> bool {
         self.is_core
