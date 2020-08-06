@@ -11,6 +11,7 @@ pub mod graph_base;
 pub mod graph_builder;
 pub mod id_types;
 pub mod input;
+pub mod line_processor;
 pub mod node;
 pub mod output;
 pub mod row;

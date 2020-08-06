@@ -19,6 +19,7 @@ pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 pub use dachshund::input::Input;
+pub use dachshund::line_processor::LineProcessor;
 pub use dachshund::node::Node;
 pub use dachshund::output::Output;
 pub use dachshund::row::EdgeRow;
