@@ -16,5 +16,6 @@ pub mod output;
 pub mod row;
 pub mod scorer;
 pub mod simple_transformer;
+pub mod simple_undirected_graph;
 pub mod test_utils;
 pub mod transformer;

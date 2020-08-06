@@ -24,5 +24,6 @@ pub use dachshund::output::Output;
 pub use dachshund::row::EdgeRow;
 pub use dachshund::scorer::Scorer;
 pub use dachshund::simple_transformer::SimpleTransformer;
+pub use dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 pub use dachshund::test_utils::*;
 pub use dachshund::transformer::Transformer;
