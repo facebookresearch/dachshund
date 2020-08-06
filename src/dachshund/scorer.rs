@@ -6,7 +6,7 @@
  */
 use crate::dachshund::candidate::Candidate;
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph::GraphBase;
+use crate::dachshund::graph_base::GraphBase;
 
 /// Used to compute the "cliqueness" score of a particular candidate.
 pub struct Scorer {

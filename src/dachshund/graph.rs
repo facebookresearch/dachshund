@@ -6,6 +6,7 @@
  */
 extern crate nalgebra as na;
 use crate::dachshund::error::{CLQError, CLQResult};
+use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use crate::dachshund::node::{Node, NodeEdge};
 use crate::dachshund::row::EdgeRow;
@@ -13,20 +14,6 @@ use na::{DMatrix, DVector};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 
-/// General-purpose trait which indicates the minimum amount of shared context
-/// required between all graph objects. Currently built to accommodate a graph
-/// with "core" and "non-core" ids. A GraphBase is built by a GraphBuilder.
-pub trait GraphBase
-where
-    Self: Sized,
-{
-    fn get_core_ids(&self) -> &Vec<NodeId>;
-    fn get_non_core_ids(&self) -> Option<&Vec<NodeId>>;
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node>;
-    fn has_node(&self, node_id: NodeId) -> bool;
-    fn get_node(&self, node_id: NodeId) -> &Node;
-    fn count_edges(&self) -> usize;
-}
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;

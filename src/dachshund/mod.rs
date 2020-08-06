@@ -8,6 +8,7 @@ pub mod beam;
 pub mod candidate;
 pub mod error;
 pub mod graph;
+pub mod graph_base;
 pub mod id_types;
 pub mod input;
 pub mod node;

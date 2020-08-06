@@ -8,7 +8,8 @@ extern crate clap;
 extern crate serde_json;
 
 use crate::dachshund::error::CLQResult;
-use crate::dachshund::graph::{GraphBase, SimpleUndirectedGraph, SimpleUndirectedGraphBuilder};
+use crate::dachshund::graph::{SimpleUndirectedGraph, SimpleUndirectedGraphBuilder};
+use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
 use crate::dachshund::input::Input;
 use crate::dachshund::output::Output;

@@ -14,7 +14,7 @@ use rand::prelude::*;
 
 use crate::dachshund::candidate::Candidate;
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph::GraphBase;
+use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;

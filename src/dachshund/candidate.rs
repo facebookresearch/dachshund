@@ -16,7 +16,7 @@ use std::hash::{Hash, Hasher};
 use rustc_serialize::json;
 
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph::GraphBase;
+use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::node::Node;
 use crate::dachshund::output::Output;
