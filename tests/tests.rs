@@ -8,7 +8,7 @@ extern crate lib_dachshund;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::row::{CliqueRow, EdgeRow};
@@ -114,10 +114,10 @@ fn test_process_single_row() -> CLQResult<()> {
     let rows = vec![row];
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -147,10 +147,10 @@ fn test_process_small_clique() -> CLQResult<()> {
     let rows = process_raw_vector(&transformer, raw)?;
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -182,10 +182,10 @@ fn test_process_small_clique_with_non_clique_row() -> CLQResult<()> {
     let rows = process_raw_vector(&transformer, raw)?;
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -217,10 +217,10 @@ fn test_process_medium_clique() -> CLQResult<()> {
     let rows = process_raw_vector(&transformer, clique_rows)?;
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -266,10 +266,10 @@ fn test_process_medium_clique_with_insufficient_epochs() -> CLQResult<()> {
     let rows = process_raw_vector(&transformer, clique_rows)?;
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -305,10 +305,10 @@ fn test_process_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
     let rows = process_raw_vector(&transformer, raw)?;
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -343,10 +343,10 @@ fn test_process_another_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
     let rows = process_raw_vector(&transformer, raw)?;
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let res: Candidate<Graph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let res: Candidate<TypedGraph> = transformer
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,

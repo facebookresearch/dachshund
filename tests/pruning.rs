@@ -7,7 +7,7 @@
 extern crate lib_dachshund;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::graph_builder::GraphBuilder;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::output::Output;
@@ -37,8 +37,8 @@ fn simple_test(raw: Vec<String>, min_degree: usize, expected_len: usize) -> CLQR
     let transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows = process_raw_vector(&transformer, raw)?;
 
-    let mut graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
+    let mut graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     let exclude_nodes: HashSet<NodeId> =
         TypedGraphBuilder::trim_edges(&mut graph.nodes, &min_degree);
     assert_eq!(exclude_nodes.len(), expected_len);
@@ -97,13 +97,13 @@ fn test_prune_small_clique() -> CLQResult<()> {
 
     let transformer = gen_test_transformer(ts, "author".to_string())?;
     let rows = process_raw_vector(&transformer, raw)?;
-    let mut graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
+    let mut graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     assert_eq!(graph.nodes.len(), 5);
     graph = TypedGraphBuilder::prune(graph, &rows, 2)?;
     assert_eq!(graph.nodes.len(), 4);
-    let res: Candidate<Graph> = transformer
-        .process_graph::<Graph>(&graph, Vec::new(), graph_id, true)?
+    let res: Candidate<TypedGraph> = transformer
+        .process_graph::<TypedGraph>(&graph, Vec::new(), graph_id, true)?
         .top_candidate;
     assert_nodes_have_ids(&graph, &res.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &res.non_core_ids, vec![3, 4], false);
@@ -148,12 +148,12 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
     )?;
     let rows_prune = process_raw_vector(&transformer_prune, raw.clone())?;
 
-    let graph: Graph =
-        transformer_prune.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows_prune)?;
+    let graph: TypedGraph = transformer_prune
+        .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows_prune)?;
     let mut text_prune: Vec<u8> = Vec::new();
     let mut output_prune = Output::string(&mut text_prune);
     let result_prune = transformer_prune
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,
@@ -182,12 +182,12 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
     )?;
     let rows = process_raw_vector(&transformer, raw)?;
 
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     let mut text: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut text);
     let result = transformer
-        .process_clique_rows::<TypedGraphBuilder, Graph>(
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             Vec::new(),
             graph_id,

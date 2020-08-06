@@ -12,7 +12,7 @@ use rand::thread_rng;
 use lib_dachshund::dachshund::beam::Beam;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
@@ -49,14 +49,14 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
         CliqueRow::new(graph_id, 3, Some(article_type)),
         CliqueRow::new(graph_id, 4, Some(article_type)),
     ];
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     let test_node_id: NodeId = NodeId::from(3 as i64);
     graph.nodes[&test_node_id]
         .non_core_type
         .ok_or_else(CLQError::err_none)?;
 
-    let beam: Beam<Graph> = Beam::new(
+    let beam: Beam<TypedGraph> = Beam::new(
         &graph,
         clique_rows,
         20,
@@ -68,7 +68,7 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
         Some(1.0),
         graph_id,
     )?;
-    let init_candidate: &Candidate<Graph> = &beam.candidates[0];
+    let init_candidate: &Candidate<TypedGraph> = &beam.candidates[0];
     assert_nodes_have_ids(&graph, &init_candidate.core_ids, vec![1], true);
     assert_nodes_have_ids(&graph, &init_candidate.non_core_ids, vec![3, 4], false);
     Ok(())
@@ -101,9 +101,9 @@ fn test_init_beam_with_partially_overlapping_clique_rows() -> CLQResult<()> {
         CliqueRow::new(graph_id, 4, Some(article_type)),
         CliqueRow::new(graph_id, 7, Some(article_type)),
     ];
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
-    let beam: Beam<Graph> = Beam::new(
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let beam: Beam<TypedGraph> = Beam::new(
         &graph,
         clique_rows,
         20,
@@ -115,7 +115,7 @@ fn test_init_beam_with_partially_overlapping_clique_rows() -> CLQResult<()> {
         Some(1.0),
         graph_id,
     )?;
-    let init_candidate: &Candidate<Graph> = &beam.candidates[0];
+    let init_candidate: &Candidate<TypedGraph> = &beam.candidates[0];
     assert_nodes_have_ids(&graph, &init_candidate.core_ids, vec![1], true);
     assert_nodes_have_ids(&graph, &init_candidate.non_core_ids, vec![3, 4], false);
     Ok(())
@@ -166,7 +166,7 @@ fn test_init_beam_with_clique_rows_input() -> CLQResult<()> {
         let input = Input::string(&bytes);
         let mut buffer: Vec<u8> = Vec::new();
         let mut output = Output::string(&mut buffer);
-        transformer.run::<TypedGraphBuilder, Graph>(input, &mut output)?;
+        transformer.run::<TypedGraphBuilder, TypedGraph>(input, &mut output)?;
         let output_str: String = String::from_utf8(buffer)?;
         assert_eq!(output_str, expected.join("\n") + "\n");
         Ok(())
@@ -219,7 +219,7 @@ fn test_init_beam_with_clique_rows_input_one_epoch() -> CLQResult<()> {
     let input = Input::string(&bytes);
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);
-    transformer.run::<TypedGraphBuilder, Graph>(input, &mut output)?;
+    transformer.run::<TypedGraphBuilder, TypedGraph>(input, &mut output)?;
     let output_str: String = String::from_utf8(buffer)?;
     assert_eq!(output_str, expected.join("\n") + "\n");
     Ok(())

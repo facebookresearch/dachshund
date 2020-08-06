@@ -8,7 +8,7 @@ extern crate lib_dachshund;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::row::EdgeRow;
 use lib_dachshund::dachshund::scorer::Scorer;
@@ -31,15 +31,15 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     let raw: Vec<String> = vec!["0\t1\t2\tauthor\tpublished_at\tconference".to_string()];
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     assert_eq!(graph.non_core_ids.len(), 1);
 
     let alpha: f32 = 1.0;
     let scorer: Scorer = Scorer::new(2, alpha, Some(0.5), Some(0.5));
     let core_node_id: NodeId = *graph.core_ids.first().unwrap();
-    let mut candidate: Candidate<Graph> = Candidate::new(core_node_id, &graph, &scorer)?;
+    let mut candidate: Candidate<TypedGraph> = Candidate::new(core_node_id, &graph, &scorer)?;
     assert_eq!(candidate.get_score()?, -1.0);
 
     let non_core_node_id: NodeId = *graph.non_core_ids.first().unwrap();

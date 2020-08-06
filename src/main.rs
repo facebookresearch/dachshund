@@ -13,7 +13,7 @@ use std::io;
 use clap::{App, Arg, ArgMatches};
 
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::transformer::Transformer;
@@ -111,6 +111,6 @@ fn main() -> CLQResult<()> {
     let input: Input = Input::console(&stdio);
     let mut dummy: Vec<u8> = Vec::new();
     let mut output: Output = Output::console(&mut dummy);
-    transformer.run::<TypedGraphBuilder, Graph>(input, &mut output)?;
+    transformer.run::<TypedGraphBuilder, TypedGraph>(input, &mut output)?;
     Ok(())
 }

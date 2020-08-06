@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph::Graph;
+use crate::dachshund::graph::TypedGraph;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::row::EdgeRow;
@@ -51,7 +51,7 @@ pub fn gen_test_typespec() -> Vec<Vec<String>> {
 }
 
 pub fn assert_nodes_have_ids<T>(
-    graph: &Graph,
+    graph: &TypedGraph,
     node_ids: &HashSet<NodeId>,
     test_ids: Vec<T>,
     core: bool,

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::node::Node;
 use lib_dachshund::dachshund::row::CliqueRow;
@@ -24,7 +24,7 @@ use lib_dachshund::dachshund::transformer::Transformer;
 fn test_output_simple_candidate() -> CLQResult<()> {
     let node_id = NodeId::from(0);
     let node: Node = Node::new(node_id, true, None, Vec::new());
-    let mut graph: Graph = Graph {
+    let mut graph: TypedGraph = TypedGraph {
         nodes: HashMap::new(),
         core_ids: vec![],
         non_core_ids: vec![],
@@ -32,7 +32,7 @@ fn test_output_simple_candidate() -> CLQResult<()> {
     graph.nodes.insert(node_id, node);
     graph.core_ids.push(node_id);
 
-    let mut candidate: Candidate<Graph> = Candidate::init_blank(&graph);
+    let mut candidate: Candidate<TypedGraph> = Candidate::init_blank(&graph);
     candidate.add_node(node_id)?;
     let graph_id: GraphId = 1.into();
     let output_rows: Vec<CliqueRow> = candidate.get_output_rows(graph_id)?;
@@ -54,8 +54,8 @@ fn test_rebuild_candidate() -> CLQResult<()> {
 
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
-    let graph: Graph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows)?;
+    let graph: TypedGraph =
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     let core_node_id: NodeId = *graph.core_ids.first().unwrap();
     assert_eq!(graph.non_core_ids.len(), 1);
@@ -63,7 +63,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
 
     let alpha: f32 = 1.0;
     let scorer: Scorer = Scorer::new(2, alpha, Some(0.5), Some(0.5));
-    let mut candidate: Candidate<Graph> = Candidate::new(core_node_id, &graph, &scorer)?;
+    let mut candidate: Candidate<TypedGraph> = Candidate::new(core_node_id, &graph, &scorer)?;
     candidate.add_node(non_core_node_id)?;
     let score: f32 = scorer.score(&candidate)?;
     candidate.set_score(score)?;

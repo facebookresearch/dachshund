@@ -18,12 +18,12 @@ use std::collections::HashMap;
 /// each node. If the id of a node is known, its Node object can be retrieved via the
 /// nodes HashMap. To iterate over core and non-core nodes, the struct also provides the
 /// core_ids and non_core_ids vectors.
-pub struct Graph {
+pub struct TypedGraph {
     pub nodes: HashMap<NodeId, Node>,
     pub core_ids: Vec<NodeId>,
     pub non_core_ids: Vec<NodeId>,
 }
-impl GraphBase for Graph {
+impl GraphBase for TypedGraph {
     fn get_core_ids(&self) -> &Vec<NodeId> {
         &self.core_ids
     }
@@ -48,13 +48,13 @@ impl GraphBase for Graph {
     }
 }
 pub struct TypedGraphBuilder {}
-impl GraphBuilder<Graph> for TypedGraphBuilder {
+impl GraphBuilder<TypedGraph> for TypedGraphBuilder {
     fn _new(
         nodes: HashMap<NodeId, Node>,
         core_ids: Vec<NodeId>,
         non_core_ids: Vec<NodeId>,
-    ) -> CLQResult<Graph> {
-        Ok(Graph {
+    ) -> CLQResult<TypedGraph> {
+        Ok(TypedGraph {
             nodes,
             core_ids,
             non_core_ids,
