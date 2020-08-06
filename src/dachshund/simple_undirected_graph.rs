@@ -45,7 +45,7 @@ impl GraphBase for SimpleUndirectedGraph {
         for node in self.nodes.values() {
             num_edges += node.neighbors.len();
         }
-        num_edges
+        num_edges / 2
     }
 }
 impl SimpleUndirectedGraph {

@@ -52,4 +52,8 @@ version = "0.7.3"
 
 [[bin]]
 name = "clique_miner"
-path = "src/main.rs"
+path = "src/clique_miner.rs"
+
+[[bin]]
+name = "simple_graph_featurizer"
+path = "src/simple_graph_featurizer.rs"

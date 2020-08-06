@@ -1,7 +1,30 @@
 Dachshund is a graph mining library written in Rust. It provides high performance data structures for multiple kinds of graphs, from simple undirected graphs to typed hypergraphs. Dachshund also provides algorithms for common tasks for graph mining and analysis, ranging from shortest paths to graph spectral analysis.
 
 ## Examples
-Out of the box Dachshund is ready to use for clique mining. For instance:
+
+### Graph featurizer
+This application takes a list of graphs and featurizes it. For instance:
+
+```
+cat example.txt | cut -s -f1-3 | target/debug/simple_graph_featurizer
+```
+The output will look like this:
+
+```
+0	{"bet_cent":1.2,"clust_coef":0.0,"evcent":0.868,"num_16_cores":0,"num_17_trusses":0,"num_2_cores":1,"num_3_trusses":0,"num_4_cores":0,"num_5_trusses":0,"num_8_cores":0,"num_9_trusses":0,"num_connected_components":1,"num_edges":5,"size_of_largest_cc":5}
+```
+What the various JSON-encoded features mean:
+- `bet_cent`: average betweenness centrality.
+- `clust_coef`: average clustering coefficient.
+- `evcent`: average eigenvector centrality.
+- `num_{k}_cores`: {k}-core count.
+- `num_{k}_trusses`: {k}-truss count.
+- `num_connected_components`: number of connected components.
+- `num_edges`: number of edges.
+- `size_of_largest_cc`: number of nodes in largest connected component.
+
+### Clique miner
+This application finds the largest (quasi-) cliques in a graph. For instance:
 ```
 cargo build
 cat example.txt | target/debug/clique_miner \

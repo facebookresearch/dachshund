@@ -222,7 +222,7 @@ fn get_karate_club_graph() -> SimpleUndirectedGraph {
 fn test_karate_club() {
     let graph = get_karate_club_graph();
     assert_eq!(graph.nodes.len(), 34);
-    assert_eq!(graph.count_edges(), 78 * 2);
+    assert_eq!(graph.count_edges(), 78);
     assert_eq!(graph.get_node_degree(NodeId::from(1 as i64)), 16);
     assert_eq!(graph.get_node_degree(NodeId::from(2 as i64)), 9);
     assert_eq!(graph.get_node_degree(NodeId::from(3 as i64)), 10);
