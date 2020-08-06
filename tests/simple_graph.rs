@@ -5,9 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate lib_dachshund;
-use lib_dachshund::dachshund::graph::{
-    SimpleUndirectedGraph, SimpleUndirectedGraphBuilder,
-};
+use lib_dachshund::dachshund::graph::{SimpleUndirectedGraph, SimpleUndirectedGraphBuilder};
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;

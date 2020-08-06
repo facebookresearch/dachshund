@@ -85,11 +85,7 @@ pub trait TransformerBase {
     // logic for taking row and storing into self via side-effect
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()>;
     // logic for processing batch of rows, once all rows are ready
-    fn process_batch(
-        &self,
-        graph_id: GraphId,
-        output: &Sender<(String, bool)>,
-    ) -> CLQResult<()>;
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()>;
     // reset transformer state after processing;
     fn reset(&mut self) -> CLQResult<()>;
 
@@ -184,12 +180,13 @@ pub trait GraphStatsTransformerBase: TransformerBase {
             "num_17_trusses": k_trusses_17.len(),
             "num_connected_components": conn_comp.len(),
             "size_of_largest_cc": largest_cc.len(),
-            "bet_cent": (Iterator::sum::<f64>(betcent.values()) / 
+            "bet_cent": (Iterator::sum::<f64>(betcent.values()) /
                 (betcent.len() as f64) * 1000.0).floor() / 1000.0,
-            "evcent": (Iterator::sum::<f64>(evcent.values()) / 
+            "evcent": (Iterator::sum::<f64>(evcent.values()) /
                 (evcent.len() as f64) * 1000.0).floor() / 1000.0,
-            "clust_coef": (graph.get_avg_clustering() * 1000.0).floor() / 1000.0, 
-        }).to_string()
+            "clust_coef": (graph.get_avg_clustering() * 1000.0).floor() / 1000.0,
+        })
+        .to_string()
     }
 }
 impl SimpleTransformer {
@@ -232,11 +229,7 @@ impl TransformerBase for SimpleTransformer {
         self.batch.clear();
         Ok(())
     }
-    fn process_batch(
-        &self,
-        graph_id: GraphId,
-        output: &Sender<(String, bool)>,
-    ) -> CLQResult<()> {
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()> {
         let tuples: Vec<(i64, i64)> = self.batch.iter().map(|x| x.as_tuple()).collect();
         let graph = SimpleUndirectedGraphBuilder::from_vector(&tuples);
         let stats = Self::compute_graph_stats_json(&graph);
@@ -260,11 +253,7 @@ impl TransformerBase for SimpleParallelTransformer {
         self.batch.clear();
         Ok(())
     }
-    fn process_batch(
-        &self,
-        graph_id: GraphId,
-        output: &Sender<(String, bool)>,
-    ) -> CLQResult<()> {
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()> {
         let tuples: Vec<(i64, i64)> = self.batch.iter().map(|x| x.as_tuple()).collect();
         let output_clone = output.clone();
         let line_processor = self.line_processor.clone();

@@ -15,7 +15,7 @@ use clap::ArgMatches;
 use crate::dachshund::beam::{Beam, BeamSearchResult};
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph::{GraphBase, GraphBuilder};
-use crate::dachshund::id_types::{GraphId, EdgeTypeId, NodeId, NodeTypeId};
+use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use crate::dachshund::input::Input;
 use crate::dachshund::output::Output;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
@@ -49,8 +49,7 @@ impl NonCoreTypeIds {
     }
     fn insert(&mut self, type_str: &str, type_id: NodeTypeId) {
         if !self.data.contains_key(type_str) {
-            self.data
-                .insert(type_str.to_owned(), type_id);
+            self.data.insert(type_str.to_owned(), type_id);
         }
     }
 
@@ -65,7 +64,7 @@ impl NonCoreTypeIds {
     }
 }
 
-/// Used to set up the typed graph clique mining algorithm. 
+/// Used to set up the typed graph clique mining algorithm.
 pub struct Transformer {
     pub core_type: String,
     pub non_core_type_ids: NonCoreTypeIds,
@@ -121,9 +120,9 @@ impl Transformer {
     ///     - `beam_size`: Beam construction parameter. The number of top candidates to
     ///     maintain as potential future cores for expansion in the "beam" (i.e., the list of top candidates).
     ///     - `alpha`: `Scorer` constructor parameter. Controls the contribution of density
-    ///     - `global_thresh`: `Scorer` constructor parameter. If provided, candidates must be at 
+    ///     - `global_thresh`: `Scorer` constructor parameter. If provided, candidates must be at
     ///     least this dense to be considered valid (quasi-)cliques.
-    ///     - `local_thresh`: `Scorer` constructor parameter. if provided, each node in the candidate 
+    ///     - `local_thresh`: `Scorer` constructor parameter. if provided, each node in the candidate
     ///     must have at least `local_thresh` proportion of ties to other nodes in the candidate,
     ///     for the candidate to be considered valid.
     ///     - `num_to_search`: number of expansion candidates to consider for each candidate in the
@@ -131,7 +130,7 @@ impl Transformer {
     ///     - `num_epochs`: maximum number of epochs to run search for.
     ///     - `max_repeated_prior_scores`: maximum number of times for which the top score can be
     ///     repeated in consecutive epochs, before the search gets shut down early.
-    ///     - `debug`: whether to produce verbose output in the search process. 
+    ///     - `debug`: whether to produce verbose output in the search process.
     ///     - `min_degree`: minimum degree required for each node in a (quasi-)clique in order for
     ///     the subgraph to be considered interesting.
     ///     - `core_type`: the core type, as found in the typespec.
@@ -160,11 +159,8 @@ impl Transformer {
         non_core_types.sort();
 
         let num_non_core_types: usize = non_core_types.len();
-        let non_core_type_ids: NonCoreTypeIds = Transformer::process_typespec(
-            typespec,
-            &core_type,
-            non_core_types.to_vec(),
-        )?;
+        let non_core_type_ids: NonCoreTypeIds =
+            Transformer::process_typespec(typespec, &core_type, non_core_types.to_vec())?;
         let transformer = Self {
             core_type,
             non_core_type_ids,
@@ -319,7 +315,7 @@ impl Transformer {
         )
     }
     /// Used to "seed" the beam search with an existing best (quasi-)clique (if any provided),
-    /// and then run the search under the parameters specified in the constructor. 
+    /// and then run the search under the parameters specified in the constructor.
     pub fn process_clique_rows<'a, TGraphBuilder: GraphBuilder<TGraph>, TGraph: GraphBase>(
         &'a self,
         graph: &'a TGraph,
@@ -339,7 +335,9 @@ impl Transformer {
                 let line: String = format!(
                     "{}\t{}",
                     graph_id.value(),
-                    result.top_candidate.to_printable_row(&self.non_core_types)?,
+                    result
+                        .top_candidate
+                        .to_printable_row(&self.non_core_types)?,
                 );
                 output.print(line)?;
             } else {
@@ -353,9 +351,9 @@ impl Transformer {
         }
         Ok(Some(result))
     }
-    /// to be called by main.rs (or a test), using an input (such as stdin), 
+    /// to be called by main.rs (or a test), using an input (such as stdin),
     /// which must provide a lines() function, and an output (such as stdout), to
-    /// which it is possible to write line-by-line. Typical reducer logic: 
+    /// which it is possible to write line-by-line. Typical reducer logic:
     /// read one line at a time, with the first column being the key. If key has not
     /// changed, keep accumulating lines. If key has changed, process accumulated
     /// lines, output results and reset state.  
@@ -391,8 +389,12 @@ impl Transformer {
                         }
                     }
                     current_graph_id = Some(new_graph_id);
-                    if let Some(r) = raw.as_edge_row() { edge_rows.push(r) }
-                    if let Some(r) = raw.as_clique_row() { clique_rows.push(r) }
+                    if let Some(r) = raw.as_edge_row() {
+                        edge_rows.push(r)
+                    }
+                    if let Some(r) = raw.as_clique_row() {
+                        clique_rows.push(r)
+                    }
                 }
                 Err(error) => eprintln!("I/O error: {}", error),
             }

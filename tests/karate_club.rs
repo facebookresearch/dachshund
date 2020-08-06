@@ -148,9 +148,7 @@ fn get_karate_club_graph_with_one_extra_edge() -> SimpleUndirectedGraph {
     rows.push(new_edge);
     rows.push(rev_edge);
     let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(
-            graph_id, &rows,
-        )
+        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
         .unwrap();
     graph
 }
@@ -176,9 +174,7 @@ fn get_two_karate_clubs() -> SimpleUndirectedGraph {
     let transformer = get_transformer();
     let rows = get_two_karate_clubs_edges(&transformer);
     let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(
-            graph_id, &rows,
-        )
+        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
         .unwrap();
     return graph;
 }
@@ -208,9 +204,7 @@ fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
     rows.push(new_edge);
     rows.push(rev_edge);
     let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(
-            graph_id, &rows,
-        )
+        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
         .unwrap();
     graph
 }
@@ -219,9 +213,7 @@ fn get_karate_club_graph() -> SimpleUndirectedGraph {
     let transformer = get_transformer();
     let rows: Vec<EdgeRow> = get_rows(&transformer);
     let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(
-            graph_id, &rows,
-        )
+        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
         .unwrap();
     graph
 }

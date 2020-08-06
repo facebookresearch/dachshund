@@ -8,7 +8,7 @@ extern crate lib_dachshund;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{TypedGraphBuilder, Graph};
+use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::row::{CliqueRow, EdgeRow};
@@ -22,9 +22,21 @@ use lib_dachshund::dachshund::transformer::Transformer;
 #[test]
 fn test_process_typespec() -> CLQResult<()> {
     let ts = vec![
-        vec!["author".to_string(), "published_at".into(), "conference".into()],
-        vec!["author".to_string(), "organized".into(), "conference".into()],
-        vec!["author".to_string(), "published_at".into(), "journal".into()],
+        vec![
+            "author".to_string(),
+            "published_at".into(),
+            "conference".into(),
+        ],
+        vec![
+            "author".to_string(),
+            "organized".into(),
+            "conference".into(),
+        ],
+        vec![
+            "author".to_string(),
+            "published_at".into(),
+            "journal".into(),
+        ],
         vec!["author".to_string(), "attended".into(), "conference".into()],
     ];
     let target_types = vec!["conference".to_string(), "journal".into()];
@@ -274,7 +286,11 @@ fn test_process_medium_clique_with_insufficient_epochs() -> CLQResult<()> {
 #[test]
 fn test_process_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
     let typespec = vec![
-        vec!["author".to_string(), "published_at".into(), "conference".into()],
+        vec![
+            "author".to_string(),
+            "published_at".into(),
+            "conference".into(),
+        ],
         vec!["author".to_string(), "attended".into(), "conference".into()],
     ];
     let raw = vec![
@@ -309,16 +325,8 @@ fn test_process_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
 #[test]
 fn test_process_another_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
     let typespec = vec![
-        vec![
-            "author".to_string(),
-            "published".into(),
-            "article".into(),
-        ],
-        vec![
-            "author".to_string(),
-            "cited".into(),
-            "article".into(),
-        ],
+        vec!["author".to_string(), "published".into(), "article".into()],
+        vec!["author".to_string(), "cited".into(), "article".into()],
     ];
     let raw = vec![
         "0\t1\t5\tauthor\tpublished\tarticle".to_string(),

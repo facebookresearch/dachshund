@@ -19,6 +19,8 @@ authors = [
 
 [features]
 map_first_last = []
+rustfmt = []
+cargo-fmt = []
 
 [lib]
 name = "lib_dachshund"

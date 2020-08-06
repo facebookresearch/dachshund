@@ -6,7 +6,7 @@
  */
 extern crate nalgebra as na;
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::id_types::{GraphId, EdgeTypeId, NodeId, NodeTypeId};
+use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use crate::dachshund::node::{Node, NodeEdge};
 use crate::dachshund::row::EdgeRow;
 use na::{DMatrix, DVector};
@@ -129,10 +129,10 @@ where
         }
         for &id in non_core_ids {
             let node = Node::new(
-                id,                        // node_id,
-                false,                     // is_core,
+                id,                           // node_id,
+                false,                        // is_core,
                 Some(non_core_type_ids[&id]), // non_core_type,
-                Vec::new(),                // neighbors,
+                Vec::new(),                   // neighbors,
             );
             node_map.insert(id, node);
         }
@@ -196,11 +196,7 @@ where
     /// creates a TGraph object from a vector of rows. Client must provide
     /// graph_id which must match with each row's graph_id. If min_degree
     /// is provided, the graph is additionally pruned.
-    fn new(
-        graph_id: GraphId,
-        rows: &[EdgeRow],
-        min_degree: Option<usize>,
-    ) -> CLQResult<TGraph> {
+    fn new(graph_id: GraphId, rows: &[EdgeRow], min_degree: Option<usize>) -> CLQResult<TGraph> {
         let mut source_ids: HashSet<NodeId> = HashSet::new();
         let mut target_ids: HashSet<NodeId> = HashSet::new();
         let mut target_type_ids: HashMap<NodeId, NodeTypeId> = HashMap::new();
@@ -456,9 +452,9 @@ impl SimpleUndirectedGraph {
         &self,
         source: NodeId,
     ) -> (
-        Vec<NodeId>,                  // nodes in nondecreasing order by distance
-        HashMap<NodeId, u32>,         // distances from source
-        NodePredecessors,             // immediate predecessors
+        Vec<NodeId>,          // nodes in nondecreasing order by distance
+        HashMap<NodeId, u32>, // distances from source
+        NodePredecessors,     // immediate predecessors
     ) {
         // Predecessors of v (nodes immediately before v on shortest path from source to v)
         let mut preds: NodePredecessors = HashMap::new();
@@ -599,8 +595,7 @@ impl SimpleUndirectedGraph {
         }
 
         for source in sources.iter() {
-            let (dist, parents) =
-                self.get_shortest_paths(*source, nodes_in_connected_component);
+            let (dist, parents) = self.get_shortest_paths(*source, nodes_in_connected_component);
             let shortest_paths = self.enumerate_shortest_paths(&dist, &parents, *source);
             for paths in shortest_paths.values() {
                 let weight: f64 = 0.5 / paths.len() as f64;
@@ -939,10 +934,7 @@ impl SimpleUndirectedGraph {
             .collect::<HashSet<OrderedNodeSet>>();
         (filtered_trusses, truss_nodes)
     }
-    pub fn get_k_trusses(
-        &self,
-        k: usize,
-    ) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
+    pub fn get_k_trusses(&self, k: usize) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
         // Basic algorithm: https://louridas.github.io/rwa/assignments/finding-trusses/
 
         // ignore_nodes will contain all the irrelevant nodes after

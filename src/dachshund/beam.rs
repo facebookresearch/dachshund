@@ -44,7 +44,6 @@ where
 }
 
 impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
-
     /// performs a random walk of length `length` along the graph,
     /// starting at a particular node.
     fn random_walk(
@@ -77,9 +76,9 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
     ///     - `alpha`: `Scorer` constructor parameter. Controls the contribution of density
     ///     to the ``cliqueness'' score. Higher values means denser cliques are prefered, all else
     ///     being equal.
-    ///     - `global_thresh`: `Scorer` constructor parameter. If provided, candidates must be at 
+    ///     - `global_thresh`: `Scorer` constructor parameter. If provided, candidates must be at
     ///     least this dense to be considered valid (quasi-)cliques.
-    ///     - `local_thresh`: `Scorer` constructor parameter. if provided, each node in the candidate 
+    ///     - `local_thresh`: `Scorer` constructor parameter. if provided, each node in the candidate
     ///     must have at least `local_thresh` proportion of ties to other nodes in the candidate,
     ///     for the candidate to be considered valid.
     ///     - `graph_id`: uniquely identifies the graph currently being processed.
@@ -124,9 +123,9 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                 &core_ids
             };
             assert!(!ids_vec.is_empty());
-            let root_id = ids_vec.choose(&mut rng).ok_or_else(|| {
-                format!("Problem finding root in graph_id: {}", graph_id.value())
-            })?;
+            let root_id = ids_vec
+                .choose(&mut rng)
+                .ok_or_else(|| format!("Problem finding root in graph_id: {}", graph_id.value()))?;
             let candidate_node = Beam::random_walk(&mut rng, graph, *root_id, 7)?;
             let candidate = Candidate::new(candidate_node, graph, &scorer)?;
             candidates.push(candidate);
@@ -229,7 +228,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
     /// runs one_step_search for `num_epochs` epochs, trying `num_to_search`
     /// expansion candidates for each candidate in the beam (the list of top
     /// candidates found so far). The beam is of `beam_size`. If the top
-    /// score resulting from a one step search is repeated `max_repeated_prior_scores` 
+    /// score resulting from a one step search is repeated `max_repeated_prior_scores`
     /// times, the search is terminated early. (Note that the search has a stochastic
     /// component, which is why repeating the search may yield different results).
     pub fn run_search(

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-use crate::dachshund::id_types::{GraphId, EdgeTypeId, NodeId, NodeTypeId};
+use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use std::fmt;
 
 ///  Used to keep track of edge row input.

@@ -7,7 +7,7 @@
 extern crate lib_dachshund;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{TypedGraphBuilder, Graph, GraphBuilder};
+use lib_dachshund::dachshund::graph::{Graph, GraphBuilder, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::test_utils::{
@@ -80,7 +80,11 @@ fn test_partial_exclude_nodes() -> CLQResult<()> {
 #[test]
 fn test_prune_small_clique() -> CLQResult<()> {
     // graph_id source_id target_id target_type
-    let ts: Vec<Vec<String>> = vec![vec!["author".into(), "published_at".into(), "conference".into()]];
+    let ts: Vec<Vec<String>> = vec![vec![
+        "author".into(),
+        "published_at".into(),
+        "conference".into(),
+    ]];
     let raw = vec![
         "0\t1\t3\tauthor\tpublished_at\tconference".into(),
         "0\t2\t3\tauthor\tpublished_at\tconference".into(),
@@ -143,8 +147,8 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
     )?;
     let rows_prune = process_raw_vector(&transformer_prune, raw.clone())?;
 
-    let graph: Graph = transformer_prune
-        .build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows_prune)?;
+    let graph: Graph =
+        transformer_prune.build_pruned_graph::<TypedGraphBuilder, Graph>(graph_id, &rows_prune)?;
     let mut text_prune: Vec<u8> = Vec::new();
     let mut output_prune = Output::string(&mut text_prune);
     let result_prune = transformer_prune

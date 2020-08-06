@@ -64,7 +64,6 @@ impl<'a, T: GraphBase> fmt::Display for Candidate<'a, T> {
 }
 
 impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
-
     /// creates an empty candidate object, refering to a graph.
     pub fn init_blank(graph: &'a TGraph) -> Self {
         Self {
@@ -179,7 +178,11 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
 
         let cliqueness = self.get_cliqueness()?;
         let core_ids: Vec<i64> = self.sorted_core_ids().iter().map(|x| x.value()).collect();
-        let non_core_ids: Vec<i64> = self.sorted_non_core_ids().iter().map(|x| x.value()).collect();
+        let non_core_ids: Vec<i64> = self
+            .sorted_non_core_ids()
+            .iter()
+            .map(|x| x.value())
+            .collect();
 
         let mut s = String::new();
         s.push_str(&core_ids.len().to_string());
@@ -409,7 +412,9 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     pub fn count_ties_between_nodes(&self) -> CLQResult<usize> {
         let mut num_ties: usize = 0;
         for &non_core_id in &self.non_core_ids {
-            num_ties += self.get_node(non_core_id).count_ties_with_ids(&self.core_ids);
+            num_ties += self
+                .get_node(non_core_id)
+                .count_ties_with_ids(&self.core_ids);
         }
         Ok(num_ties)
     }
@@ -420,7 +425,8 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         let mut non_core_out_counts: Vec<usize> = vec![0; num_non_core_types + 1];
         for &non_core_id in &self.non_core_ids {
             let non_core = self.get_node(non_core_id);
-            let non_core_type_id: NodeTypeId = non_core.non_core_type.ok_or_else(CLQError::err_none)?;
+            let non_core_type_id: NodeTypeId =
+                non_core.non_core_type.ok_or_else(CLQError::err_none)?;
             let num_ties: usize = non_core.count_ties_with_ids(&self.core_ids);
             let max_density = non_core
                 .max_edge_count_with_core_node()?

@@ -20,11 +20,11 @@ impl Scorer {
     /// Creates a new Scorer class. Typically called by the `Beam` "searcher" class,
     /// with the following parameters:
     /// - `num_non_core_types`: the number of non-core types in the graph.
-    /// - `alpha`: Controls the contribution of density to the ``cliqueness'' score. Higher 
+    /// - `alpha`: Controls the contribution of density to the ``cliqueness'' score. Higher
     /// values mean denser cliques are prefered, all else being equal.
-    /// - `global_thresh`: If provided, candidates must be at least this dense to be considered 
+    /// - `global_thresh`: If provided, candidates must be at least this dense to be considered
     /// valid (quasi-)cliques.
-    /// - `local_thresh`: If provided, each node in the candidate must have at least `local_thresh` 
+    /// - `local_thresh`: If provided, each node in the candidate must have at least `local_thresh`
     /// proportion of ties to other nodes in the candidate, for the candidate to be considered valid.
     pub fn new(
         num_non_core_types: usize,

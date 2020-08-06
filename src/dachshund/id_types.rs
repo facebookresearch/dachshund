@@ -89,7 +89,6 @@ impl fmt::Display for NodeId {
     }
 }
 
-
 /// Used to refer to distinct graphs. Current use cases:
 /// - as a key for input to a transformer (multiple graphs may be processed, in order).
 /// - as an identifier for a (quasi-)clique, after it is output.

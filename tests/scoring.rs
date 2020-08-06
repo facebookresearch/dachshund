@@ -8,7 +8,7 @@ extern crate lib_dachshund;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{TypedGraphBuilder, Graph};
+use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::row::EdgeRow;
 use lib_dachshund::dachshund::scorer::Scorer;
@@ -20,7 +20,11 @@ use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vec
 #[test]
 fn test_score_trivial_graph() -> CLQResult<()> {
     let typespec: Vec<Vec<String>> = vec![
-        vec!["author".to_string(), "published_at".into(), "conference".into()],
+        vec![
+            "author".to_string(),
+            "published_at".into(),
+            "conference".into(),
+        ],
         vec!["author".to_string(), "attended".into(), "conference".into()],
     ];
     let graph_id: GraphId = 0.into();

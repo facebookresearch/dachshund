@@ -13,7 +13,7 @@ use std::io;
 use clap::{App, Arg, ArgMatches};
 
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{TypedGraphBuilder, Graph};
+use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::transformer::Transformer;

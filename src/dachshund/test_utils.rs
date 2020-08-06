@@ -13,7 +13,10 @@ use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::row::EdgeRow;
 use crate::dachshund::transformer::Transformer;
 
-pub fn gen_test_transformer(typespec: Vec<Vec<String>>, core_type: String) -> CLQResult<Transformer> {
+pub fn gen_test_transformer(
+    typespec: Vec<Vec<String>>,
+    core_type: String,
+) -> CLQResult<Transformer> {
     let transformer: Transformer = Transformer::new(
         typespec,
         20,
@@ -33,8 +36,16 @@ pub fn gen_test_transformer(typespec: Vec<Vec<String>>, core_type: String) -> CL
 
 pub fn gen_test_typespec() -> Vec<Vec<String>> {
     return vec![
-        vec!["author".to_string(), "published_at".into(), "conference".into()],
-        vec!["author".to_string(), "published_at".into(), "journal".into()],
+        vec![
+            "author".to_string(),
+            "published_at".into(),
+            "conference".into(),
+        ],
+        vec![
+            "author".to_string(),
+            "published_at".into(),
+            "journal".into(),
+        ],
     ];
 }
 
@@ -124,7 +135,10 @@ pub fn gen_single_clique(
     for (non_core_type, non_core_count) in non_core_counts.iter().enumerate() {
         for i in 0..*non_core_count {
             let non_core_id = next_id + i;
-            non_core_ids.push((NodeId::from(non_core_id as i64), NodeTypeId::from(non_core_type)));
+            non_core_ids.push((
+                NodeId::from(non_core_id as i64),
+                NodeTypeId::from(non_core_type),
+            ));
         }
         next_id += non_core_count;
     }

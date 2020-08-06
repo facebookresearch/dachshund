@@ -16,7 +16,7 @@ pub mod dachshund;
 pub use dachshund::beam::Beam;
 pub use dachshund::candidate::Candidate;
 pub use dachshund::graph::Graph;
-pub use dachshund::id_types::{GraphId, EdgeTypeId, NodeId, NodeTypeId};
+pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 pub use dachshund::input::Input;
 pub use dachshund::node::Node;
 pub use dachshund::output::Output;

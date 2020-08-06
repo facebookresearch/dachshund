@@ -12,7 +12,7 @@ use rand::thread_rng;
 use lib_dachshund::dachshund::beam::Beam;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{TypedGraphBuilder, Graph};
+use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
