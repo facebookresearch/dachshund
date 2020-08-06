@@ -14,8 +14,8 @@ use clap::ArgMatches;
 
 use crate::dachshund::beam::{Beam, BeamSearchResult};
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph::GraphBuilder;
 use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::graph_builder::GraphBuilder;
 use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use crate::dachshund::input::Input;
 use crate::dachshund::output::Output;

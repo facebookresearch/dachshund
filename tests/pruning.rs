@@ -7,7 +7,8 @@
 extern crate lib_dachshund;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{Graph, GraphBuilder, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph::{Graph, TypedGraphBuilder};
+use lib_dachshund::dachshund::graph_builder::GraphBuilder;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::test_utils::{
