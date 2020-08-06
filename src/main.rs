@@ -13,10 +13,11 @@ use std::io;
 use clap::{App, Arg, ArgMatches};
 
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::transformer::Transformer;
+use lib_dachshund::dachshund::typed_graph::TypedGraph;
+use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 fn get_command_line_args() -> ArgMatches<'static> {
     let matches: ArgMatches = App::new("Dachshund")

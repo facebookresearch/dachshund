@@ -15,7 +15,6 @@ pub mod dachshund;
 
 pub use dachshund::beam::Beam;
 pub use dachshund::candidate::Candidate;
-pub use dachshund::graph::TypedGraph;
 pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
@@ -29,3 +28,5 @@ pub use dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 pub use dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 pub use dachshund::test_utils::*;
 pub use dachshund::transformer::Transformer;
+pub use dachshund::typed_graph::TypedGraph;
+pub use dachshund::typed_graph_builder::TypedGraphBuilder;

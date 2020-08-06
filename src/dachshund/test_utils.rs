@@ -8,11 +8,11 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph::TypedGraph;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::row::EdgeRow;
 use crate::dachshund::transformer::Transformer;
+use crate::dachshund::typed_graph::TypedGraph;
 
 pub fn gen_test_transformer(
     typespec: Vec<Vec<String>>,

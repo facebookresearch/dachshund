@@ -7,7 +7,6 @@
 pub mod beam;
 pub mod candidate;
 pub mod error;
-pub mod graph;
 pub mod graph_base;
 pub mod graph_builder;
 pub mod id_types;
@@ -21,3 +20,5 @@ pub mod simple_undirected_graph;
 pub mod simple_undirected_graph_builder;
 pub mod test_utils;
 pub mod transformer;
+pub mod typed_graph;
+pub mod typed_graph_builder;

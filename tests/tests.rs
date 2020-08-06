@@ -8,7 +8,6 @@ extern crate lib_dachshund;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::row::{CliqueRow, EdgeRow};
@@ -17,6 +16,8 @@ use lib_dachshund::dachshund::test_utils::{
     process_raw_vector,
 };
 use lib_dachshund::dachshund::transformer::Transformer;
+use lib_dachshund::dachshund::typed_graph::TypedGraph;
+use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 #[cfg(test)]
 #[test]

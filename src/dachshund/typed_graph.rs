@@ -5,9 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate nalgebra as na;
-use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
-use crate::dachshund::graph_builder::GraphBuilder;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
 use std::collections::HashMap;
@@ -45,19 +43,5 @@ impl GraphBase for TypedGraph {
             num_edges += node.neighbors.len();
         }
         num_edges
-    }
-}
-pub struct TypedGraphBuilder {}
-impl GraphBuilder<TypedGraph> for TypedGraphBuilder {
-    fn _new(
-        nodes: HashMap<NodeId, Node>,
-        core_ids: Vec<NodeId>,
-        non_core_ids: Vec<NodeId>,
-    ) -> CLQResult<TypedGraph> {
-        Ok(TypedGraph {
-            nodes,
-            core_ids,
-            non_core_ids,
-        })
     }
 }

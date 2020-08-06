@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::node::Node;
 use lib_dachshund::dachshund::row::CliqueRow;
@@ -18,6 +17,8 @@ use lib_dachshund::dachshund::row::EdgeRow;
 use lib_dachshund::dachshund::scorer::Scorer;
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 use lib_dachshund::dachshund::transformer::Transformer;
+use lib_dachshund::dachshund::typed_graph::TypedGraph;
+use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 #[cfg(test)]
 #[test]

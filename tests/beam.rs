@@ -12,7 +12,6 @@ use rand::thread_rng;
 use lib_dachshund::dachshund::beam::Beam;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::graph::{TypedGraph, TypedGraphBuilder};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
@@ -22,6 +21,8 @@ use lib_dachshund::dachshund::test_utils::{
     assert_nodes_have_ids, gen_test_transformer, process_raw_vector,
 };
 use lib_dachshund::dachshund::transformer::Transformer;
+use lib_dachshund::dachshund::typed_graph::TypedGraph;
+use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 #[cfg(test)]
 #[test]
