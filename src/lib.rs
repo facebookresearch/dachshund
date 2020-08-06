@@ -29,5 +29,6 @@ pub use dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 pub use dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 pub use dachshund::test_utils::*;
 pub use dachshund::transformer::Transformer;
+pub use dachshund::transformer_base::TransformerBase;
 pub use dachshund::typed_graph::TypedGraph;
 pub use dachshund::typed_graph_builder::TypedGraphBuilder;

@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate lib_dachshund;
+use crate::lib_dachshund::TransformerBase;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::simple_transformer::{
-    GraphStatsTransformerBase, SimpleParallelTransformer, SimpleTransformer, TransformerBase,
+    GraphStatsTransformerBase, SimpleParallelTransformer, SimpleTransformer,
 };
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;

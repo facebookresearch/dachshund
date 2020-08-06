@@ -16,7 +16,7 @@ use lib_dachshund::dachshund::error::CLQResult;
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::simple_transformer::SimpleTransformer;
-use lib_dachshund::dachshund::simple_transformer::TransformerBase;
+use lib_dachshund::dachshund::transformer_base::TransformerBase;
 
 fn get_command_line_args() -> ArgMatches<'static> {
     let matches: ArgMatches = App::new("Dachshund Graph Featurizer")

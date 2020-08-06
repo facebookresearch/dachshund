@@ -21,5 +21,6 @@ pub mod simple_undirected_graph;
 pub mod simple_undirected_graph_builder;
 pub mod test_utils;
 pub mod transformer;
+pub mod transformer_base;
 pub mod typed_graph;
 pub mod typed_graph_builder;
