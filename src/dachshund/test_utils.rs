@@ -10,6 +10,7 @@ use std::fmt::Debug;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
+use crate::dachshund::line_processor::LineProcessorBase;
 use crate::dachshund::row::EdgeRow;
 use crate::dachshund::transformer::Transformer;
 use crate::dachshund::typed_graph::TypedGraph;

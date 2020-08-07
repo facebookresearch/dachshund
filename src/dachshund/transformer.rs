@@ -17,6 +17,7 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::graph_builder::GraphBuilder;
 use crate::dachshund::id_types::{GraphId, NodeTypeId};
 use crate::dachshund::input::Input;
+use crate::dachshund::line_processor::LineProcessorBase;
 use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::output::Output;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};

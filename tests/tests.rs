@@ -9,6 +9,7 @@ extern crate lib_dachshund;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
+use lib_dachshund::dachshund::line_processor::LineProcessorBase;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::row::{CliqueRow, EdgeRow};
 use lib_dachshund::dachshund::test_utils::{

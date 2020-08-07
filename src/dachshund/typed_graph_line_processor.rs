@@ -9,6 +9,7 @@ extern crate serde_json;
 
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
+use crate::dachshund::line_processor::LineProcessorBase;
 use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::row::Row;
 use crate::dachshund::row::{CliqueRow, EdgeRow};
@@ -23,20 +24,7 @@ pub struct TypedGraphLineProcessor {
     pub non_core_types: Rc<Vec<String>>,
     pub edge_types: Rc<Vec<String>>,
 }
-impl TypedGraphLineProcessor {
-    pub fn new(
-        core_type: String,
-        non_core_type_ids: Rc<NonCoreTypeIds>,
-        non_core_types: Rc<Vec<String>>,
-        edge_types: Rc<Vec<String>>,
-    ) -> Self {
-        Self {
-            core_type,
-            non_core_type_ids,
-            non_core_types,
-            edge_types,
-        }
-    }
+impl LineProcessorBase for TypedGraphLineProcessor {
     /// processes a line of (tab-separated) input, of the form:
     /// graph_id\tcore_id\tnon_core_id\tcore_type\tedge_type\tnon_core_type
     ///
@@ -49,7 +37,7 @@ impl TypedGraphLineProcessor {
     /// clique, the best identified by some other search process. This existing
     /// clique may be invalidated if it no longer meets cliqueness requirements
     /// as per the current search process.
-    pub fn process_line(&self, line: String) -> CLQResult<Box<dyn Row>> {
+    fn process_line(&self, line: String) -> CLQResult<Box<dyn Row>> {
         let vec: Vec<&str> = line.split('\t').collect();
         // this is an edge row if we have something on column 3
         assert!(vec.len() == 6);
@@ -92,5 +80,20 @@ impl TypedGraphLineProcessor {
             node_id,
             target_type: non_core_type,
         }))
+    }
+}
+impl TypedGraphLineProcessor {
+    pub fn new(
+        core_type: String,
+        non_core_type_ids: Rc<NonCoreTypeIds>,
+        non_core_types: Rc<Vec<String>>,
+        edge_types: Rc<Vec<String>>,
+    ) -> Self {
+        Self {
+            core_type,
+            non_core_type_ids,
+            non_core_types,
+            edge_types,
+        }
     }
 }
