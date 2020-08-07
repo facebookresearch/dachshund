@@ -70,6 +70,7 @@ fn test_process_single_line() -> CLQResult<()> {
     let raw: String = "0\t1\t2\tauthor\tpublished_at\tjournal".to_string();
 
     let row: EdgeRow = transformer
+        .line_processor
         .process_line(raw)?
         .as_edge_row()
         .ok_or_else(CLQError::err_none)?;
@@ -88,7 +89,11 @@ fn test_process_single_line_clique_row() -> CLQResult<()> {
     let transformer = gen_test_transformer(ts, "author".to_string())?;
     // graph_id node_id node_type
     let raw: String = "0\t2\tjournal\t\t\t".to_string();
-    let row: CliqueRow = transformer.process_line(raw)?.as_clique_row().unwrap();
+    let row: CliqueRow = transformer
+        .line_processor
+        .process_line(raw)?
+        .as_clique_row()
+        .unwrap();
     assert_eq!(row.graph_id.value(), 0);
     assert_eq!(row.node_id, NodeId::from(2));
     let target_type_name: Option<String> = transformer
@@ -96,7 +101,11 @@ fn test_process_single_line_clique_row() -> CLQResult<()> {
         .type_name(&row.target_type.unwrap());
     assert_eq!(target_type_name, Some("journal".to_owned()));
     let raw: String = "0\t1\tauthor\t\t\t".to_string();
-    let row: CliqueRow = transformer.process_line(raw)?.as_clique_row().unwrap();
+    let row: CliqueRow = transformer
+        .line_processor
+        .process_line(raw)?
+        .as_clique_row()
+        .unwrap();
     assert_eq!(row.graph_id.value(), 0);
     assert_eq!(row.node_id, NodeId::from(1));
     assert_eq!(row.target_type, None);
@@ -111,7 +120,11 @@ fn test_process_single_row() -> CLQResult<()> {
     let raw = "0\t1\t2\tauthor\tpublished_at\tconference".to_string();
     let graph_id: GraphId = 0.into();
 
-    let row: EdgeRow = transformer.process_line(raw)?.as_edge_row().unwrap();
+    let row: EdgeRow = transformer
+        .line_processor
+        .process_line(raw)?
+        .as_edge_row()
+        .unwrap();
     let rows = vec![row];
     let mut buffer: Vec<u8> = Vec::new();
     let mut output = Output::string(&mut buffer);

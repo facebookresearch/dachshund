@@ -32,3 +32,4 @@ pub use dachshund::transformer::Transformer;
 pub use dachshund::transformer_base::TransformerBase;
 pub use dachshund::typed_graph::TypedGraph;
 pub use dachshund::typed_graph_builder::TypedGraphBuilder;
+pub use dachshund::typed_graph_line_processor::TypedGraphLineProcessor;

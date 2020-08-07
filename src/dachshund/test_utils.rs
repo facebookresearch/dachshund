@@ -77,6 +77,7 @@ pub fn process_raw_vector(transformer: &Transformer, raw: Vec<String>) -> CLQRes
     let mut rows: Vec<EdgeRow> = Vec::new();
     for r in raw {
         let row: EdgeRow = transformer
+            .line_processor
             .process_line(r)?
             .as_edge_row()
             .ok_or_else(CLQError::err_none)?;

@@ -7,7 +7,6 @@
 extern crate clap;
 extern crate serde_json;
 
-use std::collections::HashMap;
 use std::io::prelude::*;
 
 use clap::ArgMatches;
@@ -16,61 +15,21 @@ use crate::dachshund::beam::{Beam, BeamSearchResult};
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::graph_builder::GraphBuilder;
-use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
+use crate::dachshund::id_types::{GraphId, NodeTypeId};
 use crate::dachshund::input::Input;
+use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::output::Output;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
-
-/// A mapping from opaque strings identifying node types (e.g. "author"), to the associated integer
-/// identifier used internally. Encapsulates some special/convenient accessor/mutator logic.
-pub struct NonCoreTypeIds {
-    data: HashMap<String, NodeTypeId>,
-}
-
-impl NonCoreTypeIds {
-    fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-        }
-    }
-
-    pub fn require(&self, type_str: &str) -> CLQResult<&NodeTypeId> {
-        let id = self
-            .data
-            .get(type_str)
-            .ok_or_else(|| CLQError::from(format!("No mapping for non-core type: {}", type_str)))?;
-        Ok(id)
-    }
-    fn require_mut(&mut self, type_str: &str) -> CLQResult<&mut NodeTypeId> {
-        let id = self
-            .data
-            .get_mut(type_str)
-            .ok_or_else(|| CLQError::from(format!("No mapping for non-core type: {}", type_str)))?;
-        Ok(id)
-    }
-    fn insert(&mut self, type_str: &str, type_id: NodeTypeId) {
-        if !self.data.contains_key(type_str) {
-            self.data.insert(type_str.to_owned(), type_id);
-        }
-    }
-
-    pub fn type_name(&self, non_core_type_id: &NodeTypeId) -> Option<String> {
-        self.data.iter().find_map(|(k, v)| {
-            if v == non_core_type_id {
-                Some(k.to_owned())
-            } else {
-                None
-            }
-        })
-    }
-}
+use crate::dachshund::typed_graph_line_processor::TypedGraphLineProcessor;
+use std::rc::Rc;
 
 /// Used to set up the typed graph clique mining algorithm.
 pub struct Transformer {
     pub core_type: String,
-    pub non_core_type_ids: NonCoreTypeIds,
-    pub non_core_types: Vec<String>,
-    pub edge_types: Vec<String>,
+    pub non_core_type_ids: Rc<NonCoreTypeIds>,
+    pub non_core_types: Rc<Vec<String>>,
+    pub line_processor: TypedGraphLineProcessor,
+    pub edge_types: Rc<Vec<String>>,
     pub beam_size: usize,
     pub alpha: f32,
     pub global_thresh: Option<f32>,
@@ -153,19 +112,31 @@ impl Transformer {
         core_type: String,
         long_format: bool,
     ) -> CLQResult<Self> {
-        let mut edge_types: Vec<String> = typespec.iter().map(|x| x[1].clone()).collect();
-        edge_types.sort();
+        let mut edge_types_v: Vec<String> = typespec.iter().map(|x| x[1].clone()).collect();
+        edge_types_v.sort();
+        let edge_types = Rc::new(edge_types_v);
 
-        let mut non_core_types: Vec<String> = typespec.iter().map(|x| x[2].clone()).collect();
-        non_core_types.sort();
+        let mut non_core_types_v: Vec<String> = typespec.iter().map(|x| x[2].clone()).collect();
+        non_core_types_v.sort();
+        let non_core_types = Rc::new(non_core_types_v);
 
         let num_non_core_types: usize = non_core_types.len();
-        let non_core_type_ids: NonCoreTypeIds =
-            Transformer::process_typespec(typespec, &core_type, non_core_types.to_vec())?;
+        let non_core_type_ids: Rc<NonCoreTypeIds> = Rc::new(Transformer::process_typespec(
+            typespec,
+            &core_type,
+            non_core_types.to_vec(),
+        )?);
+        let line_processor = TypedGraphLineProcessor::new(
+            core_type.clone(),
+            non_core_type_ids.clone(),
+            non_core_types.clone(),
+            edge_types.clone(),
+        );
         let transformer = Self {
             core_type,
             non_core_type_ids,
             non_core_types,
+            line_processor,
             edge_types,
             beam_size,
             alpha,
@@ -232,62 +203,6 @@ impl Transformer {
         TGraphBuilder::new(graph_id, rows, Some(self.min_degree))
     }
 
-    /// processes a line of (tab-separated) input, of the form:
-    /// graph_id\tcore_id\tnon_core_id\tcore_type\tedge_type\tnon_core_type
-    ///
-    /// or:
-    ///
-    /// graph_id\tnode_id\tnode_type
-    ///
-    /// Note that core_type is not used in the first row type. The second
-    /// row type is used to initialize the beam search with a single existing
-    /// clique, the best identified by some other search process. This existing
-    /// clique may be invalidated if it no longer meets cliqueness requirements
-    /// as per the current search process.
-    pub fn process_line(&self, line: String) -> CLQResult<Box<dyn Row>> {
-        let vec: Vec<&str> = line.split('\t').collect();
-        // this is an edge row if we have something on column 3
-        assert!(vec.len() == 6);
-        let is_edge_row: bool = !vec[3].is_empty();
-        if is_edge_row {
-            let graph_id: GraphId = vec[0].parse::<i64>()?.into();
-            let core_id: NodeId = vec[1].parse::<i64>()?.into();
-            let non_core_id: NodeId = vec[2].parse::<i64>()?.into();
-            let edge_type: &str = vec[4].trim_end();
-            let non_core_type: &str = vec[5].trim_end();
-            let non_core_type_id: NodeTypeId = *self.non_core_type_ids.require(non_core_type)?;
-            let edge_type_id: EdgeTypeId = self
-                .edge_types
-                .iter()
-                .position(|r| r == edge_type)
-                .ok_or_else(CLQError::err_none)?
-                .into();
-            let core_type_id: NodeTypeId = *self.non_core_type_ids.require(&self.core_type)?;
-            return Ok(Box::new(EdgeRow {
-                graph_id,
-                source_id: core_id,
-                target_id: non_core_id,
-                source_type_id: core_type_id,
-                target_type_id: non_core_type_id,
-                edge_type_id,
-            }));
-        }
-        let graph_id: GraphId = vec[0].parse::<i64>()?.into();
-        let node_id: NodeId = vec[1].parse::<i64>()?.into();
-        let node_type: &str = vec[2].trim_end();
-        let non_core_type: Option<NodeTypeId>;
-        if node_type == self.core_type {
-            non_core_type = None;
-        } else {
-            let non_core_type_id: NodeTypeId = *self.non_core_type_ids.require(node_type)?;
-            non_core_type = Some(non_core_type_id);
-        }
-        Ok(Box::new(CliqueRow {
-            graph_id,
-            node_id,
-            target_type: non_core_type,
-        }))
-    }
     /// Given a properly-built graph, runs the quasi-clique detection beam search on it.
     pub fn process_graph<'a, TGraph: GraphBase>(
         &'a self,
@@ -370,7 +285,7 @@ impl Transformer {
         for line in input.lines() {
             match line {
                 Ok(n) => {
-                    let raw: Box<dyn Row> = self.process_line(n)?;
+                    let raw: Box<dyn Row> = self.line_processor.process_line(n)?;
                     let new_graph_id: GraphId = raw.get_graph_id();
                     if let Some(current_id) = current_graph_id {
                         if new_graph_id != current_id {
