@@ -10,7 +10,7 @@ extern crate serde_json;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
-use crate::dachshund::line_processor::LineProcessor;
+use crate::dachshund::line_processor::{LineProcessor, LineProcessorBase};
 use crate::dachshund::row::{Row, SimpleEdgeRow};
 use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use crate::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
@@ -104,7 +104,7 @@ impl Default for SimpleParallelTransformer {
 }
 
 impl TransformerBase for SimpleTransformer {
-    fn get_line_processor(&self) -> Arc<LineProcessor> {
+    fn get_line_processor(&self) -> Arc<dyn LineProcessorBase> {
         self.line_processor.clone()
     }
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()> {
@@ -128,7 +128,7 @@ impl TransformerBase for SimpleTransformer {
     }
 }
 impl TransformerBase for SimpleParallelTransformer {
-    fn get_line_processor(&self) -> Arc<LineProcessor> {
+    fn get_line_processor(&self) -> Arc<dyn LineProcessorBase> {
         self.line_processor.clone()
     }
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()> {

@@ -10,7 +10,7 @@ extern crate serde_json;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::id_types::GraphId;
 use crate::dachshund::input::Input;
-use crate::dachshund::line_processor::LineProcessor;
+use crate::dachshund::line_processor::LineProcessorBase;
 use crate::dachshund::output::Output;
 use crate::dachshund::row::Row;
 use std::io::prelude::*;
@@ -21,7 +21,7 @@ use std::thread;
 use std::time::Duration;
 
 pub trait TransformerBase {
-    fn get_line_processor(&self) -> Arc<LineProcessor>;
+    fn get_line_processor(&self) -> Arc<dyn LineProcessorBase>;
     // logic for taking row and storing into self via side-effect
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()>;
     // logic for processing batch of rows, once all rows are ready
