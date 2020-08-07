@@ -11,6 +11,10 @@ use crate::dachshund::node::Node;
 use na::{DMatrix, DVector};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
+use rand::prelude::*;
+use rand::Rng;
+use rand::seq::SliceRandom;
+use rand::distributions::WeightedIndex;
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
@@ -98,6 +102,119 @@ impl SimpleUndirectedGraph {
             .collect::<Vec<f64>>();
         Iterator::sum::<f64>(coefs.iter()) / coefs.len() as f64
     }
+
+    // Triangles : Number of triangles a node participates in.
+    pub fn triangle_count(&self, node_id: NodeId) -> usize {
+        let node: &Node = &self.nodes[&node_id];
+        let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
+        for ne in &node.neighbors {
+            neighbor_ids.insert(ne.target_id.clone());
+        }
+
+        let mut triangle_count = 0;
+        for ne in &node.neighbors {
+            let neighbor: &Node = &self.nodes[&ne.target_id];
+            triangle_count += neighbor.count_ties_with_ids(&neighbor_ids);
+        }
+
+        triangle_count / 2
+    }
+
+    // Triples : pairs of neighbors of a given node.
+    pub fn triples_count(&self, node_id: NodeId) -> usize {
+        let num_neighbors = &self.nodes[&node_id].neighbors.len();
+        num_neighbors * (num_neighbors - 1) / 2
+    }
+
+    // Transitivity: 3 * number of triangles  / number of triples
+    pub fn get_transitivity(&self) -> f64 {
+        let num_triangles = Iterator::sum::<usize>(self
+            .ids
+            .iter()
+            .map(|x| self.triangle_count(*x)));
+
+        let num_triples = Iterator::sum::<usize>(self
+            .ids
+            .iter()
+            .map(|x| self.triples_count(*x)));
+
+        num_triangles as f64 / num_triples as f64
+    }
+
+    // Approximate Clustering - Randomly sample neighbors of nodes w/ degree at least 2.
+    // k~=26,000 gives an approximation of <1% chance of an error of less than 1 percentage point.
+    // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
+    pub fn get_approx_avg_clustering(&self, samples: usize) -> f64 {
+
+        let ordered_nodes = self.nodes.iter()
+                                .filter(|(_node_id, node)| node.degree() >= 2)
+                                .map(|(_node_id, node)| node)
+                                .collect::<Vec<&Node>>();
+
+        let n = ordered_nodes.len();
+        let mut successes = 0;
+        let mut rng = rand::thread_rng();
+
+        for _i in 0..samples {
+            // Pick a random node with degree at least 2.
+            let v = &ordered_nodes[rng.gen_range(0, n)];
+
+            // Choose 2 random nodes that are neighbors of j
+            let mut random_neighbors = v.neighbors.choose_multiple(&mut rng, 2).map(|x| x.target_id);
+            let u_id = random_neighbors.next().unwrap();
+            let w_id = random_neighbors.next().unwrap();
+
+            // If they're connected, increment l.
+            // TODO: No O(1) way to check if there's an edge?
+            for edge in &self.nodes[&u_id].neighbors {
+                if edge.target_id == w_id {
+                    successes += 1;
+                    break;
+                }
+            }
+        }
+        (successes as f64) / (samples as f64)
+    }
+
+    // Approximate Transitivity
+    // k~=26,000 gives an approximation of <1% chance of an error of less than 1 percentage point.
+    // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
+    pub fn get_approx_transitivity(&self, samples: usize) -> f64 {
+
+        let ordered_nodes = self.nodes.iter()
+                                .filter(|(_node_id, node)| node.degree() >= 2)
+                                .map(|(_node_id, node)| node)
+                                .collect::<Vec<&Node>>();
+
+        let triples_counts : Vec<usize> = self.nodes.iter()
+                                .filter(|(_node_id, node)| node.degree() >= 2)
+                                .map(|(node_id, _node)| self.triples_count(*node_id))
+                                .collect();
+        let dist = WeightedIndex::new(triples_counts).unwrap();
+
+        let mut successes = 0;
+        let mut rng = rand::thread_rng();
+        for _i in 0..samples {
+            // Choose a random node weighted by degree.
+            let v = &ordered_nodes[dist.sample(&mut rng)];
+
+            // Choose 2 random nodes that are neighbors of j
+            let mut random_neighbors = v.neighbors.choose_multiple(&mut rng, 2).map(|x| x.target_id);
+            let u_id = random_neighbors.next().unwrap();
+            let w_id = random_neighbors.next().unwrap();
+
+            // TODO: No constant time way to check if there's an edge?
+            for edge in &self.nodes[&u_id].neighbors {
+                if edge.target_id == w_id {
+                    successes += 1;
+                    break;
+                }
+            }
+        }
+
+        (successes as f64) / (samples as f64)
+    }
+
     // Dikstra's algorithm for shortest paths. Returns distance and parent mappings
     pub fn get_shortest_paths(
         &self,
