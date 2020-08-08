@@ -459,3 +459,15 @@ fn test_connected_components() {
     assert_eq!(conn_comp_2[0].len(), 34);
     assert_eq!(conn_comp_2[1].len(), 34);
 }
+
+#[test]
+fn test_transitivity() {
+    let graph = get_karate_club_graph();
+    let trans = graph.get_transitivity();
+    println!("{}", trans);  
+    assert!((trans - 0.2556818181818182).abs() <= f64::EPSILON);
+    
+    let approx_trans = graph.get_approx_transitivity(1000);
+    println!("{}", approx_trans);  
+    assert!((approx_trans - trans).abs() <= 0.05);
+}
