@@ -9,7 +9,6 @@ use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_builder::GraphBuilder;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
-use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::test_utils::{
     assert_nodes_have_ids, gen_test_transformer, process_raw_vector,
 };
@@ -17,6 +16,7 @@ use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
 use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 use std::collections::HashSet;
+use std::sync::mpsc::channel;
 
 pub fn gen_test_typespec() -> Vec<Vec<String>> {
     return vec![
@@ -103,8 +103,9 @@ fn test_prune_small_clique() -> CLQResult<()> {
     assert_eq!(graph.nodes.len(), 5);
     graph = TypedGraphBuilder::prune(graph, &rows, 2)?;
     assert_eq!(graph.nodes.len(), 4);
+    let v = Vec::new();
     let res: Candidate<TypedGraph> = transformer
-        .process_graph::<TypedGraph>(&graph, Vec::new(), graph_id, true)?
+        .process_graph::<TypedGraph>(&graph, &v, graph_id, true)?
         .top_candidate;
     assert_nodes_have_ids(&graph, &res.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &res.non_core_ids, vec![3, 4], false);
@@ -132,7 +133,10 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
     let graph_id: GraphId = 0.into();
 
     let ts = gen_test_typespec();
+
     // with pruning at degree < 3
+    let (sender_prune, _receiver_prune) = channel();
+    
     let transformer_prune = Transformer::new(
         ts.clone(),
         20,
@@ -151,22 +155,23 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
 
     let graph: TypedGraph = transformer_prune
         .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows_prune)?;
-    let mut text_prune: Vec<u8> = Vec::new();
-    let mut output_prune = Output::string(&mut text_prune);
+    let v_prune = Vec::new();
     let result_prune = transformer_prune
         .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
-            Vec::new(),
+            &v_prune,
             graph_id,
             false,
-            &mut output_prune,
+            &sender_prune,
         )?
         .ok_or_else(CLQError::err_none)?;
+    sender_prune.send(("".to_string(), true)).unwrap();
     let candidate_prune = result_prune.top_candidate;
     assert_nodes_have_ids(&graph, &candidate_prune.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &candidate_prune.non_core_ids, vec![3], false);
 
     // without any pruning
+    let (sender, _receiver) = channel();
     let transformer = Transformer::new(
         ts,
         20,
@@ -185,17 +190,17 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
 
     let graph: TypedGraph =
         transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let mut text: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut text);
+    let v = Vec::new();
     let result = transformer
         .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
-            Vec::new(),
+            &v,
             graph_id,
             false,
-            &mut output,
+            &sender,
         )?
         .ok_or_else(CLQError::err_none)?;
+    sender.send(("".to_string(), true)).unwrap();
     let candidate = result.top_candidate;
     assert_nodes_have_ids(&graph, &candidate.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &candidate.non_core_ids, vec![3], false);

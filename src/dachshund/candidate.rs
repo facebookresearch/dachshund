@@ -19,9 +19,10 @@ use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::node::Node;
-use crate::dachshund::output::Output;
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
+
+use std::sync::mpsc::Sender;
 
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
 /// reiterate, a (fuzzy) clique is a subgraph of edges going from some set of "core" nodes
@@ -86,13 +87,13 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
 
     /// creates a Candidate object from an array of CliqueRows.
     pub fn from_clique_rows(
-        rows: Vec<CliqueRow>,
+        rows: &'a Vec<CliqueRow>,
         graph: &'a TGraph,
         scorer: &Scorer,
     ) -> CLQResult<Option<Self>> {
         assert!(!rows.is_empty());
         let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph);
-        for row in &rows {
+        for row in rows {
             if graph.has_node(row.node_id) {
                 let node: &Node = graph.get_node(row.node_id);
                 assert_eq!(node.non_core_type, row.target_type);
@@ -246,7 +247,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         graph_id: GraphId,
         target_types: &[String],
         core_type: &str,
-        output: &mut Output,
+        output: &Sender<(String, bool)>,
     ) -> CLQResult<()> {
         for output_row in &self.get_output_rows(graph_id)? {
             let node_type: String = match output_row.target_type {
@@ -255,12 +256,12 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 Some(t) => target_types[t.value() - 1].clone(),
                 None => core_type.to_string(),
             };
-            output.print(format!(
+            output.send((format!(
                 "{}\t{}\t{}",
                 graph_id.value(),
                 output_row.node_id.value(),
                 node_type
-            ))?;
+            ), false)).unwrap();
         }
         Ok(())
     }

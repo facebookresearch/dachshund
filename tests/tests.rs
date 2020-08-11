@@ -10,7 +10,6 @@ use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::line_processor::LineProcessorBase;
-use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::row::{CliqueRow, EdgeRow};
 use lib_dachshund::dachshund::test_utils::{
     assert_nodes_have_ids, gen_single_clique, gen_test_transformer, gen_test_typespec,
@@ -19,6 +18,7 @@ use lib_dachshund::dachshund::test_utils::{
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
 use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
+use std::sync::mpsc::channel;
 
 #[cfg(test)]
 #[test]
@@ -113,105 +113,76 @@ fn test_process_single_line_clique_row() -> CLQResult<()> {
     Ok(())
 }
 
-#[test]
-fn test_process_single_row() -> CLQResult<()> {
-    let ts = gen_test_typespec();
-    let transformer = gen_test_transformer(ts, "author".to_string())?;
-    // graph_id source_id target_id target_type
-    let raw = "0\t1\t2\tauthor\tpublished_at\tconference".to_string();
+fn test_expected_clique<F>(transformer: Transformer, raw: Vec<String>, f: F) -> CLQResult<()>
+    where F: Fn(&TypedGraph, &Candidate<TypedGraph>) -> () {
     let graph_id: GraphId = 0.into();
 
-    let row: EdgeRow = transformer
-        .line_processor
-        .process_line(raw)?
-        .as_edge_row()
-        .unwrap();
-    let rows = vec![row];
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
+    let rows = process_raw_vector(&transformer, raw).unwrap();
     let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows).unwrap();
+    let clique_rows = Vec::new();
+    let (sender, _receiver) = channel();
     let res: Candidate<TypedGraph> = transformer
         .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
-            Vec::new(),
+            &clique_rows,
             graph_id,
             true,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
+            &sender,
+        ).unwrap()
+        .ok_or_else(CLQError::err_none).unwrap()
         .top_candidate;
-    assert_nodes_have_ids(&graph, &res.core_ids, vec![1], true);
-    assert_nodes_have_ids(&graph, &res.non_core_ids, vec![2], false);
+    sender.send(("".to_string(), true)).unwrap();
+    f(&graph, &res);
     Ok(())
+}
+
+#[test]
+fn test_process_single_row() -> CLQResult<()> {
+    test_expected_clique(
+        gen_test_transformer(gen_test_typespec(), "author".to_string()).unwrap(),
+        vec!["0\t1\t2\tauthor\tpublished_at\tconference".to_string()],
+        |graph, res| {
+            assert_nodes_have_ids(graph, &res.core_ids, vec![1], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![2], false);
+        }
+    )
 }
 
 #[test]
 fn test_process_small_clique() -> CLQResult<()> {
-    let ts = gen_test_typespec();
-    // graph_id source_id target_id target_type
-    let raw = vec![
-        "0\t1\t3\tauthor\tpublished_at\tconference".to_string(),
-        "0\t2\t3\tauthor\tpublished_at\tconference".into(),
-        "0\t1\t4\tauthor\tpublished_at\tconference".into(),
-        "0\t2\t4\tauthor\tpublished_at\tconference".into(),
-    ];
-    let graph_id: GraphId = 0.into();
-
-    let transformer = gen_test_transformer(ts, "author".to_string())?;
-    let rows = process_raw_vector(&transformer, raw)?;
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            Vec::new(),
-            graph_id,
-            true,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
-        .top_candidate;
-    assert_nodes_have_ids(&graph, &res.core_ids, vec![1, 2], true);
-    assert_nodes_have_ids(&graph, &res.non_core_ids, vec![3, 4], false);
-    Ok(())
+    test_expected_clique(
+        gen_test_transformer(gen_test_typespec(), "author".to_string()).unwrap(),
+        vec![
+            "0\t1\t3\tauthor\tpublished_at\tconference".to_string(),
+            "0\t2\t3\tauthor\tpublished_at\tconference".into(),
+            "0\t1\t4\tauthor\tpublished_at\tconference".into(),
+            "0\t2\t4\tauthor\tpublished_at\tconference".into(),
+        ],
+        |graph, res| {
+            assert_nodes_have_ids(graph, &res.core_ids, vec![1,2], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3,4], false);
+        }
+    )
 }
 
 #[test]
 fn test_process_small_clique_with_non_clique_row() -> CLQResult<()> {
-    let ts = gen_test_typespec();
-    // graph_id source_id target_id target_type
-    let raw = vec![
-        "0\t1\t3\tauthor\tpublished_at\tconference".to_string(),
-        "0\t2\t3\tauthor\tpublished_at\tconference".into(),
-        "0\t1\t4\tauthor\tpublished_at\tconference".into(),
-        "0\t2\t4\tauthor\tpublished_at\tconference".into(),
-        // nonsensical
-        "0\t2\t5\tconference\tpublished_at\tconference".into(),
-    ];
-    let graph_id: GraphId = 0.into();
-
-    let transformer = gen_test_transformer(ts, "author".to_string())?;
-    let rows = process_raw_vector(&transformer, raw)?;
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            Vec::new(),
-            graph_id,
-            true,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
-        .top_candidate;
-    assert_nodes_have_ids(&graph, &res.core_ids, vec![1, 2], true);
-    assert_nodes_have_ids(&graph, &res.non_core_ids, vec![3, 4], false);
-    Ok(())
+    test_expected_clique(
+        gen_test_transformer(gen_test_typespec(), "author".to_string()).unwrap(),
+        vec![
+            "0\t1\t3\tauthor\tpublished_at\tconference".to_string(),
+            "0\t2\t3\tauthor\tpublished_at\tconference".into(),
+            "0\t1\t4\tauthor\tpublished_at\tconference".into(),
+            "0\t2\t4\tauthor\tpublished_at\tconference".into(),
+            // nonsensical
+            "0\t2\t5\tconference\tpublished_at\tconference".into(),
+        ],
+        |graph, res| {
+            assert_nodes_have_ids(graph, &res.core_ids, vec![1,2], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3,4], false);
+        }
+    )
 }
 
 #[test]
@@ -228,26 +199,16 @@ fn test_process_medium_clique() -> CLQResult<()> {
         vec!["published_at".to_string()],
     );
     assert_eq!(clique_rows.len(), 200);
-    let transformer = gen_test_transformer(ts, "author".to_string())?;
-    let rows = process_raw_vector(&transformer, clique_rows)?;
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            Vec::new(),
-            graph_id,
-            false,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
-        .top_candidate;
-    assert_nodes_have_ids(&graph, &res.core_ids, core_ids, true);
-    let non_core_ids: Vec<NodeId> = non_cores.into_iter().map(|x| x.0).collect();
-    assert_nodes_have_ids(&graph, &res.non_core_ids, non_core_ids, false);
-    Ok(())
+    test_expected_clique(
+        gen_test_transformer(ts, "author".to_string()).unwrap(),
+        clique_rows,
+        |graph, res| {
+            assert_nodes_have_ids(graph, &res.core_ids,
+                                  core_ids.iter().map(|x| x.value()).collect(), true);
+            assert_nodes_have_ids(graph, &res.non_core_ids,
+                                  non_cores.iter().map(|x| x.0.value()).collect(), false);
+        }
+    ) 
 }
 
 #[test]
@@ -264,38 +225,26 @@ fn test_process_medium_clique_with_insufficient_epochs() -> CLQResult<()> {
         vec!["published_at".to_string()],
     );
     assert_eq!(clique_rows.len(), 200);
-    let transformer = Transformer::new(
-        ts,
-        20,
-        1.0,
-        Some(1.0),
-        Some(1.0),
-        20,
-        10,
-        3,
-        true, // with 10 epochs
-        0,    // min_degree = 0
-        "author".to_string(),
-        false,
-    )?;
-    let rows = process_raw_vector(&transformer, clique_rows)?;
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            Vec::new(),
-            graph_id,
-            false,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
-        .top_candidate;
-    // discovered clique size will be num_epochs + 1
-    assert_eq!(res.core_ids.len() + res.non_core_ids.len(), 11);
-    Ok(())
+    test_expected_clique(
+        Transformer::new(
+			ts,
+			20,
+			1.0,
+			Some(1.0),
+			Some(1.0),
+			20,
+			10,
+			3,
+			true, // with 10 epochs
+			0,    // min_degree = 0
+			"author".to_string(),
+			false,
+		)?,
+        clique_rows,
+        |_graph, res| {
+            assert_eq!(res.core_ids.len() + res.non_core_ids.len(), 11);
+        }
+    ) 
 }
 
 #[test]
@@ -314,27 +263,14 @@ fn test_process_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
         "0\t1\t3\tauthor\tattended\tconference".into(),
         "0\t2\t3\tauthor\tattended\tconference".into(),
     ];
-    let graph_id: GraphId = 0.into();
-
-    let transformer = gen_test_transformer(typespec, "author".to_string())?;
-    let rows = process_raw_vector(&transformer, raw)?;
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            Vec::new(),
-            graph_id,
-            true,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
-        .top_candidate;
-    assert_nodes_have_ids(&graph, &res.core_ids, vec![1, 2], true);
-    assert_nodes_have_ids(&graph, &res.non_core_ids, vec![3], false);
-    Ok(())
+    test_expected_clique(
+        gen_test_transformer(typespec, "author".to_string()).unwrap(),
+        raw,
+        |graph, res| {
+            assert_nodes_have_ids(graph, &res.core_ids, vec![1, 2], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3], false);
+        }
+    ) 
 }
 
 #[test]
@@ -352,25 +288,12 @@ fn test_process_another_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
         "0\t4\t5\tauthor\tpublished\tarticle".into(),
         "0\t3\t5\tauthor\tcited\tarticle".into(),
     ];
-    let graph_id: GraphId = 0.into();
-
-    let transformer = gen_test_transformer(typespec, "author".to_string())?;
-    let rows = process_raw_vector(&transformer, raw)?;
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
-    let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            Vec::new(),
-            graph_id,
-            true,
-            &mut output,
-        )?
-        .ok_or_else(CLQError::err_none)?
-        .top_candidate;
-    assert_nodes_have_ids(&graph, &res.core_ids, vec![2, 3], true);
-    assert_nodes_have_ids(&graph, &res.non_core_ids, vec![5], false);
-    Ok(())
+    test_expected_clique(
+        gen_test_transformer(typespec, "author".to_string()).unwrap(),
+        raw,
+        |graph, res| {
+            assert_nodes_have_ids(graph, &res.core_ids, vec![2, 3], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![5], false);
+        }
+    ) 
 }

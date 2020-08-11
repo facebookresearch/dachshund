@@ -75,7 +75,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
     assert_eq!(output_rows[0].graph_id, graph_id);
     assert_eq!(output_rows[0].node_id, NodeId::from(1));
     assert_eq!(output_rows[0].target_type, None);
-    let new_candidate = Candidate::from_clique_rows(output_rows, &graph, &scorer)?.unwrap();
+    let new_candidate = Candidate::from_clique_rows(&output_rows, &graph, &scorer)?.unwrap();
     println!("Candidate: {}", candidate);
     println!("New candidate: {}", new_candidate);
     assert!(candidate.eq(&new_candidate));

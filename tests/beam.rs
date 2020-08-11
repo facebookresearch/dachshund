@@ -21,6 +21,7 @@ use lib_dachshund::dachshund::test_utils::{
     assert_nodes_have_ids, gen_test_transformer, process_raw_vector,
 };
 use lib_dachshund::dachshund::transformer::Transformer;
+use lib_dachshund::dachshund::transformer_base::TransformerBase;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
 use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
@@ -59,7 +60,7 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
 
     let beam: Beam<TypedGraph> = Beam::new(
         &graph,
-        clique_rows,
+        &clique_rows,
         20,
         false,
         &target_types,
@@ -106,7 +107,7 @@ fn test_init_beam_with_partially_overlapping_clique_rows() -> CLQResult<()> {
         transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     let beam: Beam<TypedGraph> = Beam::new(
         &graph,
-        clique_rows,
+        &clique_rows,
         20,
         false,
         &target_types,
@@ -148,7 +149,7 @@ fn test_init_beam_with_clique_rows_input() -> CLQResult<()> {
             "0\t4\tarticle".into(),
         ];
         // transformer with no epochs
-        let transformer = Transformer::new(
+        let mut transformer = Transformer::new(
             typespec,
             20,
             1.0,
@@ -166,8 +167,8 @@ fn test_init_beam_with_clique_rows_input() -> CLQResult<()> {
         let bytes = text.as_bytes();
         let input = Input::string(&bytes);
         let mut buffer: Vec<u8> = Vec::new();
-        let mut output = Output::string(&mut buffer);
-        transformer.run::<TypedGraphBuilder, TypedGraph>(input, &mut output)?;
+        let output = Output::string(&mut buffer);
+        transformer.run(input, output)?;
         let output_str: String = String::from_utf8(buffer)?;
         assert_eq!(output_str, expected.join("\n") + "\n");
         Ok(())
@@ -200,7 +201,7 @@ fn test_init_beam_with_clique_rows_input_one_epoch() -> CLQResult<()> {
         "0\t4\tarticle".into(),
     ];
     // transformer with no epochs
-    let transformer = Transformer::new(
+    let mut transformer = Transformer::new(
         typespec,
         20,
         1.0,
@@ -219,8 +220,8 @@ fn test_init_beam_with_clique_rows_input_one_epoch() -> CLQResult<()> {
     let bytes = text.as_bytes();
     let input = Input::string(&bytes);
     let mut buffer: Vec<u8> = Vec::new();
-    let mut output = Output::string(&mut buffer);
-    transformer.run::<TypedGraphBuilder, TypedGraph>(input, &mut output)?;
+    let output = Output::string(&mut buffer);
+    transformer.run(input, output)?;
     let output_str: String = String::from_utf8(buffer)?;
     assert_eq!(output_str, expected.join("\n") + "\n");
     Ok(())

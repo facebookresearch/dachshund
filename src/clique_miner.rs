@@ -16,8 +16,7 @@ use lib_dachshund::dachshund::error::CLQResult;
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::transformer::Transformer;
-use lib_dachshund::dachshund::typed_graph::TypedGraph;
-use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
+use lib_dachshund::dachshund::transformer_base::TransformerBase;
 
 fn get_command_line_args() -> ArgMatches<'static> {
     let matches: ArgMatches = App::new("Dachshund")
@@ -107,11 +106,11 @@ fn get_command_line_args() -> ArgMatches<'static> {
 
 fn main() -> CLQResult<()> {
     let matches: ArgMatches = get_command_line_args();
-    let transformer = Transformer::from_argmatches(matches)?;
+    let mut transformer = Transformer::from_argmatches(matches)?;
     let stdio: io::Stdin = io::stdin();
     let input: Input = Input::console(&stdio);
     let mut dummy: Vec<u8> = Vec::new();
-    let mut output: Output = Output::console(&mut dummy);
-    transformer.run::<TypedGraphBuilder, TypedGraph>(input, &mut output)?;
+    let output: Output = Output::console(&mut dummy);
+    transformer.run(input, output)?;
     Ok(())
 }

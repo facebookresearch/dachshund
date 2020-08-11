@@ -85,7 +85,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph: &'a TGraph,
-        clique_rows: Vec<CliqueRow>,
+        clique_rows: &'a Vec<CliqueRow>,
         beam_size: usize,
         verbose: bool,
         non_core_types: &'a [String],
