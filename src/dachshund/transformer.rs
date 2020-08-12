@@ -7,8 +7,6 @@
 extern crate clap;
 extern crate serde_json;
 
-use std::io::prelude::*;
-
 use clap::ArgMatches;
 
 use crate::dachshund::beam::{Beam, BeamSearchResult};
@@ -16,20 +14,23 @@ use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::graph_builder::GraphBuilder;
 use crate::dachshund::id_types::{GraphId, NodeTypeId};
-use crate::dachshund::input::Input;
 use crate::dachshund::line_processor::LineProcessorBase;
 use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
-use crate::dachshund::output::Output;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
+use crate::dachshund::transformer_base::TransformerBase;
+use crate::dachshund::typed_graph::TypedGraph;
+use crate::dachshund::typed_graph_builder::TypedGraphBuilder;
 use crate::dachshund::typed_graph_line_processor::TypedGraphLineProcessor;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::mpsc::Sender;
 
 /// Used to set up the typed graph clique mining algorithm.
 pub struct Transformer {
     pub core_type: String,
     pub non_core_type_ids: Rc<NonCoreTypeIds>,
     pub non_core_types: Rc<Vec<String>>,
-    pub line_processor: TypedGraphLineProcessor,
+    pub line_processor: Arc<TypedGraphLineProcessor>,
     pub edge_types: Rc<Vec<String>>,
     pub beam_size: usize,
     pub alpha: f32,
@@ -42,6 +43,42 @@ pub struct Transformer {
     pub debug: bool,
     pub min_degree: usize,
     pub long_format: bool,
+    
+    edge_rows: Vec<EdgeRow>,
+    clique_rows: Vec<CliqueRow>,
+}
+impl TransformerBase for Transformer {
+    fn get_line_processor(&self) -> Arc<dyn LineProcessorBase> {
+        self.line_processor.clone()
+    }
+    fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()> {
+        if let Some(edge_row) = row.as_edge_row() {
+            self.edge_rows.push(edge_row);
+        }
+        if let Some(clique_row) = row.as_clique_row() {
+            self.clique_rows.push(clique_row);
+        }
+        Ok(())
+    }
+    fn reset(&mut self) -> CLQResult<()> {
+        self.edge_rows.clear();
+        self.clique_rows.clear();
+        Ok(())
+    }
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()> {
+        let graph: TypedGraph = self.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(
+            graph_id, &self.edge_rows,
+        )?;
+        self.process_clique_rows::<TypedGraphBuilder, TypedGraph>(
+            &graph,
+            &self.clique_rows,
+            graph_id,
+            // verbose
+            self.debug,
+            output,
+        )?;
+        Ok(())
+    }
 }
 impl Transformer {
     /// processes a "typespec", a command-line argument, of the form:
@@ -127,12 +164,12 @@ impl Transformer {
             &core_type,
             non_core_types.to_vec(),
         )?);
-        let line_processor = TypedGraphLineProcessor::new(
+        let line_processor = Arc::new(TypedGraphLineProcessor::new(
             core_type.clone(),
             non_core_type_ids.clone(),
             non_core_types.clone(),
             edge_types.clone(),
-        );
+        ));
         let transformer = Self {
             core_type,
             non_core_type_ids,
@@ -150,6 +187,8 @@ impl Transformer {
             debug,
             min_degree,
             long_format,
+            edge_rows: Vec::new(),
+            clique_rows: Vec::new(),
         };
         Ok(transformer)
     }
@@ -208,7 +247,7 @@ impl Transformer {
     pub fn process_graph<'a, TGraph: GraphBase>(
         &'a self,
         graph: &'a TGraph,
-        clique_rows: Vec<CliqueRow>,
+        clique_rows: &'a Vec<CliqueRow>,
         graph_id: GraphId,
         verbose: bool,
     ) -> CLQResult<BeamSearchResult<'a, TGraph>> {
@@ -236,10 +275,10 @@ impl Transformer {
     pub fn process_clique_rows<'a, TGraphBuilder: GraphBuilder<TGraph>, TGraph: GraphBase>(
         &'a self,
         graph: &'a TGraph,
-        clique_rows: Vec<CliqueRow>,
+        clique_rows: &'a Vec<CliqueRow>,
         graph_id: GraphId,
         verbose: bool,
-        output: &mut Output,
+        output: &Sender<(String, bool)>,
     ) -> CLQResult<Option<BeamSearchResult<'a, TGraph>>> {
         if graph.get_core_ids().is_empty() || graph.get_non_core_ids().unwrap().is_empty() {
             return Ok(None);
@@ -256,7 +295,7 @@ impl Transformer {
                         .top_candidate
                         .to_printable_row(&self.non_core_types)?,
                 );
-                output.print(line)?;
+                output.send((line, false)).unwrap();
             } else {
                 result.top_candidate.print(
                     graph_id,
@@ -267,68 +306,5 @@ impl Transformer {
             }
         }
         Ok(Some(result))
-    }
-    /// to be called by main.rs (or a test), using an input (such as stdin),
-    /// which must provide a lines() function, and an output (such as stdout), to
-    /// which it is possible to write line-by-line. Typical reducer logic:
-    /// read one line at a time, with the first column being the key. If key has not
-    /// changed, keep accumulating lines. If key has changed, process accumulated
-    /// lines, output results and reset state.  
-    pub fn run<TGraphBuilder: GraphBuilder<TGraph>, TGraph: GraphBase>(
-        &self,
-        input: Input,
-        output: &mut Output,
-    ) -> CLQResult<()> {
-        let mut edge_rows: Vec<EdgeRow> = Vec::new();
-        let mut clique_rows: Vec<CliqueRow> = Vec::new();
-        let mut current_graph_id: Option<GraphId> = None;
-
-        for line in input.lines() {
-            match line {
-                Ok(n) => {
-                    let raw: Box<dyn Row> = self.line_processor.process_line(n)?;
-                    let new_graph_id: GraphId = raw.get_graph_id();
-                    if let Some(current_id) = current_graph_id {
-                        if new_graph_id != current_id {
-                            let graph: TGraph = self.build_pruned_graph::<TGraphBuilder, TGraph>(
-                                current_id, &edge_rows,
-                            )?;
-                            self.process_clique_rows::<TGraphBuilder, TGraph>(
-                                &graph,
-                                clique_rows,
-                                current_id,
-                                // verbose
-                                self.debug,
-                                output,
-                            )?;
-                            edge_rows = Vec::new();
-                            clique_rows = Vec::new();
-                        }
-                    }
-                    current_graph_id = Some(new_graph_id);
-                    if let Some(r) = raw.as_edge_row() {
-                        edge_rows.push(r)
-                    }
-                    if let Some(r) = raw.as_clique_row() {
-                        clique_rows.push(r)
-                    }
-                }
-                Err(error) => eprintln!("I/O error: {}", error),
-            }
-        }
-        if let Some(current_id) = current_graph_id {
-            let graph: TGraph =
-                self.build_pruned_graph::<TGraphBuilder, TGraph>(current_id, &edge_rows)?;
-            self.process_clique_rows::<TGraphBuilder, TGraph>(
-                &graph,
-                clique_rows,
-                current_id,
-                // verbose
-                self.debug,
-                output,
-            )?;
-            return Ok(());
-        }
-        Err("No input rows!".into())
     }
 }
