@@ -12,6 +12,8 @@ use crate::dachshund::node::{Node, NodeEdge};
 use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use rand::prelude::*;
+
 pub struct SimpleUndirectedGraphBuilder {}
 impl GraphBuilder<SimpleUndirectedGraph> for SimpleUndirectedGraphBuilder {
     fn _new(
@@ -49,9 +51,13 @@ impl SimpleUndirectedGraphBuilder {
                 id,
                 Node {
                     node_id: id,
+                    edges: neighbors
+                        .iter()
+                        .map(|x| NodeEdge::new(edge_type_id, *x))
+                        .collect(),
                     neighbors: neighbors
-                        .into_iter()
-                        .map(|x| NodeEdge::new(edge_type_id, x))
+                        .iter()
+                        .map(|x| (*x, vec![NodeEdge::new(edge_type_id, *x)]))
                         .collect(),
                     // meaningless
                     is_core: true,
@@ -64,4 +70,57 @@ impl SimpleUndirectedGraphBuilder {
             nodes,
         }
     }
+
+    pub fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
+        let mut v = Vec::new();
+        for i in 1..n {
+            for j in i+1..=n {
+                v.push((i,j));
+            }
+        }
+        SimpleUndirectedGraphBuilder::from_vector(
+            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        )
+    }
+
+    pub fn get_path_graph(n: u64) -> SimpleUndirectedGraph {
+        let mut v = Vec::new();
+        for i in 0..n {
+            v.push((i, (i+1)));
+        }
+
+        SimpleUndirectedGraphBuilder::from_vector(
+            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        )
+    }
+
+    pub fn get_cycle_graph(n: u64) -> SimpleUndirectedGraph {
+        let mut v = Vec::new();
+        for i in 0..n {
+            v.push((i, (i+1) % n));
+        }
+
+        SimpleUndirectedGraphBuilder::from_vector(
+            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        )
+    }
+
+    // Builds an Erdos-Renyi graph on n edges with p vertices.
+    // [TODO] Switch to the faster implementation using geometric distributions
+    // for sparse graphs.
+    pub fn get_er_graph(n: u64, p: f64) -> SimpleUndirectedGraph {
+        let mut v = Vec::new();
+        let mut rng = rand::thread_rng();
+
+        for i in 1..n {
+            for j in i+1..=n {
+                if rng.gen::<f64>() < p {v.push((i,j));}
+            }
+        }
+
+        SimpleUndirectedGraphBuilder::from_vector(
+            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        )
+    }
+
 }

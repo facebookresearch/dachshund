@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 use std::cmp::{Eq, PartialEq};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::hash::{Hash, Hasher};
 
 use crate::dachshund::error::{CLQError, CLQResult};
@@ -33,7 +33,8 @@ pub struct Node {
     pub node_id: NodeId,
     pub is_core: bool,
     pub non_core_type: Option<NodeTypeId>,
-    pub neighbors: Vec<NodeEdge>,
+    pub edges: Vec<NodeEdge>,
+    pub neighbors: HashMap<NodeId,Vec<NodeEdge>>,
 }
 impl Hash for Node {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -52,12 +53,14 @@ impl Node {
         node_id: NodeId,
         is_core: bool,
         non_core_type: Option<NodeTypeId>,
-        neighbors: Vec<NodeEdge>,
+        edges: Vec<NodeEdge>,
+        neighbors: HashMap<NodeId,Vec<NodeEdge>>,
     ) -> Node {
         Node {
             node_id,
             is_core,
             non_core_type,
+            edges,
             neighbors,
         }
     }
@@ -65,12 +68,23 @@ impl Node {
     /// HashSet is supplied by Candidate struct.
     pub fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
         let mut num_ties: usize = 0;
-        for ell in &self.neighbors {
-            let neighbor_id = &ell.target_id;
-            if ids.contains(&neighbor_id) {
-                num_ties += 1;
+        // If we have low degree and we're checking against a big set, iterate through our neighbors
+        if self.neighbors.len() <= ids.len() {
+            // eprintln!("Iterating though neighbors");
+            for (neighbor_id, edges) in &self.neighbors {
+                if ids.contains(&neighbor_id) {
+                    num_ties += edges.len();
+                }
             }
-        }
+        // otherwise iterate through the hashset and check against our neighbors.
+        } else {
+            for node_id in ids {
+                match self.neighbors.get(node_id) {
+                    Some(edges) => num_ties += edges.len(),
+                    None => (),
+                }
+            }
+        } ;
         num_ties
     }
     /// ensures that at least thresh % of ties with nodes represented by ids in the
@@ -80,12 +94,12 @@ impl Node {
         thresh: f32,
         ids: &HashSet<NodeId>,
         total_ties: usize,
-    ) -> f32 {
+    ) -> bool {
         let num_ties_with_ids = self.count_ties_with_ids(ids);
         if (num_ties_with_ids as f32) / (total_ties as f32) >= thresh {
-            1.0
+            true
         } else {
-            0.0
+            false
         }
     }
     pub fn is_core(&self) -> bool {
@@ -102,6 +116,6 @@ impl Node {
     }
     /// degree is the edge count (in an unweighted graph)
     pub fn degree(&self) -> usize {
-        self.neighbors.len()
+        self.edges.len()
     }
 }

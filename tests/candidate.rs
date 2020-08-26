@@ -24,7 +24,7 @@ use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 #[test]
 fn test_output_simple_candidate() -> CLQResult<()> {
     let node_id = NodeId::from(0);
-    let node: Node = Node::new(node_id, true, None, Vec::new());
+    let node: Node = Node::new(node_id, true, None, Vec::new(), HashMap::new());
     let mut graph: TypedGraph = TypedGraph {
         nodes: HashMap::new(),
         core_ids: vec![],
@@ -66,7 +66,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
     let scorer: Scorer = Scorer::new(2, alpha, Some(0.5), Some(0.5));
     let mut candidate: Candidate<TypedGraph> = Candidate::new(core_node_id, &graph, &scorer)?;
     candidate.add_node(non_core_node_id)?;
-    let score: f32 = scorer.score(&candidate)?;
+    let score: f32 = scorer.score(&mut candidate)?;
     candidate.set_score(score)?;
 
     let graph_id: GraphId = 1.into();

@@ -40,7 +40,7 @@ impl GraphBase for TypedGraph {
     fn count_edges(&self) -> usize {
         let mut num_edges: usize = 0;
         for node in self.nodes.values() {
-            num_edges += node.neighbors.len();
+            num_edges += node.edges.len();
         }
         num_edges
     }

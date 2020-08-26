@@ -43,7 +43,7 @@ pub struct Transformer {
     pub debug: bool,
     pub min_degree: usize,
     pub long_format: bool,
-    
+
     edge_rows: Vec<EdgeRow>,
     clique_rows: Vec<CliqueRow>,
 }

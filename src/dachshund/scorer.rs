@@ -40,7 +40,7 @@ impl Scorer {
         }
     }
     // computes "cliqueness" score, i.e. the objective the search algorithm is maximizing.
-    pub fn score<TGraph: GraphBase>(&self, candidate: &Candidate<TGraph>) -> CLQResult<f32> {
+    pub fn score<TGraph: GraphBase>(&self, candidate: &mut Candidate<TGraph>) -> CLQResult<f32> {
         // degenerate case where there are no edges.
         if candidate.core_ids.is_empty() || candidate.non_core_ids.is_empty() {
             return Ok(-1.0);
@@ -52,6 +52,9 @@ impl Scorer {
         let non_core_diversity_score = self.get_non_core_diversity_score(candidate)?;
         score += non_core_diversity_score;
 
+        // Debug
+        // eprintln!("Cliqueness");
+
         // the denser the ties, the better
         let cliqueness: f32 = candidate.get_cliqueness()?;
         score += cliqueness * self.alpha;
@@ -61,7 +64,6 @@ impl Scorer {
 
         // enforce a minimum density threshold for each core node.
         score *= self.get_local_thresh_score(candidate);
-
         Ok(score)
     }
 
@@ -72,35 +74,9 @@ impl Scorer {
         }
     }
     // used to ensure that each core node has at least % of ties with non-core nodes.
-    pub fn get_local_thresh_score<TGraph: GraphBase>(&self, candidate: &Candidate<TGraph>) -> f32 {
+    pub fn get_local_thresh_score<TGraph: GraphBase>(&self, candidate: &mut Candidate<TGraph>) -> f32 {
         match self.local_thresh {
-            Some(thresh) => {
-                if thresh == 0.0 {
-                    return 1.0;
-                }
-                let total_size = candidate
-                    .non_core_ids
-                    .iter()
-                    .map(|&id| {
-                        candidate
-                            .get_node(id)
-                            .max_edge_count_with_core_node()
-                            .unwrap()
-                            .unwrap()
-                    })
-                    .sum();
-                for &node_id in &candidate.core_ids {
-                    let score = candidate.get_node(node_id).get_local_thresh_score(
-                        thresh,
-                        &candidate.non_core_ids,
-                        total_size,
-                    );
-                    if score == 0.0 {
-                        return 0.0;
-                    }
-                }
-                1.0
-            }
+            Some(thresh) => candidate.local_thresh_score_at_least(thresh) as i64 as f32,
             None => 1.0,
         }
     }

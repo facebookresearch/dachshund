@@ -56,7 +56,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         for _i in 0..length {
             let next = graph
                 .get_node(current)
-                .neighbors
+                .edges
                 .choose(rng)
                 .ok_or_else(CLQError::err_none)?
                 .target_id;

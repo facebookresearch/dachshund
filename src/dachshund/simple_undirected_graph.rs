@@ -56,7 +56,7 @@ impl SimpleUndirectedGraph {
     pub fn as_input_rows(&self, graph_id: usize) -> String {
         let mut rows: Vec<String> = Vec::new();
         for (id, node) in &self.nodes {
-            for e in &node.neighbors {
+            for e in &node.edges {
                 if *id < e.target_id {
                     rows.push(format!(
                         "{}\t{}\t{}",
@@ -75,7 +75,7 @@ impl SimpleUndirectedGraph {
     pub fn get_clustering_coefficient(&self, id: NodeId) -> Option<f64> {
         let node: &Node = &self.nodes[&id];
         let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
-        for ne in &node.neighbors {
+        for ne in &node.edges {
             neighbor_ids.insert(ne.target_id);
         }
         let num_neighbors: usize = neighbor_ids.len();
@@ -83,7 +83,7 @@ impl SimpleUndirectedGraph {
             return None;
         }
         let mut num_ties: usize = 0;
-        for ne in &node.neighbors {
+        for ne in &node.edges {
             let neighbor: &Node = &self.nodes[&ne.target_id];
             num_ties += neighbor.count_ties_with_ids(&neighbor_ids);
         }
@@ -107,12 +107,12 @@ impl SimpleUndirectedGraph {
     pub fn triangle_count(&self, node_id: NodeId) -> usize {
         let node: &Node = &self.nodes[&node_id];
         let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
-        for ne in &node.neighbors {
+        for ne in &node.edges {
             neighbor_ids.insert(ne.target_id.clone());
         }
 
         let mut triangle_count = 0;
-        for ne in &node.neighbors {
+        for ne in &node.edges {
             let neighbor: &Node = &self.nodes[&ne.target_id];
             triangle_count += neighbor.count_ties_with_ids(&neighbor_ids);
         }
@@ -122,7 +122,7 @@ impl SimpleUndirectedGraph {
 
     // Triples : pairs of neighbors of a given node.
     pub fn triples_count(&self, node_id: NodeId) -> usize {
-        let num_neighbors = &self.nodes[&node_id].neighbors.len();
+        let num_neighbors = &self.nodes[&node_id].edges.len();
         num_neighbors * (num_neighbors - 1) / 2
     }
 
@@ -142,7 +142,7 @@ impl SimpleUndirectedGraph {
     }
 
     // Approximate Clustering - Randomly sample neighbors of nodes w/ degree at least 2.
-    // k~=26,000 gives an approximation of <1% chance of an error of less than 1 percentage point.
+    // k~=26,000 gives an approximation w/ <1% chance of an error of more than 1 percentage point.
     // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
     pub fn get_approx_avg_clustering(&self, samples: usize) -> f64 {
 
@@ -160,13 +160,13 @@ impl SimpleUndirectedGraph {
             let v = &ordered_nodes[rng.gen_range(0, n)];
 
             // Choose 2 random nodes that are neighbors of j
-            let mut random_neighbors = v.neighbors.choose_multiple(&mut rng, 2).map(|x| x.target_id);
+            let mut random_neighbors = v.edges.choose_multiple(&mut rng, 2).map(|x| x.target_id);
             let u_id = random_neighbors.next().unwrap();
             let w_id = random_neighbors.next().unwrap();
 
             // If they're connected, increment l.
             // TODO: No O(1) way to check if there's an edge?
-            for edge in &self.nodes[&u_id].neighbors {
+            for edge in &self.nodes[&u_id].edges {
                 if edge.target_id == w_id {
                     successes += 1;
                     break;
@@ -177,7 +177,7 @@ impl SimpleUndirectedGraph {
     }
 
     // Approximate Transitivity
-    // k~=26,000 gives an approximation of <1% chance of an error of less than 1 percentage point.
+    // k~=26,000 gives an approximation w/ <1% chance of an error of more than 1 percentage point.
     // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
     pub fn get_approx_transitivity(&self, samples: usize) -> f64 {
 
@@ -199,12 +199,12 @@ impl SimpleUndirectedGraph {
             let v = &ordered_nodes[dist.sample(&mut rng)];
 
             // Choose 2 random nodes that are neighbors of j
-            let mut random_neighbors = v.neighbors.choose_multiple(&mut rng, 2).map(|x| x.target_id);
+            let mut random_neighbors = v.edges.choose_multiple(&mut rng, 2).map(|x| x.target_id);
             let u_id = random_neighbors.next().unwrap();
             let w_id = random_neighbors.next().unwrap();
 
             // TODO: No constant time way to check if there's an edge?
-            for edge in &self.nodes[&u_id].neighbors {
+            for edge in &self.nodes[&u_id].edges {
                 if edge.target_id == w_id {
                     successes += 1;
                     break;
@@ -256,7 +256,7 @@ impl SimpleUndirectedGraph {
             }
             // remove u from queue
             queue.remove(u.unwrap());
-            for e in &self.nodes[u.unwrap()].neighbors {
+            for e in &self.nodes[u.unwrap()].edges {
                 let v = &e.target_id;
                 if queue.contains(v) {
                     let alt = min_dist.unwrap() + 1;
@@ -304,7 +304,7 @@ impl SimpleUndirectedGraph {
             let v = queue.pop_front().unwrap();
             stack.push(v);
             let node = &self.nodes[&v];
-            for edge in &node.neighbors {
+            for edge in &node.edges {
                 let neighbor_id = edge.target_id;
                 // neighbor_id newly discovered
                 if dists[&neighbor_id] < 0 {
@@ -378,7 +378,7 @@ impl SimpleUndirectedGraph {
         while !to_visit.is_empty() {
             let node_id = to_visit.pop().unwrap();
             let node = &self.nodes[&node_id];
-            for edge in &node.neighbors {
+            for edge in &node.edges {
                 let neighbor_id = edge.target_id;
                 if !visited.contains(&neighbor_id) {
                     to_visit.push(neighbor_id);
@@ -508,7 +508,7 @@ impl SimpleUndirectedGraph {
             .collect();
 
         for (i, node_id) in node_ids.iter().enumerate() {
-            for e in &self.nodes[node_id].neighbors {
+            for e in &self.nodes[node_id].edges {
                 let j = pos_map.get(&e.target_id).unwrap();
                 let pos = i * num_nodes + j;
                 data[pos] += 1.0;
@@ -580,7 +580,7 @@ impl SimpleUndirectedGraph {
         while !queue.is_empty() {
             let id = queue.pop_first().unwrap();
             let distinct_nodes: Vec<NodeId> = self.nodes[&id]
-                .neighbors
+                .edges
                 .iter()
                 .map(|x| x.target_id)
                 .filter(|x| {
@@ -598,7 +598,7 @@ impl SimpleUndirectedGraph {
                     if queue.contains(&nid) {
                         queue.remove(&nid);
                     }
-                    for e in &self.nodes[&nid].neighbors {
+                    for e in &self.nodes[&nid].edges {
                         let nid2 = e.target_id;
                         if (ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(&nid2))
                             && (ignore_edges.is_none()
@@ -639,7 +639,7 @@ impl SimpleUndirectedGraph {
             .map(|x| {
                 (
                     x.node_id,
-                    HashSet::<NodeId>::from_iter(x.neighbors.iter().map(|y| y.target_id)).len(),
+                    HashSet::<NodeId>::from_iter(x.edges.iter().map(|y| y.target_id)).len(),
                 )
             })
             .collect();
@@ -649,7 +649,7 @@ impl SimpleUndirectedGraph {
             // this assumes no multiple connections to neighbors
             if num_neighbors[&id] < k {
                 removed.insert(id);
-                for e in &self.nodes[&id].neighbors {
+                for e in &self.nodes[&id].edges {
                     let nid = e.target_id;
                     if !removed.contains(&nid) {
                         queue.insert(nid);
@@ -696,16 +696,17 @@ impl SimpleUndirectedGraph {
         let mut neighbors: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
         let mut edges: OrderedEdgeSet = BTreeSet::new();
         for node in self.nodes.values() {
+            // [TODO] This step is unncessary now.
             neighbors.insert(
                 node.node_id,
                 HashSet::from_iter(
-                    node.neighbors
+                    node.edges
                         .iter()
                         .map(|x| x.target_id)
                         .filter(|x| !ignore_nodes.contains(x)),
                 ),
             );
-            for e in &node.neighbors {
+            for e in &node.edges {
                 let id_pair: (NodeId, NodeId);
                 if node.node_id < e.target_id {
                     id_pair = (node.node_id, e.target_id);

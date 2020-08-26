@@ -15,19 +15,6 @@ use lib_dachshund::dachshund::id_types::{NodeId};
 
 use test::Bencher;
 
-fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
-    let mut v = Vec::new();
-
-    for i in 1..n {
-        for j in i+1..=n {
-            v.push((i,j));
-        }
-    }
-    SimpleUndirectedGraphBuilder::from_vector(
-        &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-    )
-}
-
 // The complete graph on 4 nodes with one edge removed.
 // This is the minimal counterexample where T(G) != C(G).
 fn get_almost_k4_graph() -> SimpleUndirectedGraph {
@@ -45,7 +32,7 @@ fn get_almost_k4_graph() -> SimpleUndirectedGraph {
 
 #[test]
 fn test_triangle_count() {
-    let k4 = get_complete_graph(4);
+    let k4 = SimpleUndirectedGraphBuilder::get_complete_graph(4);
     for node_id in k4.nodes.keys() {
         assert_eq!(3, k4.triangle_count(*node_id));
     }
@@ -61,7 +48,7 @@ fn test_triangle_count() {
 
 #[bench]
 fn bench_triangle_count(b: &mut Bencher) {
-    let k100 = get_complete_graph(100);
+    let k100 = SimpleUndirectedGraphBuilder::get_complete_graph(100);
     b.iter(|| {
         for node_id in k100.nodes.keys() {
             k100.triangle_count(*node_id);
@@ -71,7 +58,7 @@ fn bench_triangle_count(b: &mut Bencher) {
 
 #[test]
 fn test_clustering_coefficient(){
-    let k4 = &get_complete_graph(4);
+    let k4 = &SimpleUndirectedGraphBuilder::get_complete_graph(4);
     for node_id in k4.nodes.keys() {
         assert_eq!(1.0, k4.get_clustering_coefficient(*node_id).unwrap());
     }
@@ -87,7 +74,7 @@ fn test_clustering_coefficient(){
 
 #[test]
 fn test_transitivity(){
-    let k4 = &get_complete_graph(4);
+    let k4 = &SimpleUndirectedGraphBuilder::get_complete_graph(4);
     assert_eq!(1.0, k4.get_transitivity());
 
     let almost_k4 = &get_almost_k4_graph();
@@ -96,7 +83,7 @@ fn test_transitivity(){
 
 #[test]
 fn test_approx_avg_clustering(){
-    let k4 = &get_complete_graph(4);
+    let k4 = &SimpleUndirectedGraphBuilder::get_complete_graph(4);
     assert_eq!(1.0, k4.get_approx_avg_clustering(10));
 
     let almost_k4 = &get_almost_k4_graph();
@@ -109,7 +96,7 @@ fn test_approx_avg_clustering(){
 
 #[test]
 fn test_approx_transitivity(){
-    let k4 = &get_complete_graph(4);
+    let k4 = &SimpleUndirectedGraphBuilder::get_complete_graph(4);
     assert_eq!(1.0, k4.get_approx_transitivity(10));
 
     let almost_k4 = &get_almost_k4_graph();
