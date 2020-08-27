@@ -36,7 +36,8 @@ where
                 id,         // node_id,
                 true,       // is_core,
                 None,       // non_core_type,
-                Vec::new(), // neighbors,
+                Vec::new(), // edges,
+                HashMap::new(), //neighbors
             );
             node_map.insert(id, node);
         }
@@ -45,7 +46,8 @@ where
                 id,                           // node_id,
                 false,                        // is_core,
                 Some(non_core_type_ids[&id]), // non_core_type,
-                Vec::new(),                   // neighbors,
+                Vec::new(),                   // edges,
+                HashMap::new(),               // neighbors
             );
             node_map.insert(id, node);
         }
@@ -58,17 +60,42 @@ where
         for r in rows.iter() {
             assert!(node_map.contains_key(&r.source_id));
             assert!(node_map.contains_key(&r.target_id));
+
+            let source_node = node_map
+                .get_mut(&r.source_id)
+                .ok_or_else(CLQError::err_none)?;
+
+
+            if !source_node.neighbors.contains_key(&r.target_id){
+                source_node.neighbors.insert(r.target_id, Vec::new());
+            }
+            source_node.neighbors
+                .get_mut(&r.target_id)
+                .unwrap()
+                .push(NodeEdge::new(r.edge_type_id, r.target_id));
+
+            // probably unnecessary.
             node_map
                 .get_mut(&r.source_id)
                 .ok_or_else(CLQError::err_none)?
-                .neighbors
+                .edges
                 .push(NodeEdge::new(r.edge_type_id, r.target_id));
+
             // edges with the same source and target type should not be repeated
             if r.source_type_id != r.target_type_id {
-                node_map
+                let target_node = node_map
                     .get_mut(&r.target_id)
-                    .ok_or_else(CLQError::err_none)?
-                    .neighbors
+                    .ok_or_else(CLQError::err_none)?;
+
+                if !target_node.neighbors.contains_key(&r.source_id){
+                    target_node.neighbors.insert(r.source_id, Vec::new());
+                }
+                target_node.neighbors
+                    .get_mut(&r.source_id)
+                    .unwrap()
+                    .push(NodeEdge::new(r.edge_type_id, r.source_id));
+
+                target_node.edges
                     .push(NodeEdge::new(r.edge_type_id, r.source_id));
             }
         }
@@ -80,7 +107,7 @@ where
     fn trim_edges(node_map: &mut HashMap<NodeId, Node>, min_degree: &usize) -> HashSet<NodeId> {
         let mut degree_map: HashMap<NodeId, usize> = HashMap::new();
         for (node_id, node) in node_map.iter() {
-            let node_degree: usize = node.neighbors.len();
+            let node_degree: usize = node.degree();
             degree_map.insert(*node_id, node_degree);
         }
         let mut nodes_to_delete: HashSet<NodeId> = HashSet::new();
@@ -97,7 +124,7 @@ where
             }
             for node_id in nodes_to_update.iter() {
                 let node: &Node = &node_map[node_id];
-                for n in node.neighbors.iter() {
+                for n in node.edges.iter() {
                     let neighbor_node_id: NodeId = n.target_id;
                     let current_degree: usize = degree_map[&neighbor_node_id];
                     degree_map.insert(neighbor_node_id, current_degree - 1);

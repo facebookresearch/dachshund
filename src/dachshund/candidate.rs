@@ -10,6 +10,7 @@ use std::cmp::Reverse;
 use std::cmp::{Eq, PartialEq};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
@@ -24,6 +25,20 @@ use crate::dachshund::scorer::Scorer;
 
 use std::sync::mpsc::Sender;
 
+/// This data structure represents a guarantee or promise about the local cliqueness
+/// for some core nodes. It should be interpreted as saying
+/// "Every core node in a candidate clique has at least 'thresh'
+/// fraction of possible edges, except *maybe* the nodes listed in 'exceptions'
+/// ("maybe" because we might not have inspected them yet)."
+///
+/// If we're interested in knowing whether every core candidate has local density over some
+/// value that's lower than our guaranteed 'thresh', we only need to inspect the exceptions.
+#[derive(Clone)]
+struct LocalDensityGuarantee {
+    pub thresh: f32,
+    pub exceptions: HashSet<NodeId>,
+}
+
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
 /// reiterate, a (fuzzy) clique is a subgraph of edges going from some set of "core" nodes
 /// to some set of "non_core" nodes. A "true" clique involves this subgraph being complete,
@@ -35,8 +50,21 @@ use std::sync::mpsc::Sender;
 /// convenience reference to `Graph`, a checksum summarising the full state, and a field
 /// in which to maintain the candidate's current score.
 ///
+/// Some attributes are tracked for the convenience of the scorer and adjusted incrementally
+/// during add node.
+/// - ties_between_nodes and max_core_node_edges help calculate cliqueness
+///     (maintainted by increment_max_core_node_edges and increment_ties_between_nodes)
+/// - neighborhood: of nodes adjacent to the clique and the edge count from
+///     'in the clique' to help with candidate generation
+///     (maintained by adjust_neighborhood)
+/// - local_guarantee: a guarantee about the local density to help check
+///     the candidate maintains a sufficiently high local density.
+///     NB: This optimizes for memory consumption and the case where the cliques
+///     are core-heavy.
+///
 /// Note that in the current implementation, ``core'' ids must all be of the same type,
 /// whereas non-core ids can be of any type is desired.
+
 pub struct Candidate<'a, TGraph>
 where
     TGraph: GraphBase,
@@ -46,7 +74,12 @@ where
     pub non_core_ids: HashSet<NodeId>,
     pub checksum: Option<u64>,
     score: Option<f32>,
+    max_core_node_edges: usize,
+    ties_between_nodes: usize,
+    local_guarantee: Option<LocalDensityGuarantee>,
+    neighborhood: HashMap<NodeId, usize>,
 }
+
 impl<'a, T: GraphBase> Hash for Candidate<'a, T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.checksum.unwrap().hash(state);
@@ -73,6 +106,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             non_core_ids: HashSet::new(),
             checksum: None,
             score: None,
+            max_core_node_edges: 0,
+            ties_between_nodes: 0,
+            local_guarantee: None,
+            neighborhood: HashMap::new(),
         }
     }
 
@@ -80,7 +117,8 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     pub fn new(node_id: NodeId, graph: &'a TGraph, scorer: &Scorer) -> CLQResult<Self> {
         let mut candidate: Self = Candidate::init_blank(graph);
         candidate.add_node(node_id)?;
-        let score = scorer.score(&candidate)?;
+        // [TODO] Is there a way to avoid passing a mutable reference here?
+        let score = scorer.score(&mut candidate)?;
         candidate.set_score(score)?;
         Ok(candidate)
     }
@@ -104,7 +142,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         if candidate.checksum == None {
             return Ok(None);
         }
-        let score = scorer.score(&candidate)?;
+        let score = scorer.score(&mut candidate)?;
         candidate.set_score(score)?;
         Ok(Some(candidate))
     }
@@ -122,9 +160,21 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         }
         if self.graph.get_node(node_id).is_core() {
             self.core_ids.insert(node_id);
+            match &mut self.local_guarantee {
+                Some(guarantee) => guarantee.exceptions.insert(node_id),
+                None => true,
+            };
         } else {
             self.non_core_ids.insert(node_id);
+            self.increment_max_core_node_edges(node_id)?;
+            // [TODO] This can be improved: can decrease the guarantee by some
+            // function of shore sizes, but we need compute tight bounds when checking
+            // local threshold. That would improve performance on cliques with many
+            // non core nodes.
+            self.local_guarantee = None;
         }
+        self.increment_ties_between_nodes(node_id);
+        self.adjust_neighborhood(node_id);
         self.reset_score();
         Ok(())
     }
@@ -171,6 +221,13 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             .score
             .ok_or_else(|| "Tried to get score from an unscored candidate.")?;
         Ok(score)
+    }
+
+    /// Get a clone of the candidates neighborhood (which is a map from
+    /// every node adjacent to the clique to the number of edges between
+    /// that node and the members of the clique.)
+    pub fn get_neighborhood(&self) -> HashMap<NodeId, usize> {
+        self.neighborhood.clone()
     }
 
     /// encodes self as tab-separated "wide" format
@@ -277,6 +334,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 true => self.score,
                 false => None,
             },
+            max_core_node_edges : self.max_core_node_edges,
+            ties_between_nodes: self.ties_between_nodes,
+            local_guarantee: self.local_guarantee.clone(),
+            neighborhood: self.neighborhood.clone(),
         }
     }
 
@@ -304,16 +365,12 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let mut tie_counts: Vec<(NodeId, usize)> = Vec::new();
-        for node_id in self.get_adjacent_nodes()? {
-            let node = self.get_node(node_id);
-            let num_ties = match node.is_core() {
-                true => node.count_ties_with_ids(&self.non_core_ids),
-                false => node.count_ties_with_ids(&self.core_ids),
-            };
-            tie_counts.push((node_id, num_ties));
-        }
+        let mut tie_counts : Vec<(NodeId, usize)> = self.neighborhood
+            .iter().map(|(&node_id, &edge_count)| (node_id, edge_count)).collect();
+
         // sort by number of ties, with node_id as tie breaker for deterministic behaviour
+        // [TODO] Instead of sorting the entire list, use a min heap to keep the
+        // top nodes_to_search options.
         tie_counts.sort_by_key(|k| (Reverse(k.1), k.0));
 
         let mut i = 0;
@@ -350,45 +407,22 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         Ok(expansion_candidates)
     }
 
-    /// used to find nodes that are "adjacent" -- i.e., connected with existing members,
-    /// but not among the members themselves.
-    fn get_adjacent_nodes(&self) -> CLQResult<HashSet<NodeId>> {
-        let mut node_set: HashSet<NodeId> = HashSet::new();
-        for &node_id in &self.core_ids {
-            let node = self.get_node(node_id);
-            for edge in &node.neighbors {
-                let non_core_id = edge.target_id;
-                if !self.non_core_ids.contains(&non_core_id) {
-                    node_set.insert(non_core_id);
-                }
-            }
-        }
-        for &non_core_id in &self.non_core_ids {
-            let non_core_node = self.get_node(non_core_id);
-            for edge in &non_core_node.neighbors {
-                let node_id = edge.target_id;
-                if !self.core_ids.contains(&node_id) {
-                    node_set.insert(node_id);
-                }
-            }
-        }
-        Ok(node_set)
-    }
-
     /// Returns ``size'' of candidate, defined as the maximum number of edges
     /// that could connect all nodes currently in the candidate. For weighted graphs
     /// this is the sum of maximum weights for edges that could connect nodes currently
     /// in the candidates.
     pub fn get_size(&self) -> CLQResult<usize> {
-        let mut size: usize = 0;
-        for &non_core_id in &self.non_core_ids {
-            let non_core_node = self.get_node(non_core_id);
-            size += self.core_ids.len()
-                * non_core_node
-                    .max_edge_count_with_core_node()?
-                    .ok_or_else(CLQError::err_none)?;
-        }
-        Ok(size)
+        Ok(self.core_ids.len() * self.max_core_node_edges)
+    }
+
+    // Update the size to account for for adding node_id. Can be called immediately before
+    // or after inserting the node into the set of ids. Only call this when adding a noncore node.
+    fn increment_max_core_node_edges(&mut self, node_id: NodeId) -> CLQResult<()> {
+        let new_edge_count = self.get_node(node_id)
+            .max_edge_count_with_core_node()?
+            .ok_or_else(CLQError::err_none)?;
+        self.max_core_node_edges += new_edge_count;
+        Ok(())
     }
 
     /// computes "cliqueness", the density of ties between core and non-core nodes.
@@ -403,6 +437,52 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         Ok(cliqueness)
     }
 
+    // Returns true if every core node has at least thresh fraction
+    // of the possible edges, using/updating the local density guarantee
+    // as applicable.
+    pub fn local_thresh_score_at_least(&mut self, thresh: f32) -> bool {
+        if thresh == 0.0 {
+            return true
+        }
+
+        let previous_thresh : f32;
+        let nodes_to_check;
+
+        // If we have a local guarantee, and it's stricter than the threshold we're
+        // we're checking now, we only need to check the (newly added) exceptions.
+        match &self.local_guarantee {
+            None => {
+                previous_thresh = 1.0;
+                nodes_to_check = &self.core_ids;
+            },
+            Some(guarantee) => {
+                previous_thresh = guarantee.thresh;
+                nodes_to_check = if previous_thresh >= thresh
+                    {&guarantee.exceptions} else {&self.core_ids};
+            },
+        };
+
+        for &node_id in nodes_to_check {
+            // [TODO] This can be refactored to return the actual number
+            // to allow us to store a tighter guarantee.
+            if !self.get_node(node_id).get_local_thresh_score(
+                thresh,
+                &self.non_core_ids,
+                self.max_core_node_edges,
+            ){ return false }
+        }
+
+        // If we passed the local density check, we can update the guarantee.
+        // In practice, we tend to call this function repeatedly with the same
+        // threshold, so we optimize for fewer exceptions instead of a higher
+        // thresh.
+        self.local_guarantee = Some(LocalDensityGuarantee{
+                thresh: previous_thresh.min(thresh),
+                exceptions: HashSet::new()
+        });
+        true
+    }
+
     /// checks if Candidate is a true clique, defined as a subgraph where the total number
     /// of ties between nodes is equal to the maximum number of ties between nodes.
     pub fn is_clique(&self) -> CLQResult<bool> {
@@ -411,13 +491,42 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
 
     /// counts the total number of ties between candidate's core nodes and non_cores
     pub fn count_ties_between_nodes(&self) -> CLQResult<usize> {
-        let mut num_ties: usize = 0;
-        for &non_core_id in &self.non_core_ids {
-            num_ties += self
-                .get_node(non_core_id)
-                .count_ties_with_ids(&self.core_ids);
+        Ok(self.ties_between_nodes)
+    }
+
+    // Update the count of ties between nodes to account for adding node_id. Can be called
+    // immediately before or immediately after inserting node into the set of ids.
+    fn increment_ties_between_nodes(&mut self, node_id: NodeId) {
+        let new_ties = if self.graph.get_node(node_id).is_core() {
+            self.get_node(node_id).count_ties_with_ids(&self.non_core_ids)
+        } else {
+            self.get_node(node_id).count_ties_with_ids(&self.core_ids)
+        };
+        self.ties_between_nodes += new_ties;
+    }
+
+    // Adjust the neighborhood property to account for adding added_node:
+    // Any neighbor that isn't already in our graph should have its
+    // edges count in self.neighborhood increased by one, and the node we're
+    // adding needs to be removed, since it is no longer adjacent to the clique.
+    fn adjust_neighborhood(&mut self, node_id: NodeId) {
+        let opposite_shore = if self.graph.get_node(node_id).is_core()
+            { &self.non_core_ids } else { &self.core_ids };
+
+        let neighbors : Vec<NodeId> = self.get_node(node_id)
+            .edges
+            .iter()
+            .map(|x| x.target_id)
+            .collect();
+
+        for target_id in neighbors {
+            // [mlm] Write a test for this.
+            if !opposite_shore.contains(&target_id) {
+                let counter = self.neighborhood.entry(target_id).or_insert(0);
+                *counter += 1;
+            }
         }
-        Ok(num_ties)
+        self.neighborhood.remove(&node_id);
     }
 
     /// gets densities over each non-core type (useful to compute non-core diversity score)

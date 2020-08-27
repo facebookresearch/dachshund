@@ -54,7 +54,7 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     let expected_non_core_diversity_score: f32 = (2.0 as f32).ln();
     assert_eq!(non_core_diversity_score, expected_non_core_diversity_score);
 
-    let local_threshold_score: f32 = scorer.get_local_thresh_score(&candidate);
+    let local_threshold_score: f32 = scorer.get_local_thresh_score(&mut candidate);
     let expected_local_threshold_score: f32 = 1.0 as f32;
     assert_eq!(local_threshold_score, expected_local_threshold_score);
 
@@ -72,7 +72,7 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     let global_threshold_score: f32 = scorer.get_global_thresh_score(cliqueness);
     assert_eq!(global_threshold_score, 1.0 as f32);
 
-    let score: f32 = scorer.score(&candidate)?;
+    let score: f32 = scorer.score(&mut candidate)?;
     let expected_score: f32 = (1.0 as f32 + graph.core_ids.len() as f32).ln()
         + (non_core_diversity_score + cliqueness * alpha);
     assert_eq!(score, expected_score);
