@@ -71,6 +71,7 @@ impl SimpleUndirectedGraphBuilder {
         }
     }
 
+    // Build a graph with n vertices with every possible edge.
     pub fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
         for i in 1..n {
@@ -83,6 +84,8 @@ impl SimpleUndirectedGraphBuilder {
         )
     }
 
+    // Build a graph with a sequence of n vertices with an edge between
+    // each pair of successive vertices.
     pub fn get_path_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
         for i in 0..n {
@@ -94,6 +97,9 @@ impl SimpleUndirectedGraphBuilder {
         )
     }
 
+    // Build a graph with a sequence of n vertices with an edge between
+    // each pair of successive vertices, plus an edge between the first and
+    // last vertices.
     pub fn get_cycle_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
         for i in 0..n {
@@ -106,6 +112,8 @@ impl SimpleUndirectedGraphBuilder {
     }
 
     // Builds an Erdos-Renyi graph on n edges with p vertices.
+    // (Each possible edge is added to the graph independently at random with
+    //  probability p.)
     // [TODO] Switch to the faster implementation using geometric distributions
     // for sparse graphs.
     pub fn get_er_graph(n: u64, p: f64) -> SimpleUndirectedGraph {

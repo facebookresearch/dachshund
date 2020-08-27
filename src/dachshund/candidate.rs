@@ -25,8 +25,14 @@ use crate::dachshund::scorer::Scorer;
 
 use std::sync::mpsc::Sender;
 
-/// This data structure represents a guarantee about the local cliqueness for
-/// some core nodes.
+/// This data structure represents a guarantee or promise about the local cliqueness
+/// for some core nodes. It should be interpreted as saying
+/// "Every core node in a candidate clique has at least 'thresh'
+/// fraction of possible edges, except *maybe* the nodes listed in 'exceptions'
+/// ("maybe" because we might not have inspected them yet)."
+///
+/// If we're interested in knowing whether every core candidate has local density over some
+/// value that's lower than our guaranteed 'thresh', we only need to inspect the exceptions.
 #[derive(Clone)]
 struct LocalDensityGuarantee {
     pub thresh: f32,
@@ -44,15 +50,21 @@ struct LocalDensityGuarantee {
 /// convenience reference to `Graph`, a checksum summarising the full state, and a field
 /// in which to maintain the candidate's current score.
 ///
-/// Some attributes are tracked for the convenience of the scorer:
+/// Some attributes are tracked for the convenience of the scorer and adjusted incrementally
+/// during add node.
 /// - ties_between_nodes and max_core_node_edges help calculate cliqueness
+///     (maintainted by increment_max_core_node_edges and increment_ties_between_nodes)
 /// - neighborhood: of nodes adjacent to the clique and the edge count from
 ///     'in the clique' to help with candidate generation
+///     (maintained by adjust_neighborhood)
 /// - local_guarantee: a guarantee about the local density to help check
-///     the candidate maintains a sufficiently high local density
+///     the candidate maintains a sufficiently high local density.
+///     NB: This optimizes for memory consumption and the case where the cliques
+///     are core-heavy.
 ///
 /// Note that in the current implementation, ``core'' ids must all be of the same type,
 /// whereas non-core ids can be of any type is desired.
+
 pub struct Candidate<'a, TGraph>
 where
     TGraph: GraphBase,
@@ -65,7 +77,7 @@ where
     max_core_node_edges: usize,
     ties_between_nodes: usize,
     local_guarantee: Option<LocalDensityGuarantee>,
-    neighborhood: HashMap<NodeId, isize>,
+    neighborhood: HashMap<NodeId, usize>,
 }
 
 impl<'a, T: GraphBase> Hash for Candidate<'a, T> {
@@ -155,10 +167,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         } else {
             self.non_core_ids.insert(node_id);
             self.increment_max_core_node_edges(node_id)?;
-            // [TODO] This is not strictly optimal.
-            // Can decrease the guarantee by some function of shore sizes,
-            // but this would only help if we compute tight bounds when checking
-            // local threshold.
+            // [TODO] This can be improved: can decrease the guarantee by some
+            // function of shore sizes, but we need compute tight bounds when checking
+            // local threshold. That would improve performance on cliques with many
+            // non core nodes.
             self.local_guarantee = None;
         }
         self.increment_ties_between_nodes(node_id);
@@ -209,6 +221,13 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             .score
             .ok_or_else(|| "Tried to get score from an unscored candidate.")?;
         Ok(score)
+    }
+
+    /// Get a clone of the candidates neighborhood (which is a map from
+    /// every node adjacent to the clique to the number of edges between
+    /// that node and the members of the clique.)
+    pub fn get_neighborhood(&self) -> HashMap<NodeId, usize> {
+        self.neighborhood.clone()
     }
 
     /// encodes self as tab-separated "wide" format
@@ -346,12 +365,12 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let mut tie_counts : Vec<(NodeId, isize)> = self.neighborhood
+        let mut tie_counts : Vec<(NodeId, usize)> = self.neighborhood
             .iter().map(|(&node_id, &edge_count)| (node_id, edge_count)).collect();
 
         // sort by number of ties, with node_id as tie breaker for deterministic behaviour
         // [TODO] Instead of sorting the entire list, use a min heap to keep the
-        // top nodes_to_search.
+        // top nodes_to_search options.
         tie_counts.sort_by_key(|k| (Reverse(k.1), k.0));
 
         let mut i = 0;
@@ -429,6 +448,8 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         let previous_thresh : f32;
         let nodes_to_check;
 
+        // If we have a local guarantee, and it's stricter than the threshold we're
+        // we're checking now, we only need to check the (newly added) exceptions.
         match &self.local_guarantee {
             None => {
                 previous_thresh = 1.0;
@@ -450,6 +471,11 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 self.max_core_node_edges,
             ){ return false }
         }
+
+        // If we passed the local density check, we can update the guarantee.
+        // In practice, we tend to call this function repeatedly with the same
+        // threshold, so we optimize for fewer exceptions instead of a higher
+        // thresh.
         self.local_guarantee = Some(LocalDensityGuarantee{
                 thresh: previous_thresh.min(thresh),
                 exceptions: HashSet::new()
@@ -479,7 +505,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         self.ties_between_nodes += new_ties;
     }
 
-    // Adjust the neighborhood property to account for adding added_node
+    // Adjust the neighborhood property to account for adding added_node:
+    // Any neighbor that isn't already in our graph should have its
+    // edges count in self.neighborhood increased by one, and the node we're
+    // adding needs to be removed, since it is no longer adjacent to the clique.
     fn adjust_neighborhood(&mut self, node_id: NodeId) {
         let opposite_shore = if self.graph.get_node(node_id).is_core()
             { &self.non_core_ids } else { &self.core_ids };
@@ -491,12 +520,12 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             .collect();
 
         for target_id in neighbors {
+            // [mlm] Write a test for this.
             if !opposite_shore.contains(&target_id) {
                 let counter = self.neighborhood.entry(target_id).or_insert(0);
-                *counter += if opposite_shore.contains(&target_id) {-1} else {1};
+                *counter += 1;
             }
         }
-
         self.neighborhood.remove(&node_id);
     }
 

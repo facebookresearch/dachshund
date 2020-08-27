@@ -107,7 +107,6 @@ where
     fn trim_edges(node_map: &mut HashMap<NodeId, Node>, min_degree: &usize) -> HashSet<NodeId> {
         let mut degree_map: HashMap<NodeId, usize> = HashMap::new();
         for (node_id, node) in node_map.iter() {
-            // [mlm] disaster
             let node_degree: usize = node.degree();
             degree_map.insert(*node_id, node_degree);
         }

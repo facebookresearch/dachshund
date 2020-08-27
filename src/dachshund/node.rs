@@ -70,7 +70,6 @@ impl Node {
         let mut num_ties: usize = 0;
         // If we have low degree and we're checking against a big set, iterate through our neighbors
         if self.neighbors.len() <= ids.len() {
-            // eprintln!("Iterating though neighbors");
             for (neighbor_id, edges) in &self.neighbors {
                 if ids.contains(&neighbor_id) {
                     num_ties += edges.len();
