@@ -27,15 +27,16 @@ use std::sync::mpsc::Sender;
 
 /// This data structure represents a guarantee or promise about the local cliqueness
 /// for some core nodes. It should be interpreted as saying
-/// "Every core node in a candidate clique has at least 'thresh'
-/// fraction of possible edges, except *maybe* the nodes listed in 'exceptions'
+/// "Every core node in a candidate clique has at least 'num_edges'
+/// possible edges, except *maybe* the nodes listed in 'exceptions'
 /// ("maybe" because we might not have inspected them yet)."
 ///
 /// If we're interested in knowing whether every core candidate has local density over some
-/// value that's lower than our guaranteed 'thresh', we only need to inspect the exceptions.
+/// value that's corresponds to a number of edges lower than our guaranteed 'num_edges',
+/// we only need to inspect the exceptions.
 #[derive(Clone)]
-struct LocalDensityGuarantee {
-    pub thresh: f32,
+pub struct LocalDensityGuarantee {
+    pub num_edges: usize,
     pub exceptions: HashSet<NodeId>,
 }
 
@@ -76,7 +77,7 @@ where
     score: Option<f32>,
     max_core_node_edges: usize,
     ties_between_nodes: usize,
-    local_guarantee: Option<LocalDensityGuarantee>,
+    local_guarantee: LocalDensityGuarantee,
     neighborhood: HashMap<NodeId, usize>,
 }
 
@@ -108,7 +109,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             score: None,
             max_core_node_edges: 0,
             ties_between_nodes: 0,
-            local_guarantee: None,
+            local_guarantee: LocalDensityGuarantee {
+                num_edges: 0,
+                exceptions: HashSet::new(),
+            },
             neighborhood: HashMap::new(),
         }
     }
@@ -160,18 +164,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         }
         if self.graph.get_node(node_id).is_core() {
             self.core_ids.insert(node_id);
-            match &mut self.local_guarantee {
-                Some(guarantee) => guarantee.exceptions.insert(node_id),
-                None => true,
-            };
+            self.local_guarantee.exceptions.insert(node_id);
         } else {
             self.non_core_ids.insert(node_id);
             self.increment_max_core_node_edges(node_id)?;
-            // [TODO] This can be improved: can decrease the guarantee by some
-            // function of shore sizes, but we need compute tight bounds when checking
-            // local threshold. That would improve performance on cliques with many
-            // non core nodes.
-            self.local_guarantee = None;
         }
         self.increment_ties_between_nodes(node_id);
         self.adjust_neighborhood(node_id);
@@ -228,6 +224,12 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     /// that node and the members of the clique.)
     pub fn get_neighborhood(&self) -> HashMap<NodeId, usize> {
         self.neighborhood.clone()
+    }
+
+    /// Get a clone of the local guarantee which makes a promise about the
+    /// number of edges.
+    pub fn get_local_guarantee(&self) -> LocalDensityGuarantee {
+        self.local_guarantee.clone()
     }
 
     /// encodes self as tab-separated "wide" format
@@ -445,22 +447,11 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             return true
         }
 
-        let previous_thresh : f32;
-        let nodes_to_check;
-
-        // If we have a local guarantee, and it's stricter than the threshold we're
+        // If the existing local guarantee is stricter than the threshold we're
         // we're checking now, we only need to check the (newly added) exceptions.
-        match &self.local_guarantee {
-            None => {
-                previous_thresh = 1.0;
-                nodes_to_check = &self.core_ids;
-            },
-            Some(guarantee) => {
-                previous_thresh = guarantee.thresh;
-                nodes_to_check = if previous_thresh >= thresh
-                    {&guarantee.exceptions} else {&self.core_ids};
-            },
-        };
+        let previous_thresh = self.local_guarantee.num_edges as f32  / self.max_core_node_edges as f32;
+        let nodes_to_check = if previous_thresh >= thresh
+            {&self.local_guarantee.exceptions} else {&self.core_ids};
 
         for &node_id in nodes_to_check {
             // [TODO] This can be refactored to return the actual number
@@ -474,12 +465,14 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
 
         // If we passed the local density check, we can update the guarantee.
         // In practice, we tend to call this function repeatedly with the same
-        // threshold, so we optimize for fewer exceptions instead of a higher
-        // thresh.
-        self.local_guarantee = Some(LocalDensityGuarantee{
-                thresh: previous_thresh.min(thresh),
+        // threshold, so we optimize for fewer exceptions instead of guaranteeing
+        // a higher number of edges.
+
+        // [TODO] This is not the tightest guarantee. See [TODO] above.
+        self.local_guarantee = LocalDensityGuarantee{
+                num_edges: (thresh * self.max_core_node_edges as f32) as usize ,
                 exceptions: HashSet::new()
-        });
+        };
         true
     }
 
