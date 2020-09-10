@@ -6,8 +6,7 @@
  */
 extern crate rustc_serialize;
 
-use std::cmp::Reverse;
-use std::cmp::{Eq, PartialEq};
+use std::cmp::{Eq, PartialEq, Reverse, min};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::collections::HashMap;
@@ -447,31 +446,38 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             return true
         }
 
+        let implied_edge_thresh = (thresh * self.max_core_node_edges as f32).ceil() as usize;
         // If the existing local guarantee is stricter than the threshold we're
         // we're checking now, we only need to check the (newly added) exceptions.
-        let previous_thresh = self.local_guarantee.num_edges as f32  / self.max_core_node_edges as f32;
-        let nodes_to_check = if previous_thresh >= thresh
+        let check_all = self.local_guarantee.num_edges < implied_edge_thresh;
+        let nodes_to_check = if !check_all
             {&self.local_guarantee.exceptions} else {&self.core_ids};
 
+        let mut min_edges = None;
         for &node_id in nodes_to_check {
-            // [TODO] This can be refactored to return the actual number
-            // to allow us to store a tighter guarantee.
-            if !self.get_node(node_id).get_local_thresh_score(
-                thresh,
-                &self.non_core_ids,
-                self.max_core_node_edges,
-            ){ return false }
+            let edge_count = self.get_node(node_id).count_ties_with_ids(&self.non_core_ids);
+            if edge_count < implied_edge_thresh {
+                return false
+            }
+            match min_edges {
+                Some(num) => min_edges = Some(min(edge_count, num)),
+                None => min_edges = Some(edge_count),
+            }
         }
 
         // If we passed the local density check, we can update the guarantee.
         // In practice, we tend to call this function repeatedly with the same
-        // threshold, so we optimize for fewer exceptions instead of guaranteeing
+        // threshold, so we opt for fewer exceptions instead of guaranteeing
         // a higher number of edges.
+        let mut new_num_edges = min_edges.unwrap_or(self.local_guarantee.num_edges);
+        if !check_all {
+            new_num_edges = min(self.local_guarantee.num_edges,
+                                new_num_edges);
+        }
 
-        // [TODO] This is not the tightest guarantee. See [TODO] above.
         self.local_guarantee = LocalDensityGuarantee{
-                num_edges: (thresh * self.max_core_node_edges as f32) as usize ,
-                exceptions: HashSet::new()
+            num_edges: new_num_edges,
+            exceptions: HashSet::new()
         };
         true
     }

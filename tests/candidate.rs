@@ -255,27 +255,27 @@ fn test_local_density_guarantees() -> CLQResult<()> {
     // After checking that we have at least .75 density, guarantee
     // should be updated to say we have at least 3 edges.
     assert!(candidate.local_thresh_score_at_least(0.75));
-    // let guarantee = candidate.get_local_guarantee();
-    // assert_eq!(guarantee.num_edges, 3);
-    // assert!(guarantee.exceptions.is_empty());
+    let guarantee = candidate.get_local_guarantee();
+    assert_eq!(guarantee.num_edges, 3);
+    assert!(guarantee.exceptions.is_empty());
 
     // Adding 3 to the clique. Expected local densities: {1: 0.75, 3: 0.25}
     // Before we check the guarantee, we should have it as an exception.
     let new_core_node : NodeId = 3.into();
     candidate.add_node(new_core_node)?;
     let guarantee = candidate.get_local_guarantee();
-    // assert_eq!(guarantee.num_edges, 3);
+    assert_eq!(guarantee.num_edges, 3);
     assert!(guarantee.exceptions.contains(&new_core_node));
     assert_eq!(guarantee.exceptions.len(), 1);
     // A failed local density check shouldn't give us any new info.
     assert!(!candidate.local_thresh_score_at_least(0.75));
     let guarantee = candidate.get_local_guarantee();
-    // assert_eq!(guarantee.num_edges, 3);
+    assert_eq!(guarantee.num_edges, 3);
     assert!(guarantee.exceptions.contains(&new_core_node));
     assert_eq!(guarantee.exceptions.len(), 1);
     // A passing local density check should give us a new guarantee with
     // no exceptions.
-    assert!(candidate.local_thresh_score_at_least(0.25));
+    assert!(candidate.local_thresh_score_at_least(0.22));
     let guarantee = candidate.get_local_guarantee();
     assert_eq!(guarantee.num_edges, 1);
     assert!(guarantee.exceptions.is_empty());
