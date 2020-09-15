@@ -86,21 +86,6 @@ impl Node {
         } ;
         num_ties
     }
-    /// ensures that at least thresh % of ties with nodes represented by ids in the
-    /// HashSet actually exist. Called by Scorer.
-    pub fn get_local_thresh_score(
-        &self,
-        thresh: f32,
-        ids: &HashSet<NodeId>,
-        total_ties: usize,
-    ) -> bool {
-        let num_ties_with_ids = self.count_ties_with_ids(ids);
-        if (num_ties_with_ids as f32) / (total_ties as f32) >= thresh {
-            true
-        } else {
-            false
-        }
-    }
     pub fn is_core(&self) -> bool {
         self.is_core
     }
