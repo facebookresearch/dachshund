@@ -368,7 +368,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         let tie_counts : Vec<(NodeId, usize)> = self.neighborhood
             .iter().map(|(&node_id, &edge_count)| (node_id, edge_count)).collect();
 
-        let mut h = BinaryHeap::new();
+        let mut h = BinaryHeap::with_capacity(num_to_search+1);
         for (node_id, num_ties) in &tie_counts {
             h.push((Reverse(num_ties), node_id));
             if h.len() > num_to_search {
