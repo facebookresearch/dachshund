@@ -41,7 +41,7 @@ The output should look like this:
 0	2	2	[1,2]	[3,4]	["article","article"]	1	[1.0,1.0]	[1.0]
 ```
 What this means:
-1) there is a clique in the grpah with ID 0 (only graph provided)
+1) there is a clique in the graph with ID 0 (only graph provided)
 2) the clique has core nodes (authors) 1 and 2
 3) the clique has non-core nodes 3 and 4
 4) both non-core nodes are articles

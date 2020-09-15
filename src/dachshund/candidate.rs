@@ -9,8 +9,7 @@ extern crate rustc_serialize;
 use std::cmp::Reverse;
 use std::cmp::{Eq, PartialEq};
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, BinaryHeap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
@@ -356,6 +355,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         Ok(candidate)
     }
 
+
     /// finds nodes that are already connected to the candidate's members, but not
     /// among the members themselves. Sorts in descending order by the number of
     /// ties with members, returning at most num_to_search expansion candidates.
@@ -365,25 +365,24 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let mut tie_counts : Vec<(NodeId, usize)> = self.neighborhood
+        let tie_counts : Vec<(NodeId, usize)> = self.neighborhood
             .iter().map(|(&node_id, &edge_count)| (node_id, edge_count)).collect();
 
-        // sort by number of ties, with node_id as tie breaker for deterministic behaviour
-        // [TODO] Instead of sorting the entire list, use a min heap to keep the
-        // top nodes_to_search options.
-        tie_counts.sort_by_key(|k| (Reverse(k.1), k.0));
+        let mut h = BinaryHeap::with_capacity(num_to_search+1);
+        for (node_id, num_ties) in &tie_counts {
+            h.push((Reverse(num_ties), node_id));
+            if h.len() > num_to_search {
+                h.pop();
+            }
+        }
 
-        let mut i = 0;
         let mut expansion_candidates: Vec<Self> = Vec::new();
-        for (node_id, _num_ties) in tie_counts {
+
+        for (_num_ties, &node_id) in h.into_sorted_vec().iter() {
             let candidate = self.expand_with_node(node_id)?;
             assert!(self.checksum != candidate.checksum);
             if !visited_candidates.contains(&candidate.checksum.unwrap()) {
                 expansion_candidates.push(candidate);
-                i += 1;
-            }
-            if i == num_to_search {
-                return Ok(expansion_candidates);
             }
         }
         assert!(self.checksum.unwrap() != 0);
