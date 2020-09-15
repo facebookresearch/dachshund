@@ -7,7 +7,7 @@
 extern crate rand;
 
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::hash::{Hash, Hasher};
 
 use rand::prelude::*;
@@ -152,6 +152,8 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         let mut new_candidates: Vec<Candidate<TGraph>> = Vec::new();
         let mut can_continue: bool = false;
 
+        let mut previous_candidates = HashMap::new();
+
         for candidate in &self.candidates {
             if self.verbose {
                 eprintln!(
@@ -189,6 +191,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                     scored_expansion_candidates.insert(ell);
                 }
             }
+            previous_candidates.insert(candidate.checksum.unwrap(), candidate);
             scored_expansion_candidates.insert(candidate.replicate(true));
         }
 
@@ -216,8 +219,9 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         if self.verbose {
             eprintln!("Beam now contains:");
         }
-        for ell in v {
+        for mut ell in v {
             if new_candidates.len() < beam_size {
+                ell.set_neigbhorhood_with_hint(&previous_candidates);
                 new_candidates.push(ell);
             }
         }
