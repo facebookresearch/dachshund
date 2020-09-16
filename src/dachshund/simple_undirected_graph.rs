@@ -9,12 +9,12 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
 use na::{DMatrix, DVector};
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
+use rand::seq::SliceRandom;
+use rand::Rng;
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
-use rand::prelude::*;
-use rand::Rng;
-use rand::seq::SliceRandom;
-use rand::distributions::WeightedIndex;
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
@@ -128,15 +128,10 @@ impl SimpleUndirectedGraph {
 
     // Transitivity: 3 * number of triangles  / number of triples
     pub fn get_transitivity(&self) -> f64 {
-        let num_triangles = Iterator::sum::<usize>(self
-            .ids
-            .iter()
-            .map(|x| self.triangle_count(*x)));
+        let num_triangles =
+            Iterator::sum::<usize>(self.ids.iter().map(|x| self.triangle_count(*x)));
 
-        let num_triples = Iterator::sum::<usize>(self
-            .ids
-            .iter()
-            .map(|x| self.triples_count(*x)));
+        let num_triples = Iterator::sum::<usize>(self.ids.iter().map(|x| self.triples_count(*x)));
 
         num_triangles as f64 / num_triples as f64
     }
@@ -145,11 +140,12 @@ impl SimpleUndirectedGraph {
     // k~=26,000 gives an approximation w/ <1% chance of an error of more than 1 percentage point.
     // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
     pub fn get_approx_avg_clustering(&self, samples: usize) -> f64 {
-
-        let ordered_nodes = self.nodes.iter()
-                                .filter(|(_node_id, node)| node.degree() >= 2)
-                                .map(|(_node_id, node)| node)
-                                .collect::<Vec<&Node>>();
+        let ordered_nodes = self
+            .nodes
+            .iter()
+            .filter(|(_node_id, node)| node.degree() >= 2)
+            .map(|(_node_id, node)| node)
+            .collect::<Vec<&Node>>();
 
         let n = ordered_nodes.len();
         let mut successes = 0;
@@ -180,16 +176,19 @@ impl SimpleUndirectedGraph {
     // k~=26,000 gives an approximation w/ <1% chance of an error of more than 1 percentage point.
     // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
     pub fn get_approx_transitivity(&self, samples: usize) -> f64 {
+        let ordered_nodes = self
+            .nodes
+            .iter()
+            .filter(|(_node_id, node)| node.degree() >= 2)
+            .map(|(_node_id, node)| node)
+            .collect::<Vec<&Node>>();
 
-        let ordered_nodes = self.nodes.iter()
-                                .filter(|(_node_id, node)| node.degree() >= 2)
-                                .map(|(_node_id, node)| node)
-                                .collect::<Vec<&Node>>();
-
-        let triples_counts : Vec<usize> = self.nodes.iter()
-                                .filter(|(_node_id, node)| node.degree() >= 2)
-                                .map(|(node_id, _node)| self.triples_count(*node_id))
-                                .collect();
+        let triples_counts: Vec<usize> = self
+            .nodes
+            .iter()
+            .filter(|(_node_id, node)| node.degree() >= 2)
+            .map(|(node_id, _node)| self.triples_count(*node_id))
+            .collect();
         let dist = WeightedIndex::new(triples_counts).unwrap();
 
         let mut successes = 0;

@@ -136,7 +136,7 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
 
     // with pruning at degree < 3
     let (sender_prune, _receiver_prune) = channel();
-    
+
     let transformer_prune = Transformer::new(
         ts.clone(),
         20,
@@ -165,7 +165,7 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
             &sender_prune,
         )?
         .ok_or_else(CLQError::err_none)?;
-    sender_prune.send(("".to_string(), true)).unwrap();
+    sender_prune.send((None, true)).unwrap();
     let candidate_prune = result_prune.top_candidate;
     assert_nodes_have_ids(&graph, &candidate_prune.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &candidate_prune.non_core_ids, vec![3], false);
@@ -192,15 +192,9 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
         transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
     let v = Vec::new();
     let result = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            &v,
-            graph_id,
-            false,
-            &sender,
-        )?
+        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(&graph, &v, graph_id, false, &sender)?
         .ok_or_else(CLQError::err_none)?;
-    sender.send(("".to_string(), true)).unwrap();
+    sender.send((None, true)).unwrap();
     let candidate = result.top_candidate;
     assert_nodes_have_ids(&graph, &candidate.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &candidate.non_core_ids, vec![3], false);

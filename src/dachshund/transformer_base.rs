@@ -25,7 +25,7 @@ pub trait TransformerBase {
     // logic for taking row and storing into self via side-effect
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()>;
     // logic for processing batch of rows, once all rows are ready
-    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()>;
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(Option<String>, bool)>) -> CLQResult<()>;
     // reset transformer state after processing;
     fn reset(&mut self) -> CLQResult<()>;
 
@@ -43,7 +43,9 @@ pub trait TransformerBase {
                         if shutdown {
                             return;
                         }
-                        output.print(line).unwrap();
+                        if let Some(string) = line {
+                            output.print(string).unwrap();
+                        }
                         num_processed_clone.fetch_add(1, Ordering::SeqCst);
                     }
                     Err(error) => panic!(error),
@@ -75,7 +77,7 @@ pub trait TransformerBase {
                 while num_to_process > num_processed.load(Ordering::SeqCst) {
                     thread::sleep(Duration::from_millis(100));
                 }
-                sender.send(("".to_string(), true)).unwrap();
+                sender.send((None, true)).unwrap();
                 writer.join().unwrap();
                 return Ok(());
             }

@@ -226,3 +226,46 @@ fn test_init_beam_with_clique_rows_input_one_epoch() -> CLQResult<()> {
     assert_eq!(output_str, expected.join("\n") + "\n");
     Ok(())
 }
+
+#[test]
+fn test_beam_with_empty_graph_after_pruning() -> CLQResult<()> {
+    let typespec: Vec<Vec<String>> = vec![
+        vec!["author".to_string(), "published".into(), "article".into()],
+        vec!["author".to_string(), "cited".into(), "article".into()],
+    ];
+    let raw = vec![
+        "0\t1\t3\tauthor\tpublished\tarticle".to_string(),
+        "0\t2\t3\tauthor\tpublished\tarticle".into(),
+        "0\t1\t4\tauthor\tpublished\tarticle".into(),
+        "0\t2\t4\tauthor\tpublished\tarticle".into(),
+        "0\t2\t5\tauthor\tpublished\tarticle".into(),
+        "0\t1\tauthor\t\t\t".into(),
+        "0\t3\tarticle\t\t\t".into(),
+        "0\t4\tarticle\t\t\t".into(),
+    ];
+    // transformer with no epochs
+    let mut transformer = Transformer::new(
+        typespec,
+        20,
+        1.0,
+        Some(0.5),
+        Some(0.5),
+        20,
+        100,
+        3,
+        true,
+        // min degree of 10, should remove all nodes
+        10,
+        "author".to_string(),
+        true,
+    )?;
+    let text = raw.join("\n");
+    let bytes = text.as_bytes();
+    let input = Input::string(&bytes);
+    let mut buffer: Vec<u8> = Vec::new();
+    let output = Output::string(&mut buffer);
+    transformer.run(input, output)?;
+    let output_str: String = String::from_utf8(buffer)?;
+    assert_eq!(output_str, "");
+    Ok(())
+}

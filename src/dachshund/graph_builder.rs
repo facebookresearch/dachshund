@@ -33,10 +33,10 @@ where
         let mut node_map: HashMap<NodeId, Node> = HashMap::new();
         for &id in core_ids {
             let node = Node::new(
-                id,         // node_id,
-                true,       // is_core,
-                None,       // non_core_type,
-                Vec::new(), // edges,
+                id,             // node_id,
+                true,           // is_core,
+                None,           // non_core_type,
+                Vec::new(),     // edges,
                 HashMap::new(), //neighbors
             );
             node_map.insert(id, node);
@@ -65,11 +65,11 @@ where
                 .get_mut(&r.source_id)
                 .ok_or_else(CLQError::err_none)?;
 
-
-            if !source_node.neighbors.contains_key(&r.target_id){
+            if !source_node.neighbors.contains_key(&r.target_id) {
                 source_node.neighbors.insert(r.target_id, Vec::new());
             }
-            source_node.neighbors
+            source_node
+                .neighbors
                 .get_mut(&r.target_id)
                 .unwrap()
                 .push(NodeEdge::new(r.edge_type_id, r.target_id));
@@ -87,15 +87,17 @@ where
                     .get_mut(&r.target_id)
                     .ok_or_else(CLQError::err_none)?;
 
-                if !target_node.neighbors.contains_key(&r.source_id){
+                if !target_node.neighbors.contains_key(&r.source_id) {
                     target_node.neighbors.insert(r.source_id, Vec::new());
                 }
-                target_node.neighbors
+                target_node
+                    .neighbors
                     .get_mut(&r.source_id)
                     .unwrap()
                     .push(NodeEdge::new(r.edge_type_id, r.source_id));
 
-                target_node.edges
+                target_node
+                    .edges
                     .push(NodeEdge::new(r.edge_type_id, r.source_id));
             }
         }

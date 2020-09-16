@@ -114,12 +114,15 @@ fn test_process_single_line_clique_row() -> CLQResult<()> {
 }
 
 fn test_expected_clique<F>(transformer: Transformer, raw: Vec<String>, f: F) -> CLQResult<()>
-    where F: Fn(&TypedGraph, &Candidate<TypedGraph>) -> () {
+where
+    F: Fn(&TypedGraph, &Candidate<TypedGraph>) -> (),
+{
     let graph_id: GraphId = 0.into();
 
     let rows = process_raw_vector(&transformer, raw).unwrap();
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows).unwrap();
+    let graph: TypedGraph = transformer
+        .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)
+        .unwrap();
     let clique_rows = Vec::new();
     let (sender, _receiver) = channel();
     let res: Candidate<TypedGraph> = transformer
@@ -129,10 +132,12 @@ fn test_expected_clique<F>(transformer: Transformer, raw: Vec<String>, f: F) -> 
             graph_id,
             true,
             &sender,
-        ).unwrap()
-        .ok_or_else(CLQError::err_none).unwrap()
+        )
+        .unwrap()
+        .ok_or_else(CLQError::err_none)
+        .unwrap()
         .top_candidate;
-    sender.send(("".to_string(), true)).unwrap();
+    sender.send((None, true)).unwrap();
     f(&graph, &res);
     Ok(())
 }
@@ -145,7 +150,7 @@ fn test_process_single_row() -> CLQResult<()> {
         |graph, res| {
             assert_nodes_have_ids(graph, &res.core_ids, vec![1], true);
             assert_nodes_have_ids(graph, &res.non_core_ids, vec![2], false);
-        }
+        },
     )
 }
 
@@ -160,9 +165,9 @@ fn test_process_small_clique() -> CLQResult<()> {
             "0\t2\t4\tauthor\tpublished_at\tconference".into(),
         ],
         |graph, res| {
-            assert_nodes_have_ids(graph, &res.core_ids, vec![1,2], true);
-            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3,4], false);
-        }
+            assert_nodes_have_ids(graph, &res.core_ids, vec![1, 2], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3, 4], false);
+        },
     )
 }
 
@@ -179,9 +184,9 @@ fn test_process_small_clique_with_non_clique_row() -> CLQResult<()> {
             "0\t2\t5\tconference\tpublished_at\tconference".into(),
         ],
         |graph, res| {
-            assert_nodes_have_ids(graph, &res.core_ids, vec![1,2], true);
-            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3,4], false);
-        }
+            assert_nodes_have_ids(graph, &res.core_ids, vec![1, 2], true);
+            assert_nodes_have_ids(graph, &res.non_core_ids, vec![3, 4], false);
+        },
     )
 }
 
@@ -203,12 +208,20 @@ fn test_process_medium_clique() -> CLQResult<()> {
         gen_test_transformer(ts, "author".to_string()).unwrap(),
         clique_rows,
         |graph, res| {
-            assert_nodes_have_ids(graph, &res.core_ids,
-                                  core_ids.iter().map(|x| x.value()).collect(), true);
-            assert_nodes_have_ids(graph, &res.non_core_ids,
-                                  non_cores.iter().map(|x| x.0.value()).collect(), false);
-        }
-    ) 
+            assert_nodes_have_ids(
+                graph,
+                &res.core_ids,
+                core_ids.iter().map(|x| x.value()).collect(),
+                true,
+            );
+            assert_nodes_have_ids(
+                graph,
+                &res.non_core_ids,
+                non_cores.iter().map(|x| x.0.value()).collect(),
+                false,
+            );
+        },
+    )
 }
 
 #[test]
@@ -227,24 +240,24 @@ fn test_process_medium_clique_with_insufficient_epochs() -> CLQResult<()> {
     assert_eq!(clique_rows.len(), 200);
     test_expected_clique(
         Transformer::new(
-			ts,
-			20,
-			1.0,
-			Some(1.0),
-			Some(1.0),
-			20,
-			10,
-			3,
-			true, // with 10 epochs
-			0,    // min_degree = 0
-			"author".to_string(),
-			false,
-		)?,
+            ts,
+            20,
+            1.0,
+            Some(1.0),
+            Some(1.0),
+            20,
+            10,
+            3,
+            true, // with 10 epochs
+            0,    // min_degree = 0
+            "author".to_string(),
+            false,
+        )?,
         clique_rows,
         |_graph, res| {
             assert_eq!(res.core_ids.len() + res.non_core_ids.len(), 11);
-        }
-    ) 
+        },
+    )
 }
 
 #[test]
@@ -269,8 +282,8 @@ fn test_process_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
         |graph, res| {
             assert_nodes_have_ids(graph, &res.core_ids, vec![1, 2], true);
             assert_nodes_have_ids(graph, &res.non_core_ids, vec![3], false);
-        }
-    ) 
+        },
+    )
 }
 
 #[test]
@@ -294,6 +307,6 @@ fn test_process_another_small_clique_with_two_kinds_of_rows() -> CLQResult<()> {
         |graph, res| {
             assert_nodes_have_ids(graph, &res.core_ids, vec![2, 3], true);
             assert_nodes_have_ids(graph, &res.non_core_ids, vec![5], false);
-        }
-    ) 
+        },
+    )
 }
