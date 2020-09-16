@@ -304,7 +304,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         graph_id: GraphId,
         target_types: &[String],
         core_type: &str,
-        output: &Sender<(String, bool)>,
+        output: &Sender<(Option<String>, bool)>,
     ) -> CLQResult<()> {
         for output_row in &self.get_output_rows(graph_id)? {
             let node_type: String = match output_row.target_type {
@@ -313,12 +313,17 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 Some(t) => target_types[t.value() - 1].clone(),
                 None => core_type.to_string(),
             };
-            output.send((format!(
-                "{}\t{}\t{}",
-                graph_id.value(),
-                output_row.node_id.value(),
-                node_type
-            ), false)).unwrap();
+            output
+                .send((
+                    Some(format!(
+                        "{}\t{}\t{}",
+                        graph_id.value(),
+                        output_row.node_id.value(),
+                        node_type
+                    )),
+                    false,
+                ))
+                .unwrap();
         }
         Ok(())
     }
@@ -334,7 +339,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 true => self.score,
                 false => None,
             },
-            max_core_node_edges : self.max_core_node_edges,
+            max_core_node_edges: self.max_core_node_edges,
             ties_between_nodes: self.ties_between_nodes,
             local_guarantee: self.local_guarantee.clone(),
             neighborhood: self.neighborhood.clone(),
@@ -366,8 +371,11 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let tie_counts : Vec<(NodeId, usize)> = self.neighborhood
-            .iter().map(|(&node_id, &edge_count)| (node_id, edge_count)).collect();
+        let tie_counts: Vec<(NodeId, usize)> = self
+            .neighborhood
+            .iter()
+            .map(|(&node_id, &edge_count)| (node_id, edge_count))
+            .collect();
 
         let mut h = BinaryHeap::with_capacity(num_to_search+1);
         for (node_id, num_ties) in &tie_counts {
@@ -418,7 +426,8 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     // Update the size to account for for adding node_id. Can be called immediately before
     // or after inserting the node into the set of ids. Only call this when adding a noncore node.
     fn increment_max_core_node_edges(&mut self, node_id: NodeId) -> CLQResult<()> {
-        let new_edge_count = self.get_node(node_id)
+        let new_edge_count = self
+            .get_node(node_id)
             .max_edge_count_with_core_node()?
             .ok_or_else(CLQError::err_none)?;
         self.max_core_node_edges += new_edge_count;
@@ -442,7 +451,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     // as applicable.
     pub fn local_thresh_score_at_least(&mut self, thresh: f32) -> bool {
         if thresh == 0.0 {
-            return true
+            return true;
         }
 
         let implied_edge_thresh = (thresh * self.max_core_node_edges as f32).ceil() as usize;
@@ -496,7 +505,8 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     // immediately before or immediately after inserting node into the set of ids.
     fn increment_ties_between_nodes(&mut self, node_id: NodeId) {
         let new_ties = if self.graph.get_node(node_id).is_core() {
-            self.get_node(node_id).count_ties_with_ids(&self.non_core_ids)
+            self.get_node(node_id)
+                .count_ties_with_ids(&self.non_core_ids)
         } else {
             self.get_node(node_id).count_ties_with_ids(&self.core_ids)
         };
@@ -508,10 +518,14 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     // edges count in self.neighborhood increased by one, and the node we're
     // adding needs to be removed, since it is no longer adjacent to the clique.
     fn adjust_neighborhood(&mut self, node_id: NodeId) {
-        let opposite_shore = if self.graph.get_node(node_id).is_core()
-            { &self.non_core_ids } else { &self.core_ids };
+        let opposite_shore = if self.graph.get_node(node_id).is_core() {
+            &self.non_core_ids
+        } else {
+            &self.core_ids
+        };
 
-        let neighbors : Vec<NodeId> = self.get_node(node_id)
+        let neighbors: Vec<NodeId> = self
+            .get_node(node_id)
             .edges
             .iter()
             .map(|x| x.target_id)

@@ -74,7 +74,10 @@ impl Scorer {
         }
     }
     // used to ensure that each core node has at least % of ties with non-core nodes.
-    pub fn get_local_thresh_score<TGraph: GraphBase>(&self, candidate: &mut Candidate<TGraph>) -> f32 {
+    pub fn get_local_thresh_score<TGraph: GraphBase>(
+        &self,
+        candidate: &mut Candidate<TGraph>,
+    ) -> f32 {
         match self.local_thresh {
             Some(thresh) => candidate.local_thresh_score_at_least(thresh) as i64 as f32,
             None => 1.0,

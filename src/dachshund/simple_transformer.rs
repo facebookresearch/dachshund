@@ -115,7 +115,8 @@ impl TransformerBase for SimpleTransformer {
         self.batch.clear();
         Ok(())
     }
-    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()> {
+    fn process_batch(&self, graph_id: GraphId,
+                     output: &Sender<(Option<String>, bool)>) -> CLQResult<()> {
         let tuples: Vec<(i64, i64)> = self.batch.iter().map(|x| x.as_tuple()).collect();
         let graph = SimpleUndirectedGraphBuilder::from_vector(&tuples);
         let stats = Self::compute_graph_stats_json(&graph);
@@ -123,7 +124,7 @@ impl TransformerBase for SimpleTransformer {
             .line_processor
             .get_original_id(graph_id.value() as usize);
         let line: String = format!("{}\t{}", original_id, stats);
-        output.send((line, false)).unwrap();
+        output.send((Some(line), false)).unwrap();
         Ok(())
     }
 }
@@ -139,7 +140,7 @@ impl TransformerBase for SimpleParallelTransformer {
         self.batch.clear();
         Ok(())
     }
-    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()> {
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(Option<String>, bool)>) -> CLQResult<()> {
         let tuples: Vec<(i64, i64)> = self.batch.iter().map(|x| x.as_tuple()).collect();
         let output_clone = output.clone();
         let line_processor = self.line_processor.clone();
@@ -148,7 +149,7 @@ impl TransformerBase for SimpleParallelTransformer {
             let stats = Self::compute_graph_stats_json(&graph);
             let original_id = line_processor.get_original_id(graph_id.value() as usize);
             let line: String = format!("{}\t{}", original_id, stats);
-            output_clone.send((line, false)).unwrap();
+            output_clone.send((Some(line), false)).unwrap();
         });
         Ok(())
     }

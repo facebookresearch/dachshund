@@ -95,12 +95,13 @@ fn build_sample_graph() -> CLQResult<TypedGraph>{
         vec!["author".to_string(), "published".into(), "article".into()],
         vec!["author".to_string(), "cited".into(), "article".into()],
     ];
-    let raw: Vec<String> = vec!["0\t1\t2\tauthor\tpublished\tarticle".to_string(),
-                                "0\t1\t4\tauthor\tpublished\tarticle".to_string(),
-                                "0\t1\t4\tauthor\tcited\tarticle".to_string(),
-                                "0\t3\t4\tauthor\tpublished\tarticle".to_string(),
-                                "0\t3\t6\tauthor\tpublished\tarticle".to_string(),
-                                "0\t5\t6\tauthor\tpublished\tarticle".to_string(),
+    let raw: Vec<String> = vec![
+        "0\t1\t2\tauthor\tpublished\tarticle".to_string(),
+        "0\t1\t4\tauthor\tpublished\tarticle".to_string(),
+        "0\t1\t4\tauthor\tcited\tarticle".to_string(),
+        "0\t3\t4\tauthor\tpublished\tarticle".to_string(),
+        "0\t3\t6\tauthor\tpublished\tarticle".to_string(),
+        "0\t5\t6\tauthor\tpublished\tarticle".to_string(),
     ];
     let graph_id: GraphId = 0.into();
 
@@ -124,34 +125,34 @@ fn test_neighborhood() -> CLQResult<()> {
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
-    let initial_id : NodeId = 1.into();
+    let initial_id: NodeId = 1.into();
     let alpha: f32 = 1.0;
     let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
 
     let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
 
     let neighborhood = candidate.get_neighborhood();
-    let mut expected_neighborhood : HashMap<NodeId, usize> = HashMap::new();
-    expected_neighborhood.insert(2.into(),1);
-    expected_neighborhood.insert(4.into(),2);
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(4.into(), 2);
     assert_eq!(neighborhood, expected_neighborhood);
 
     // Adding 4 to the clique, so 4 is no longer adjacent and 3 should
     // be added with value 1.
     candidate.add_node(4.into())?;
     let neighborhood = candidate.get_neighborhood();
-    let mut expected_neighborhood : HashMap<NodeId, usize> = HashMap::new();
-    expected_neighborhood.insert(2.into(),1);
-    expected_neighborhood.insert(3.into(),1);
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(3.into(), 1);
     assert_eq!(neighborhood, expected_neighborhood);
 
     // Adding 3 to the clique, so 3 is no longer adjacent and 6 should
     // be added with value 1.
     candidate.add_node(3.into())?;
     let neighborhood = candidate.get_neighborhood();
-    let mut expected_neighborhood : HashMap<NodeId, usize> = HashMap::new();
-    expected_neighborhood.insert(2.into(),1);
-    expected_neighborhood.insert(6.into(),1);
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(6.into(), 1);
     assert_eq!(neighborhood, expected_neighborhood);
 
     Ok(())

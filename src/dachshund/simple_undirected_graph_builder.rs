@@ -75,8 +75,8 @@ impl SimpleUndirectedGraphBuilder {
     pub fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
         for i in 1..n {
-            for j in i+1..=n {
-                v.push((i,j));
+            for j in i + 1..=n {
+                v.push((i, j));
             }
         }
         SimpleUndirectedGraphBuilder::from_vector(
@@ -89,7 +89,7 @@ impl SimpleUndirectedGraphBuilder {
     pub fn get_path_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
         for i in 0..n {
-            v.push((i, (i+1)));
+            v.push((i, (i + 1)));
         }
 
         SimpleUndirectedGraphBuilder::from_vector(
@@ -103,7 +103,7 @@ impl SimpleUndirectedGraphBuilder {
     pub fn get_cycle_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
         for i in 0..n {
-            v.push((i, (i+1) % n));
+            v.push((i, (i + 1) % n));
         }
 
         SimpleUndirectedGraphBuilder::from_vector(
@@ -121,8 +121,10 @@ impl SimpleUndirectedGraphBuilder {
         let mut rng = rand::thread_rng();
 
         for i in 1..n {
-            for j in i+1..=n {
-                if rng.gen::<f64>() < p {v.push((i,j));}
+            for j in i + 1..=n {
+                if rng.gen::<f64>() < p {
+                    v.push((i, j));
+                }
             }
         }
 
@@ -130,5 +132,4 @@ impl SimpleUndirectedGraphBuilder {
             &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
         )
     }
-
 }
