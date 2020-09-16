@@ -22,8 +22,8 @@ use crate::dachshund::typed_graph::TypedGraph;
 use crate::dachshund::typed_graph_builder::TypedGraphBuilder;
 use crate::dachshund::typed_graph_line_processor::TypedGraphLineProcessor;
 use std::rc::Rc;
-use std::sync::Arc;
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
 
 /// Used to set up the typed graph clique mining algorithm.
 pub struct Transformer {
@@ -65,10 +65,9 @@ impl TransformerBase for Transformer {
         self.clique_rows.clear();
         Ok(())
     }
-    fn process_batch(&self, graph_id: GraphId, output: &Sender<(String, bool)>) -> CLQResult<()> {
-        let graph: TypedGraph = self.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(
-            graph_id, &self.edge_rows,
-        )?;
+    fn process_batch(&self, graph_id: GraphId, output: &Sender<(Option<String>, bool)>) -> CLQResult<()> {
+        let graph: TypedGraph =
+            self.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &self.edge_rows)?;
         self.process_clique_rows::<TypedGraphBuilder, TypedGraph>(
             &graph,
             &self.clique_rows,
@@ -278,9 +277,14 @@ impl Transformer {
         clique_rows: &'a Vec<CliqueRow>,
         graph_id: GraphId,
         verbose: bool,
-        output: &Sender<(String, bool)>,
+        output: &Sender<(Option<String>, bool)>,
     ) -> CLQResult<Option<BeamSearchResult<'a, TGraph>>> {
         if graph.get_core_ids().is_empty() || graph.get_non_core_ids().unwrap().is_empty() {
+            // still have to send an acknowledgement to the output channel
+            // that we have actually processed this graph, otherwise
+            // we lose track of how many graphs have been processed so
+            // far!
+            output.send((None, false)).unwrap();
             return Ok(None);
         }
         let result: BeamSearchResult<TGraph> =
@@ -295,7 +299,7 @@ impl Transformer {
                         .top_candidate
                         .to_printable_row(&self.non_core_types)?,
                 );
-                output.send((line, false)).unwrap();
+                output.send((Some(line), false)).unwrap();
             } else {
                 result.top_candidate.print(
                     graph_id,

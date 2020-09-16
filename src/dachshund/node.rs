@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 use std::cmp::{Eq, PartialEq};
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 use crate::dachshund::error::{CLQError, CLQResult};
@@ -34,7 +34,7 @@ pub struct Node {
     pub is_core: bool,
     pub non_core_type: Option<NodeTypeId>,
     pub edges: Vec<NodeEdge>,
-    pub neighbors: HashMap<NodeId,Vec<NodeEdge>>,
+    pub neighbors: HashMap<NodeId, Vec<NodeEdge>>,
 }
 impl Hash for Node {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -54,7 +54,7 @@ impl Node {
         is_core: bool,
         non_core_type: Option<NodeTypeId>,
         edges: Vec<NodeEdge>,
-        neighbors: HashMap<NodeId,Vec<NodeEdge>>,
+        neighbors: HashMap<NodeId, Vec<NodeEdge>>,
     ) -> Node {
         Node {
             node_id,
@@ -83,7 +83,7 @@ impl Node {
                     None => (),
                 }
             }
-        } ;
+        };
         num_ties
     }
     pub fn is_core(&self) -> bool {
