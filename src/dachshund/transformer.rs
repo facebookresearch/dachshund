@@ -65,7 +65,11 @@ impl TransformerBase for Transformer {
         self.clique_rows.clear();
         Ok(())
     }
-    fn process_batch(&self, graph_id: GraphId, output: &Sender<(Option<String>, bool)>) -> CLQResult<()> {
+    fn process_batch(
+        &self,
+        graph_id: GraphId,
+        output: &Sender<(Option<String>, bool)>,
+    ) -> CLQResult<()> {
         let graph: TypedGraph =
             self.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &self.edge_rows)?;
         self.process_clique_rows::<TypedGraphBuilder, TypedGraph>(

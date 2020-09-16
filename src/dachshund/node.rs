@@ -78,9 +78,8 @@ impl Node {
         // otherwise iterate through the hashset and check against our neighbors.
         } else {
             for node_id in ids {
-                match self.neighbors.get(node_id) {
-                    Some(edges) => num_ties += edges.len(),
-                    None => (),
+                if let Some(edges) = self.neighbors.get(node_id) {
+                    num_ties += edges.len()
                 }
             }
         };

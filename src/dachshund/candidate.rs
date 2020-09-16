@@ -6,9 +6,9 @@
  */
 extern crate rustc_serialize;
 
-use std::cmp::{Eq, PartialEq, Reverse, min};
+use std::cmp::{min, Eq, PartialEq, Reverse};
 use std::collections::hash_map::DefaultHasher;
-use std::collections::{HashMap, HashSet, BinaryHeap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
@@ -230,7 +230,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     /// Get a clone of the candidates neighborhood (which is a map from
     /// every node adjacent to the clique to the number of edges between
     /// that node and the members of the clique.)
-    pub fn get_neighborhood(&self) -> HashMap<NodeId, usize>{
+    pub fn get_neighborhood(&self) -> HashMap<NodeId, usize> {
         match &self.neighborhood {
             None => self.calculate_neighborhood(),
             Some(neighbors) => neighbors.clone(),
@@ -382,7 +382,6 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         Ok(candidate)
     }
 
-
     /// finds nodes that are already connected to the candidate's members, but not
     /// among the members themselves. Sorts in descending order by the number of
     /// ties with members, returning at most num_to_search expansion candidates.
@@ -392,10 +391,13 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let tie_counts : Vec<(NodeId, usize)> = self.get_neighborhood()
-            .iter().map(|(&node_id, &edge_count)| (node_id, edge_count)).collect();
+        let tie_counts: Vec<(NodeId, usize)> = self
+            .get_neighborhood()
+            .iter()
+            .map(|(&node_id, &edge_count)| (node_id, edge_count))
+            .collect();
 
-        let mut h = BinaryHeap::with_capacity(num_to_search+1);
+        let mut h = BinaryHeap::with_capacity(num_to_search + 1);
         for (node_id, num_ties) in &tie_counts {
             h.push((Reverse(num_ties), node_id));
             if h.len() > num_to_search {
@@ -476,14 +478,19 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         // If the existing local guarantee is stricter than the threshold we're
         // we're checking now, we only need to check the (newly added) exceptions.
         let check_all = self.local_guarantee.num_edges < implied_edge_thresh;
-        let nodes_to_check = if !check_all
-            {&self.local_guarantee.exceptions} else {&self.core_ids};
+        let nodes_to_check = if !check_all {
+            &self.local_guarantee.exceptions
+        } else {
+            &self.core_ids
+        };
 
         let mut min_edges = None;
         for &node_id in nodes_to_check {
-            let edge_count = self.get_node(node_id).count_ties_with_ids(&self.non_core_ids);
+            let edge_count = self
+                .get_node(node_id)
+                .count_ties_with_ids(&self.non_core_ids);
             if edge_count < implied_edge_thresh {
-                return false
+                return false;
             }
             match min_edges {
                 Some(num) => min_edges = Some(min(edge_count, num)),
@@ -497,13 +504,12 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         // a higher number of edges.
         let mut new_num_edges = min_edges.unwrap_or(self.local_guarantee.num_edges);
         if !check_all {
-            new_num_edges = min(self.local_guarantee.num_edges,
-                                new_num_edges);
+            new_num_edges = min(self.local_guarantee.num_edges, new_num_edges);
         }
 
-        self.local_guarantee = LocalDensityGuarantee{
+        self.local_guarantee = LocalDensityGuarantee {
             num_edges: new_num_edges,
-            exceptions: HashSet::new()
+            exceptions: HashSet::new(),
         };
         true
     }
@@ -549,8 +555,11 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     // edges count in self.neighborhood increased by one, and the node we're
     // adding needs to be removed, since it is no longer adjacent to the clique.
     fn adjust_neighborhood(&self, neighborhood: &mut HashMap<NodeId, usize>, node_id: NodeId) {
-        let opposite_shore = if self.graph.get_node(node_id).is_core()
-            { &self.non_core_ids } else { &self.core_ids };
+        let opposite_shore = if self.graph.get_node(node_id).is_core() {
+            &self.non_core_ids
+        } else {
+            &self.core_ids
+        };
 
         let neighbors: Vec<NodeId> = self
             .get_node(node_id)

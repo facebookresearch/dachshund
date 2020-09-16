@@ -90,7 +90,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
 ///  3 - 4
 ///    \
 ///  5 - 6
-fn build_sample_graph() -> CLQResult<TypedGraph>{
+fn build_sample_graph() -> CLQResult<TypedGraph> {
     let typespec: Vec<Vec<String>> = vec![
         vec!["author".to_string(), "published".into(), "article".into()],
         vec!["author".to_string(), "cited".into(), "article".into()],
@@ -174,7 +174,7 @@ fn test_local_density() -> CLQResult<()> {
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
-    let initial_id : NodeId = 1.into();
+    let initial_id: NodeId = 1.into();
     let alpha: f32 = 1.0;
     let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
 
@@ -230,7 +230,7 @@ fn test_local_density_guarantees() -> CLQResult<()> {
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
-    let initial_id : NodeId = 1.into();
+    let initial_id: NodeId = 1.into();
     let alpha: f32 = 1.0;
     let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
 
@@ -262,7 +262,7 @@ fn test_local_density_guarantees() -> CLQResult<()> {
 
     // Adding 3 to the clique. Expected local densities: {1: 0.75, 3: 0.25}
     // Before we check the guarantee, we should have it as an exception.
-    let new_core_node : NodeId = 3.into();
+    let new_core_node: NodeId = 3.into();
     candidate.add_node(new_core_node)?;
     let guarantee = candidate.get_local_guarantee();
     assert_eq!(guarantee.num_edges, 3);
