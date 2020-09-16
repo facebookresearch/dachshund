@@ -151,7 +151,8 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         let mut scored_expansion_candidates: HashSet<Candidate<TGraph>> = HashSet::new();
         let mut new_candidates: Vec<Candidate<TGraph>> = Vec::new();
         let mut can_continue: bool = false;
-
+        // A map from a checksum to a reference to a candidate from the previous generation.
+        // Used as a hint when materializing the neighborhood for the next generation of candidates.
         let mut previous_candidates = HashMap::new();
 
         for candidate in &self.candidates {

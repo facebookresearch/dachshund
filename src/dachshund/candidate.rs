@@ -38,6 +38,15 @@ pub struct LocalDensityGuarantee {
     pub exceptions: HashSet<NodeId>,
 }
 
+/// A recipe for a candidate is a checksum of another and a node id.
+/// This represents the claim that you can generate the candidate in question
+/// by adding node node_id to an existing candidate identified with checksum.
+#[derive(Clone, Copy)]
+pub struct Recipe {
+    pub checksum: Option<u64>,
+    pub node_id: NodeId,
+}
+
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
 /// reiterate, a (fuzzy) clique is a subgraph of edges going from some set of "core" nodes
 /// to some set of "non_core" nodes. A "true" clique involves this subgraph being complete,
@@ -81,7 +90,7 @@ where
     ties_between_nodes: usize,
     local_guarantee: LocalDensityGuarantee,
     neighborhood: Option<HashMap<NodeId, usize>>,
-    recipe: Option<(Option<u64>, NodeId)>,
+    recipe: Option<Recipe>,
 }
 
 impl<'a, T: GraphBase> Hash for Candidate<'a, T> {
@@ -161,7 +170,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         let mut s = DefaultHasher::new();
         node_id.hash(&mut s);
         let node_hash: u64 = s.finish();
-        self.recipe = Some((self.checksum, node_id));
+        self.recipe = Some(Recipe {
+            checksum: self.checksum,
+            node_id,
+        });
         if self.checksum != None {
             self.checksum = Some(self.checksum.unwrap().wrapping_add(node_hash));
         } else {
@@ -177,7 +189,9 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         self.increment_ties_between_nodes(node_id);
         self.reset_score();
         match self.recipe {
-            Some((None, _node_id)) => self.neighborhood = Some(self.calculate_neighborhood()),
+            Some(Recipe { checksum: None, .. }) => {
+                self.neighborhood = Some(self.calculate_neighborhood())
+            }
             _ => self.neighborhood = None,
         }
         Ok(())
@@ -588,7 +602,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     pub fn set_neigbhorhood_with_hint(&mut self, hints: &HashMap<u64, &Self>) {
         match self.recipe {
             None => self.neighborhood = Some(self.calculate_neighborhood()),
-            Some((checksum, node_id)) => {
+            Some(Recipe { checksum, node_id }) => {
                 if checksum == None || !hints.contains_key(&checksum.unwrap()) {
                     self.neighborhood = Some(self.calculate_neighborhood());
                 } else {

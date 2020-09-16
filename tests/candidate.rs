@@ -158,6 +158,61 @@ fn test_neighborhood() -> CLQResult<()> {
     Ok(())
 }
 
+/// Test that a candidate correctly sets its neighborhood, including with a hint.
+///
+///  1 - 2
+///    \\
+///  3 - 4
+///    \
+///  5 - 6
+///
+/// Start with {1}, then add 4, then add 3,  then 2.
+#[test]
+fn test_set_neighborhood() -> CLQResult<()> {
+    let graph: TypedGraph = build_sample_graph()?;
+    assert_eq!(graph.core_ids.len(), 3);
+    assert_eq!(graph.non_core_ids.len(), 3);
+
+    let initial_id: NodeId = 1.into();
+    let alpha: f32 = 1.0;
+    let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
+
+    let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
+    // Adding 4 to the clique, so 4 is no longer adjacent and 3 should
+    // be added with value 1.
+    candidate.add_node(4.into())?;
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(3.into(), 1);
+    assert_eq!(candidate.get_neighborhood(), expected_neighborhood);
+    candidate.set_neighborhood();
+    assert_eq!(candidate.get_neighborhood(), expected_neighborhood);
+
+    let mut new_candidate = candidate.replicate(false);
+    let mut hints = HashMap::new();
+    hints.insert(candidate.checksum.unwrap(), &candidate);
+
+    // Adding 3 to the clique, so 3 is no longer adjacent and 6 should
+    // be added with value 1. We pass a useful hint here.
+    new_candidate.add_node(3.into())?;
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(6.into(), 1);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+    new_candidate.set_neigbhorhood_with_hint(&hints);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+
+    // Adding 2 to the clique, so 2 is no longer adjacent.
+    // This time, we pass a useless hint.
+    new_candidate.add_node(2.into())?;
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(6.into(), 1);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+    new_candidate.set_neigbhorhood_with_hint(&hints);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+    Ok(())
+}
+
 /// Test that a candidate's appropriately calculates its local density.
 /// (Does not inspect the density guarantee itself.)
 ///
