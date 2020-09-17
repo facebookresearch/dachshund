@@ -25,7 +25,11 @@ pub trait TransformerBase {
     // logic for taking row and storing into self via side-effect
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()>;
     // logic for processing batch of rows, once all rows are ready
-    fn process_batch(&self, graph_id: GraphId, output: &Sender<(Option<String>, bool)>) -> CLQResult<()>;
+    fn process_batch(
+        &self,
+        graph_id: GraphId,
+        output: &Sender<(Option<String>, bool)>,
+    ) -> CLQResult<()>;
     // reset transformer state after processing;
     fn reset(&mut self) -> CLQResult<()>;
 

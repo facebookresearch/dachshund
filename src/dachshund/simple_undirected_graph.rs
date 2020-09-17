@@ -108,7 +108,7 @@ impl SimpleUndirectedGraph {
         let node: &Node = &self.nodes[&node_id];
         let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
         for ne in &node.edges {
-            neighbor_ids.insert(ne.target_id.clone());
+            neighbor_ids.insert(ne.target_id);
         }
 
         let mut triangle_count = 0;
