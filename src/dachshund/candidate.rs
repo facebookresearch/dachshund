@@ -38,6 +38,15 @@ pub struct LocalDensityGuarantee {
     pub exceptions: HashSet<NodeId>,
 }
 
+/// A recipe for a candidate is a checksum of another and a node id.
+/// This represents the claim that you can generate the candidate in question
+/// by adding node node_id to an existing candidate identified with checksum.
+#[derive(Clone, Copy)]
+pub struct Recipe {
+    pub checksum: Option<u64>,
+    pub node_id: NodeId,
+}
+
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
 /// reiterate, a (fuzzy) clique is a subgraph of edges going from some set of "core" nodes
 /// to some set of "non_core" nodes. A "true" clique involves this subgraph being complete,
@@ -60,6 +69,10 @@ pub struct LocalDensityGuarantee {
 ///     the candidate maintains a sufficiently high local density.
 ///     NB: This optimizes for memory consumption and the case where the cliques
 ///     are core-heavy.
+/// - recipe: This consists of a pair of a checksum and a node id that describes
+///     one way to build this candidate from another candidate. This helps the beam
+///     search find a candidate from the previous epoch that can be used as a hint
+///     to build out the other convenience attributes.
 ///
 /// Note that in the current implementation, ``core'' ids must all be of the same type,
 /// whereas non-core ids can be of any type is desired.
@@ -76,7 +89,8 @@ where
     max_core_node_edges: usize,
     ties_between_nodes: usize,
     local_guarantee: LocalDensityGuarantee,
-    neighborhood: HashMap<NodeId, usize>,
+    neighborhood: Option<HashMap<NodeId, usize>>,
+    recipe: Option<Recipe>,
 }
 
 impl<'a, T: GraphBase> Hash for Candidate<'a, T> {
@@ -111,7 +125,8 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
                 num_edges: 0,
                 exceptions: HashSet::new(),
             },
-            neighborhood: HashMap::new(),
+            neighborhood: Some(HashMap::new()),
+            recipe: None,
         }
     }
 
@@ -119,7 +134,6 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     pub fn new(node_id: NodeId, graph: &'a TGraph, scorer: &Scorer) -> CLQResult<Self> {
         let mut candidate: Self = Candidate::init_blank(graph);
         candidate.add_node(node_id)?;
-        // [TODO] Is there a way to avoid passing a mutable reference here?
         let score = scorer.score(&mut candidate)?;
         candidate.set_score(score)?;
         Ok(candidate)
@@ -146,6 +160,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         }
         let score = scorer.score(&mut candidate)?;
         candidate.set_score(score)?;
+        candidate.set_neighborhood();
         Ok(Some(candidate))
     }
 
@@ -155,6 +170,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         let mut s = DefaultHasher::new();
         node_id.hash(&mut s);
         let node_hash: u64 = s.finish();
+        self.recipe = Some(Recipe {
+            checksum: self.checksum,
+            node_id,
+        });
         if self.checksum != None {
             self.checksum = Some(self.checksum.unwrap().wrapping_add(node_hash));
         } else {
@@ -168,8 +187,13 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             self.increment_max_core_node_edges(node_id)?;
         }
         self.increment_ties_between_nodes(node_id);
-        self.adjust_neighborhood(node_id);
         self.reset_score();
+        match self.recipe {
+            Some(Recipe { checksum: None, .. }) => {
+                self.neighborhood = Some(self.calculate_neighborhood())
+            }
+            _ => self.neighborhood = None,
+        }
         Ok(())
     }
 
@@ -221,7 +245,10 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     /// every node adjacent to the clique to the number of edges between
     /// that node and the members of the clique.)
     pub fn get_neighborhood(&self) -> HashMap<NodeId, usize> {
-        self.neighborhood.clone()
+        match &self.neighborhood {
+            None => self.calculate_neighborhood(),
+            Some(neighbors) => neighbors.clone(),
+        }
     }
 
     /// Get a clone of the local guarantee which makes a promise about the
@@ -328,10 +355,14 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         Ok(())
     }
 
-    /// create a copy of itself, needed for expand_with_node
+    /// Create a copy of itself, needed for expand_with_node.
+    /// This happens for every candidate we want to score, not just
+    /// the ones we plan on expanding, so the performance of the
+    /// search is very sensitive to the cost of this operation.
     pub fn replicate(&self, keep_score: bool) -> Self {
         Self {
             graph: self.graph,
+            // Note: These clones are relatively expensive.
             core_ids: self.core_ids.clone(),
             non_core_ids: self.non_core_ids.clone(),
             checksum: self.checksum,
@@ -342,7 +373,11 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             max_core_node_edges: self.max_core_node_edges,
             ties_between_nodes: self.ties_between_nodes,
             local_guarantee: self.local_guarantee.clone(),
-            neighborhood: self.neighborhood.clone(),
+            // Neighborhood is needed to expand, but not to score,
+            // so to save work, we don't compute the neighborhood
+            // until after the beam decides to keep the candidate.
+            neighborhood: None,
+            recipe: self.recipe,
         }
     }
 
@@ -371,7 +406,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
         let tie_counts: Vec<(NodeId, usize)> = self
-            .neighborhood
+            .get_neighborhood()
             .iter()
             .map(|(&node_id, &edge_count)| (node_id, edge_count))
             .collect();
@@ -516,11 +551,24 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         self.ties_between_nodes += new_ties;
     }
 
-    // Adjust the neighborhood property to account for adding added_node:
+    // Recalculates the candidate's neighborhood from scratch.
+    fn calculate_neighborhood(&self) -> HashMap<NodeId, usize> {
+        let mut neighborhood = HashMap::new();
+        for node_id in &self.core_ids {
+            self.adjust_neighborhood(&mut neighborhood, *node_id);
+        }
+
+        for node_id in &self.non_core_ids {
+            self.adjust_neighborhood(&mut neighborhood, *node_id);
+        }
+        neighborhood
+    }
+
+    // Adjust the neighborhood hashmap to account for adding added_node:
     // Any neighbor that isn't already in our graph should have its
     // edges count in self.neighborhood increased by one, and the node we're
     // adding needs to be removed, since it is no longer adjacent to the clique.
-    fn adjust_neighborhood(&mut self, node_id: NodeId) {
+    fn adjust_neighborhood(&self, neighborhood: &mut HashMap<NodeId, usize>, node_id: NodeId) {
         let opposite_shore = if self.graph.get_node(node_id).is_core() {
             &self.non_core_ids
         } else {
@@ -535,13 +583,40 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
             .collect();
 
         for target_id in neighbors {
-            // [mlm] Write a test for this.
             if !opposite_shore.contains(&target_id) {
-                let counter = self.neighborhood.entry(target_id).or_insert(0);
+                let counter = neighborhood.entry(target_id).or_insert(0);
                 *counter += 1;
             }
         }
-        self.neighborhood.remove(&node_id);
+        neighborhood.remove(&node_id);
+    }
+
+    // Recalculates the candidate's neighborhood from scratch.
+    pub fn set_neighborhood(&mut self) {
+        self.neighborhood = Some(self.calculate_neighborhood());
+    }
+
+    // Set the neighborhood property with another candidate as a hint to crib from.
+    // We use the recipe to make sure that we can safely clone its neighborhood as
+    // starting point.
+    pub fn set_neigbhorhood_with_hint(&mut self, hints: &HashMap<u64, &Self>) {
+        match self.recipe {
+            None => self.neighborhood = Some(self.calculate_neighborhood()),
+            Some(Recipe { checksum, node_id }) => {
+                if checksum == None || !hints.contains_key(&checksum.unwrap()) {
+                    self.neighborhood = Some(self.calculate_neighborhood());
+                } else {
+                    let hint = hints.get(&checksum.unwrap()).unwrap();
+                    if checksum != hint.checksum || hint.neighborhood == None {
+                        self.neighborhood = Some(self.calculate_neighborhood());
+                    } else {
+                        let mut new_neighborhood = hint.neighborhood.as_ref().unwrap().clone();
+                        self.adjust_neighborhood(&mut new_neighborhood, node_id);
+                        self.neighborhood = Some(new_neighborhood);
+                    }
+                }
+            }
+        }
     }
 
     /// gets densities over each non-core type (useful to compute non-core diversity score)
