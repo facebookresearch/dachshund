@@ -17,6 +17,7 @@ pub mod non_core_type_ids;
 pub mod output;
 pub mod row;
 pub mod scorer;
+pub mod search_problem;
 pub mod simple_transformer;
 pub mod simple_undirected_graph;
 pub mod simple_undirected_graph_builder;

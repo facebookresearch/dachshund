@@ -61,13 +61,10 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
     let beam: Beam<TypedGraph> = Beam::new(
         &graph,
         &clique_rows,
-        20,
         false,
         &target_types,
         1,
-        1.0,
-        Some(1.0),
-        Some(1.0),
+        transformer.search_problem.clone(),
         graph_id,
     )?;
     let init_candidate: &Candidate<TypedGraph> = &beam.candidates[0];
@@ -108,13 +105,10 @@ fn test_init_beam_with_partially_overlapping_clique_rows() -> CLQResult<()> {
     let beam: Beam<TypedGraph> = Beam::new(
         &graph,
         &clique_rows,
-        20,
         false,
         &target_types,
         1,
-        1.0,
-        Some(1.0),
-        Some(1.0),
+        transformer.search_problem.clone(),
         graph_id,
     )?;
     let init_candidate: &Candidate<TypedGraph> = &beam.candidates[0];
