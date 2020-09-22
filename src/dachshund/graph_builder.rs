@@ -65,9 +65,10 @@ where
                 .get_mut(&r.source_id)
                 .ok_or_else(CLQError::err_none)?;
 
-            if !source_node.neighbors.contains_key(&r.target_id) {
-                source_node.neighbors.insert(r.target_id, Vec::new());
-            }
+            source_node
+                .neighbors
+                .entry(r.target_id)
+                .or_insert_with(Vec::new);
             source_node
                 .neighbors
                 .get_mut(&r.target_id)
@@ -87,9 +88,10 @@ where
                     .get_mut(&r.target_id)
                     .ok_or_else(CLQError::err_none)?;
 
-                if !target_node.neighbors.contains_key(&r.source_id) {
-                    target_node.neighbors.insert(r.source_id, Vec::new());
-                }
+                target_node
+                    .neighbors
+                    .entry(r.source_id)
+                    .or_insert_with(Vec::new);
                 target_node
                     .neighbors
                     .get_mut(&r.source_id)

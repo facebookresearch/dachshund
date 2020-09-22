@@ -6,11 +6,14 @@
  */
 extern crate lib_dachshund;
 
+use std::rc::Rc;
+
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::row::EdgeRow;
 use lib_dachshund::dachshund::scorer::Scorer;
+use lib_dachshund::dachshund::search_problem::SearchProblem;
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
 use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
@@ -37,8 +40,19 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     assert_eq!(graph.core_ids.len(), 1);
     assert_eq!(graph.non_core_ids.len(), 1);
 
-    let alpha: f32 = 1.0;
-    let scorer: Scorer = Scorer::new(2, alpha, Some(0.5), Some(0.5));
+    let alpha = 1.0;
+    let search_problem = Rc::new(SearchProblem::new(
+        20,
+        alpha,
+        Some(0.5),
+        Some(0.5),
+        20,
+        100,
+        3,
+        1,
+    ));
+
+    let scorer: Scorer = Scorer::new(2, &search_problem);
     let core_node_id: NodeId = *graph.core_ids.first().unwrap();
     let mut candidate: Candidate<TypedGraph> = Candidate::new(core_node_id, &graph, &scorer)?;
     assert_eq!(candidate.get_score()?, -1.0);

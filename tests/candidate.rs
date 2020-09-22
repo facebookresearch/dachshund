@@ -62,8 +62,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
     assert_eq!(graph.non_core_ids.len(), 1);
     let non_core_node_id: NodeId = *graph.non_core_ids.first().unwrap();
 
-    let alpha: f32 = 1.0;
-    let scorer: Scorer = Scorer::new(2, alpha, Some(0.5), Some(0.5));
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
     let mut candidate: Candidate<TypedGraph> = Candidate::new(core_node_id, &graph, &scorer)?;
     candidate.add_node(non_core_node_id)?;
     let score: f32 = scorer.score(&mut candidate)?;
@@ -90,7 +89,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
 ///  3 - 4
 ///    \
 ///  5 - 6
-fn build_sample_graph() -> CLQResult<TypedGraph>{
+fn build_sample_graph() -> (TypedGraph, Transformer) {
     let typespec: Vec<Vec<String>> = vec![
         vec!["author".to_string(), "published".into(), "article".into()],
         vec!["author".to_string(), "cited".into(), "article".into()],
@@ -105,9 +104,14 @@ fn build_sample_graph() -> CLQResult<TypedGraph>{
     ];
     let graph_id: GraphId = 0.into();
 
-    let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
-    let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
-    transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)
+    let transformer: Transformer = gen_test_transformer(typespec, "author".to_string()).unwrap();
+    let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw).unwrap();
+    (
+        transformer
+            .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)
+            .unwrap(),
+        transformer,
+    )
 }
 
 /// Test that a candidate correctly tracks its neighborhood.
@@ -121,13 +125,12 @@ fn build_sample_graph() -> CLQResult<TypedGraph>{
 /// Start with {1}, then add 4, then add 3.
 #[test]
 fn test_neighborhood() -> CLQResult<()> {
-    let graph: TypedGraph = build_sample_graph()?;
+    let (graph, transformer) = build_sample_graph();
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
     let initial_id: NodeId = 1.into();
-    let alpha: f32 = 1.0;
-    let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
 
     let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
 
@@ -158,6 +161,61 @@ fn test_neighborhood() -> CLQResult<()> {
     Ok(())
 }
 
+/// Test that a candidate correctly sets its neighborhood, including with a hint.
+///
+///  1 - 2
+///    \\
+///  3 - 4
+///    \
+///  5 - 6
+///
+/// Start with {1}, then add 4, then add 3,  then 2.
+#[test]
+fn test_set_neighborhood() -> CLQResult<()> {
+    let graph: TypedGraph = build_sample_graph()?;
+    assert_eq!(graph.core_ids.len(), 3);
+    assert_eq!(graph.non_core_ids.len(), 3);
+
+    let initial_id: NodeId = 1.into();
+    let alpha: f32 = 1.0;
+    let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
+
+    let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
+    // Adding 4 to the clique, so 4 is no longer adjacent and 3 should
+    // be added with value 1.
+    candidate.add_node(4.into())?;
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(3.into(), 1);
+    assert_eq!(candidate.get_neighborhood(), expected_neighborhood);
+    candidate.set_neighborhood();
+    assert_eq!(candidate.get_neighborhood(), expected_neighborhood);
+
+    let mut new_candidate = candidate.replicate(false);
+    let mut hints = HashMap::new();
+    hints.insert(candidate.checksum.unwrap(), &candidate);
+
+    // Adding 3 to the clique, so 3 is no longer adjacent and 6 should
+    // be added with value 1. We pass a useful hint here.
+    new_candidate.add_node(3.into())?;
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(2.into(), 1);
+    expected_neighborhood.insert(6.into(), 1);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+    new_candidate.set_neigbhorhood_with_hint(&hints);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+
+    // Adding 2 to the clique, so 2 is no longer adjacent.
+    // This time, we pass a useless hint.
+    new_candidate.add_node(2.into())?;
+    let mut expected_neighborhood: HashMap<NodeId, usize> = HashMap::new();
+    expected_neighborhood.insert(6.into(), 1);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+    new_candidate.set_neigbhorhood_with_hint(&hints);
+    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
+    Ok(())
+}
+
 /// Test that a candidate's appropriately calculates its local density.
 /// (Does not inspect the density guarantee itself.)
 ///
@@ -170,13 +228,12 @@ fn test_neighborhood() -> CLQResult<()> {
 /// Start with {1, 4}, then add 3, then add 6.
 #[test]
 fn test_local_density() -> CLQResult<()> {
-    let graph: TypedGraph = build_sample_graph()?;
+    let (graph, transformer) = build_sample_graph();
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
-    let initial_id : NodeId = 1.into();
-    let alpha: f32 = 1.0;
-    let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
+    let initial_id: NodeId = 1.into();
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
 
     let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
 
@@ -226,13 +283,12 @@ fn test_local_density() -> CLQResult<()> {
 /// Start with {1, 4}, then add 2, then add 3.
 #[test]
 fn test_local_density_guarantees() -> CLQResult<()> {
-    let graph: TypedGraph = build_sample_graph()?;
+    let (graph, transformer) = build_sample_graph();
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
-    let initial_id : NodeId = 1.into();
-    let alpha: f32 = 1.0;
-    let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
+    let initial_id: NodeId = 1.into();
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
 
     let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
 
@@ -262,7 +318,7 @@ fn test_local_density_guarantees() -> CLQResult<()> {
 
     // Adding 3 to the clique. Expected local densities: {1: 0.75, 3: 0.25}
     // Before we check the guarantee, we should have it as an exception.
-    let new_core_node : NodeId = 3.into();
+    let new_core_node: NodeId = 3.into();
     candidate.add_node(new_core_node)?;
     let guarantee = candidate.get_local_guarantee();
     assert_eq!(guarantee.num_edges, 3);

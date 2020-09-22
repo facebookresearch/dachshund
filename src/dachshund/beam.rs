@@ -7,7 +7,7 @@
 extern crate rand;
 
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 use rand::prelude::*;
@@ -18,6 +18,9 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
+use crate::dachshund::search_problem::SearchProblem;
+
+use std::rc::Rc;
 
 /// The result of a beam search.
 pub struct BeamSearchResult<'a, TGraph>
@@ -37,6 +40,7 @@ where
 {
     pub candidates: Vec<Candidate<'a, TGraph>>,
     pub graph: &'a TGraph,
+    pub search_problem: Rc<SearchProblem>,
     verbose: bool,
     non_core_types: &'a [String],
     visited_candidates: HashSet<u64>,
@@ -86,20 +90,17 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
     pub fn new(
         graph: &'a TGraph,
         clique_rows: &'a Vec<CliqueRow>,
-        beam_size: usize,
         verbose: bool,
         non_core_types: &'a [String],
         num_non_core_types: usize,
-        alpha: f32,
-        global_thresh: Option<f32>,
-        local_thresh: Option<f32>,
+        search_problem: Rc<SearchProblem>,
         graph_id: GraphId,
     ) -> CLQResult<Beam<'a, TGraph>> {
         let core_ids: &Vec<NodeId> = &graph.get_core_ids();
         let non_core_ids: &Vec<NodeId> = &graph.get_non_core_ids().unwrap();
 
         let mut candidates: Vec<Candidate<TGraph>> = Vec::new();
-        let scorer: Scorer = Scorer::new(num_non_core_types, alpha, global_thresh, local_thresh);
+        let scorer: Scorer = Scorer::new(num_non_core_types, &search_problem);
 
         // To ensure deterministic behaviour between two identically configured runs,
         // seed the pseudorandom sequence with the current cluster.
@@ -114,7 +115,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
             }
         }
 
-        while candidates.len() < beam_size {
+        while candidates.len() < search_problem.beam_size {
             assert!(!core_ids.is_empty());
             assert!(!non_core_ids.is_empty());
             let ids_vec = if rng.gen::<f32>() <= 0.5 {
@@ -134,6 +135,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         let beam: Beam<TGraph> = Beam {
             candidates,
             graph,
+            search_problem,
             verbose,
             non_core_types,
             visited_candidates,
@@ -151,6 +153,9 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         let mut scored_expansion_candidates: HashSet<Candidate<TGraph>> = HashSet::new();
         let mut new_candidates: Vec<Candidate<TGraph>> = Vec::new();
         let mut can_continue: bool = false;
+        // A map from a checksum to a reference to a candidate from the previous generation.
+        // Used as a hint when materializing the neighborhood for the next generation of candidates.
+        let mut previous_candidates = HashMap::new();
 
         for candidate in &self.candidates {
             if self.verbose {
@@ -189,6 +194,7 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                     scored_expansion_candidates.insert(ell);
                 }
             }
+            previous_candidates.insert(candidate.checksum.unwrap(), candidate);
             scored_expansion_candidates.insert(candidate.replicate(true));
         }
 
@@ -216,8 +222,9 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
         if self.verbose {
             eprintln!("Beam now contains:");
         }
-        for ell in v {
+        for mut ell in v {
             if new_candidates.len() < beam_size {
+                ell.set_neigbhorhood_with_hint(&previous_candidates);
                 new_candidates.push(ell);
             }
         }
@@ -231,21 +238,17 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
     /// score resulting from a one step search is repeated `max_repeated_prior_scores`
     /// times, the search is terminated early. (Note that the search has a stochastic
     /// component, which is why repeating the search may yield different results).
-    pub fn run_search(
-        &mut self,
-        num_to_search: usize,
-        beam_size: usize,
-        num_epochs: usize,
-        max_repeated_prior_scores: usize,
-    ) -> CLQResult<BeamSearchResult<'a, TGraph>> {
+    pub fn run_search(&mut self) -> CLQResult<BeamSearchResult<'a, TGraph>> {
         let mut prior_score: f32 = -2.0;
         let mut num_repeated_prior_scores: usize = 0;
         let mut num_steps: usize = 0;
-        if num_epochs > 0 {
-            for i in 0..num_epochs - 1 {
+        if self.search_problem.num_epochs > 0 {
+            for i in 0..self.search_problem.num_epochs - 1 {
                 num_steps = i + 1;
-                let (top, can_continue): (Candidate<TGraph>, bool) =
-                    self.one_step_search(num_to_search, beam_size)?;
+                let (top, can_continue): (Candidate<TGraph>, bool) = self.one_step_search(
+                    self.search_problem.num_to_search,
+                    self.search_problem.beam_size,
+                )?;
                 // result of all candidates being previously visited
                 if !can_continue {
                     break;
@@ -267,12 +270,15 @@ impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
                 } else {
                     num_repeated_prior_scores = 0;
                 }
-                if num_repeated_prior_scores == max_repeated_prior_scores {
+                if num_repeated_prior_scores == self.search_problem.max_repeated_prior_scores {
                     break;
                 }
                 prior_score = score;
             }
-            let result = self.one_step_search(num_to_search, beam_size)?;
+            let result = self.one_step_search(
+                self.search_problem.num_to_search,
+                self.search_problem.beam_size,
+            )?;
             return Ok(BeamSearchResult {
                 top_candidate: result.0,
                 num_steps,
