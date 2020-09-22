@@ -13,13 +13,14 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
+type Community = HashSet<NodeId>;
 
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleUndirectedGraph {
@@ -768,5 +769,48 @@ impl SimpleUndirectedGraph {
         // this really only works for an undirected graph
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)
+    }
+    pub fn get_CNM_communities(&self) -> Vec<Community> {
+        // stores current communities
+        let mut communities: Vec<Community> = Vec::new();
+        let mut degree_map: HashMap<usize, usize> = HashMap::new();
+        // binary map -- for finding deltaQ_ik
+        let mut deltaQ_bmap: Vec<HashMap<usize, f64>> = Vec::new();
+        // max heaps -- for argmax_j deltaQ_ij
+        // using the fact that tupled are compared in lexicographic order
+        // first element holds deltaQ, 2nd holds index
+        let mut deltaQ_maxheap: Vec<BinaryHeap<(f64, usize)>> = Vec::new();
+
+        let mut reverse_id_map: HashMap<NodeId, usize> = HashMap::new();
+
+        let mut num_edges: usize = 0;
+        for (i, id) in self.ids.iter().enumerate() {
+            let mut community: Community = HashSet::new();
+            community.insert(*id);
+            communities.push(community);
+
+            let d = self.nodes[&id].degree();
+
+            degree_map.insert(i, d);
+            reverse_id_map.insert(*id, i);
+            num_edges += d;
+
+            deltaQ_maxheap.push(BinaryHeap::new());
+            deltaQ_bmap.push(HashMap::new());
+        }
+
+        for community in &communities {
+            for id in community {
+                for neighbor_id in &self.nodes[&id].neighbors {
+                    let i: &usize = reverse_id_map.get(&id).unwrap();
+                    let j: &usize = reverse_id_map.get(&neighbor_id.0).unwrap();
+                    let k_i: usize = degree_map[i];
+                    let k_j: usize = degree_map[j];
+                    let delta_qij: f64 = 1.0 / (num_edges as f64) - ((k_i * k_j) as f64) / (((2 * num_edges)^2) as f64);
+                }
+            }
+        }
+
+        communities
     }
 }
