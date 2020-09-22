@@ -17,6 +17,7 @@ use crate::dachshund::id_types::{GraphId, NodeTypeId};
 use crate::dachshund::line_processor::LineProcessorBase;
 use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
+use crate::dachshund::search_problem::SearchProblem;
 use crate::dachshund::transformer_base::TransformerBase;
 use crate::dachshund::typed_graph::TypedGraph;
 use crate::dachshund::typed_graph_builder::TypedGraphBuilder;
@@ -30,18 +31,11 @@ pub struct Transformer {
     pub core_type: String,
     pub non_core_type_ids: Rc<NonCoreTypeIds>,
     pub non_core_types: Rc<Vec<String>>,
-    pub line_processor: Arc<TypedGraphLineProcessor>,
     pub edge_types: Rc<Vec<String>>,
-    pub beam_size: usize,
-    pub alpha: f32,
-    pub global_thresh: Option<f32>,
-    pub local_thresh: Option<f32>,
-    pub num_to_search: usize,
-    pub num_epochs: usize,
-    pub max_repeated_prior_scores: usize,
     pub num_non_core_types: usize,
+    pub line_processor: Arc<TypedGraphLineProcessor>,
+    pub search_problem: Rc<SearchProblem>,
     pub debug: bool,
-    pub min_degree: usize,
     pub long_format: bool,
 
     edge_rows: Vec<EdgeRow>,
@@ -153,6 +147,16 @@ impl Transformer {
         core_type: String,
         long_format: bool,
     ) -> CLQResult<Self> {
+        let search_problem = Rc::new(SearchProblem::new(
+            beam_size,
+            alpha,
+            global_thresh,
+            local_thresh,
+            num_to_search,
+            num_epochs,
+            max_repeated_prior_scores,
+            min_degree,
+        ));
         let mut edge_types_v: Vec<String> = typespec.iter().map(|x| x[1].clone()).collect();
         edge_types_v.sort();
         let edge_types = Rc::new(edge_types_v);
@@ -177,18 +181,11 @@ impl Transformer {
             core_type,
             non_core_type_ids,
             non_core_types,
-            line_processor,
             edge_types,
-            beam_size,
-            alpha,
-            global_thresh,
-            local_thresh,
-            num_to_search,
-            num_epochs,
-            max_repeated_prior_scores,
             num_non_core_types,
+            line_processor,
+            search_problem,
             debug,
-            min_degree,
             long_format,
             edge_rows: Vec::new(),
             clique_rows: Vec::new(),
@@ -243,7 +240,7 @@ impl Transformer {
         graph_id: GraphId,
         rows: &Vec<EdgeRow>,
     ) -> CLQResult<TGraph> {
-        TGraphBuilder::new(graph_id, rows, Some(self.min_degree))
+        TGraphBuilder::new(graph_id, rows, Some(self.search_problem.min_degree))
     }
 
     /// Given a properly-built graph, runs the quasi-clique detection beam search on it.
@@ -257,21 +254,13 @@ impl Transformer {
         let mut beam: Beam<TGraph> = Beam::new(
             graph,
             clique_rows,
-            self.beam_size,
             verbose,
             &self.non_core_types,
             self.num_non_core_types,
-            self.alpha,
-            self.global_thresh,
-            self.local_thresh,
+            self.search_problem.clone(),
             graph_id,
         )?;
-        beam.run_search(
-            self.num_to_search,
-            self.beam_size,
-            self.num_epochs,
-            self.max_repeated_prior_scores,
-        )
+        beam.run_search()
     }
     /// Used to "seed" the beam search with an existing best (quasi-)clique (if any provided),
     /// and then run the search under the parameters specified in the constructor.

@@ -24,6 +24,7 @@ pub use dachshund::node::Node;
 pub use dachshund::output::Output;
 pub use dachshund::row::EdgeRow;
 pub use dachshund::scorer::Scorer;
+pub use dachshund::search_problem::SearchProblem;
 pub use dachshund::simple_transformer::SimpleTransformer;
 pub use dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 pub use dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;

@@ -7,6 +7,8 @@
 use crate::dachshund::candidate::Candidate;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::search_problem::SearchProblem;
+use std::rc::Rc;
 
 /// Used to compute the "cliqueness" score of a particular candidate.
 pub struct Scorer {
@@ -26,17 +28,12 @@ impl Scorer {
     /// valid (quasi-)cliques.
     /// - `local_thresh`: If provided, each node in the candidate must have at least `local_thresh`
     /// proportion of ties to other nodes in the candidate, for the candidate to be considered valid.
-    pub fn new(
-        num_non_core_types: usize,
-        alpha: f32,
-        global_thresh: Option<f32>,
-        local_thresh: Option<f32>,
-    ) -> Scorer {
+    pub fn new(num_non_core_types: usize, search_problem: &Rc<SearchProblem>) -> Scorer {
         Scorer {
             num_non_core_types,
-            alpha,
-            global_thresh,
-            local_thresh,
+            alpha: search_problem.alpha,
+            global_thresh: search_problem.global_thresh,
+            local_thresh: search_problem.local_thresh,
         }
     }
     // computes "cliqueness" score, i.e. the objective the search algorithm is maximizing.
