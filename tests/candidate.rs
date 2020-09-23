@@ -172,7 +172,7 @@ fn test_neighborhood() -> CLQResult<()> {
 /// Start with {1}, then add 4, then add 3,  then 2.
 #[test]
 fn test_set_neighborhood() -> CLQResult<()> {
-    let graph: TypedGraph = build_sample_graph()?;
+    let graph: TypedGraph = build_sample_graph().0;
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 

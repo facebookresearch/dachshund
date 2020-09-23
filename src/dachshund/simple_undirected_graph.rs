@@ -9,6 +9,7 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
 use na::{DMatrix, DVector};
+use ordered_float::OrderedFloat;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
@@ -770,24 +771,31 @@ impl SimpleUndirectedGraph {
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)
     }
-    pub fn get_CNM_communities(&self) -> Vec<Community> {
+    pub fn init_cnm_communities(&self) -> (
+        HashMap<usize, Community>,
+        HashMap<usize, usize>,
+        HashMap<usize, HashMap<usize, f64>>,
+        HashMap<usize, BinaryHeap<(OrderedFloat<f64>, usize)>>,
+        BinaryHeap<(OrderedFloat<f64>, usize, usize)>,
+        usize
+    ) {
         // stores current communities
-        let mut communities: Vec<Community> = Vec::new();
+        let mut communities: HashMap<usize, Community> = HashMap::new();
         let mut degree_map: HashMap<usize, usize> = HashMap::new();
-        // binary map -- for finding deltaQ_ik
-        let mut deltaQ_bmap: Vec<HashMap<usize, f64>> = Vec::new();
-        // max heaps -- for argmax_j deltaQ_ij
+        // binary map -- for finding delta_q_ik
+        let mut delta_q_bmap: HashMap<usize, HashMap<usize, f64>> = HashMap::new();
+        // max heaps -- for argmax_j delta_q_ij
         // using the fact that tupled are compared in lexicographic order
-        // first element holds deltaQ, 2nd holds index
-        let mut deltaQ_maxheap: Vec<BinaryHeap<(f64, usize)>> = Vec::new();
-
+        // first element holds delta_q, 2nd holds index
+        let mut delta_q_maxheap: HashMap<usize, BinaryHeap<(OrderedFloat<f64>, usize)>> = HashMap::new();
+        let mut H: BinaryHeap<(OrderedFloat<f64>, usize, usize)> = BinaryHeap::new();
         let mut reverse_id_map: HashMap<NodeId, usize> = HashMap::new();
 
         let mut num_edges: usize = 0;
         for (i, id) in self.ids.iter().enumerate() {
             let mut community: Community = HashSet::new();
             community.insert(*id);
-            communities.push(community);
+            communities.insert(i, community);
 
             let d = self.nodes[&id].degree();
 
@@ -795,11 +803,11 @@ impl SimpleUndirectedGraph {
             reverse_id_map.insert(*id, i);
             num_edges += d;
 
-            deltaQ_maxheap.push(BinaryHeap::new());
-            deltaQ_bmap.push(HashMap::new());
+            delta_q_maxheap.insert(i, BinaryHeap::new());
+            delta_q_bmap.insert(i, HashMap::new());
         }
 
-        for community in &communities {
+        for community in communities.values() {
             for id in community {
                 for neighbor_id in &self.nodes[&id].neighbors {
                     let i: &usize = reverse_id_map.get(&id).unwrap();
@@ -807,9 +815,91 @@ impl SimpleUndirectedGraph {
                     let k_i: usize = degree_map[i];
                     let k_j: usize = degree_map[j];
                     let delta_qij: f64 = 1.0 / (num_edges as f64) - ((k_i * k_j) as f64) / (((2 * num_edges)^2) as f64);
+
+                    delta_q_bmap.get_mut(i).unwrap().insert(*j, delta_qij);
+                    delta_q_maxheap.get_mut(i).unwrap().push((OrderedFloat(delta_qij), *j));
                 }
             }
         }
+        for i in 0..delta_q_maxheap.len() {
+            let top_elem = delta_q_maxheap[&i].peek().unwrap();
+            H.push((top_elem.0, i, top_elem.1));
+        }
+        (communities, degree_map, delta_q_bmap, delta_q_maxheap, H, num_edges)
+    }
+    pub fn get_cnm_communities(&self) -> HashMap<usize, Community> {
+
+        let (mut communities, mut degree_map, mut delta_q_bmap,
+             mut delta_q_maxheap, mut H, num_edges) = self.init_cnm_communities();
+        // find largest delta_q_ij
+        let (largest_delta_q_ij, i, j) = H.pop().unwrap();
+
+        // we will create community j from communities i and j
+        let com_i: Community = communities.remove(&i).unwrap();
+        let com_j: &mut Community = communities.get_mut(&j).unwrap();
+        com_j.extend(com_i);
+
+        // get communities to which com_i, com_j are connected
+        let neighbors_i: HashMap<usize, f64> = delta_q_bmap.remove(&i).unwrap();
+        let neighbors_j: HashMap<usize, f64> = delta_q_bmap.remove(&j).unwrap();
+        let mut all_neighbors: HashSet<usize> = neighbors_i.keys().copied().collect();
+
+        all_neighbors.extend(neighbors_j.keys().copied());
+        all_neighbors.remove(&i);
+        all_neighbors.remove(&j);
+
+        let mut new_delta_qjk_map: HashMap<usize, f64> = HashMap::new();
+        let mut new_community_maxheap: BinaryHeap<(OrderedFloat<f64>, usize)> = BinaryHeap::new();
+        for k in all_neighbors {
+
+            let delta_qik: Option<&f64> = neighbors_i.get(&k);
+            let delta_qjk: Option<&f64> = neighbors_j.get(&k);
+
+            /* Get new delta_qjk */
+            let new_delta_qjk = match delta_qik {
+                Some(x) => match delta_qjk {
+                    Some(y) => x + y,
+                    None => x - (degree_map[&j] as f64 / num_edges as f64) * (degree_map[&k] as f64 / (2 * num_edges) as f64)
+                },
+                None => delta_qjk.unwrap() - (degree_map[&i] as f64 / num_edges as f64) * (degree_map[&k] as f64 / (2 * num_edges) as f64)
+            };
+            new_delta_qjk_map.insert(k, new_delta_qjk);
+
+            /* Update the binary maps for k */
+            let neighbors_k: &mut HashMap<usize, f64> = delta_q_bmap.get_mut(&k).unwrap();
+            if delta_qik.is_some() {
+                neighbors_k.remove(&i);
+            }
+            (*neighbors_k.get_mut(&j).unwrap()) = new_delta_qjk;
+
+            /* Update the binary heap for k */
+            let old_maxheap: BinaryHeap<(OrderedFloat<f64>, usize)> = delta_q_maxheap.remove(&k).unwrap();
+            let mut new_maxheap: BinaryHeap<(OrderedFloat<f64>, usize)> = BinaryHeap::with_capacity(old_maxheap.len());
+            for (delta_qjk, ll) in old_maxheap.into_iter_sorted() {
+                if ll != i {
+                    if ll == j {
+                        new_maxheap.push((OrderedFloat(new_delta_qjk), ll));
+                    } else {
+                        new_maxheap.push((delta_qjk, ll));
+                    }
+                }
+            }
+            delta_q_maxheap.insert(k, new_maxheap);
+            new_community_maxheap.push((OrderedFloat(new_delta_qjk), k));
+        }
+        // adding the new_delta_qjk map for the newly created community
+        delta_q_bmap.insert(j, new_delta_qjk_map);
+        delta_q_bmap.remove(&i);
+        // updating H with the highest value from new_community_maxheap
+        let top_elem = new_community_maxheap.peek().unwrap();
+        H.push((top_elem.0, j, top_elem.1));
+        // updating the delta_q_maxheap
+        delta_q_maxheap.insert(j, new_community_maxheap);
+
+        // updating the degree map
+        let new_degree = degree_map[&i] + degree_map[&j];
+        degree_map.insert(j, new_degree);
+        degree_map.remove(&i);
 
         communities
     }

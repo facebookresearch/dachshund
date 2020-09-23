@@ -6,6 +6,7 @@
  */
 
 #![feature(map_first_last)]
+#![feature(binary_heap_into_iter_sorted)]
 extern crate clap;
 extern crate rand;
 extern crate rustc_serialize;
