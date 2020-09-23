@@ -172,13 +172,13 @@ fn test_neighborhood() -> CLQResult<()> {
 /// Start with {1}, then add 4, then add 3,  then 2.
 #[test]
 fn test_set_neighborhood() -> CLQResult<()> {
-    let graph: TypedGraph = build_sample_graph()?;
+    let (graph, transformer) = build_sample_graph();
     assert_eq!(graph.core_ids.len(), 3);
     assert_eq!(graph.non_core_ids.len(), 3);
 
     let initial_id: NodeId = 1.into();
     let alpha: f32 = 1.0;
-    let scorer: Scorer = Scorer::new(2, alpha, Some(0.0), Some(0.0));
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
 
     let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
     // Adding 4 to the clique, so 4 is no longer adjacent and 3 should
