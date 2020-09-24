@@ -16,6 +16,7 @@ pub mod dachshund;
 
 pub use dachshund::beam::Beam;
 pub use dachshund::candidate::Candidate;
+pub use dachshund::cnm_communities::CNMCommunities;
 pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};

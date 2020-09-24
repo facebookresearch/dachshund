@@ -8,10 +8,11 @@
 
 extern crate lib_dachshund;
 extern crate test;
+use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::row::EdgeRow;
-use lib_dachshund::dachshund::simple_undirected_graph::{CNMCommunities, SimpleUndirectedGraph};
+use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 use lib_dachshund::dachshund::transformer::Transformer;
