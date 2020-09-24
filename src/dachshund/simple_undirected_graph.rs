@@ -16,58 +16,13 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::hash_map::Keys;
 use std::iter::FromIterator;
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
-type Community = HashSet<NodeId>;
-
-#[derive(Clone, Copy, Eq)]
-pub struct CNMCommunityMergeInstruction {
-    delta_ij: OrderedFloat<f64>,
-    i: usize,
-    j: usize,
-}
-impl CNMCommunityMergeInstruction {
-    pub fn new(delta_ij: OrderedFloat<f64>, i: usize, j: usize) -> Self {
-        Self { delta_ij, i, j }
-    }
-    pub fn tuple(self) -> (OrderedFloat<f64>, usize, usize) {
-        (self.delta_ij, self.i, self.j)
-    }
-}
-impl Ord for CNMCommunityMergeInstruction {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.delta_ij < other.delta_ij {
-            Ordering::Less
-        } else if self.delta_ij > other.delta_ij {
-            Ordering::Greater
-        } else if self.i > other.i {
-            Ordering::Less
-        } else if self.i < other.i {
-            Ordering::Greater
-        } else if self.j > other.j {
-            Ordering::Less
-        } else if self.j < other.j {
-            Ordering::Greater
-        } else {
-            Ordering::Equal
-        }
-    }
-}
-impl PartialEq for CNMCommunityMergeInstruction {
-    fn eq(&self, other: &Self) -> bool {
-        self.delta_ij == other.delta_ij && self.i == other.i && self.j == other.j
-    }
-}
-impl PartialOrd for CNMCommunityMergeInstruction {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-type CNMCommunityMergeInstructionHeap = BinaryHeap<CNMCommunityMergeInstruction>;
 
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleUndirectedGraph {
@@ -75,6 +30,9 @@ pub struct SimpleUndirectedGraph {
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleUndirectedGraph {
+
+    type NodeType = Node;
+
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.
     fn get_core_ids(&self) -> &Vec<NodeId> {
         &self.ids
@@ -82,6 +40,9 @@ impl GraphBase for SimpleUndirectedGraph {
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.
     fn get_non_core_ids(&self) -> Option<&Vec<NodeId>> {
         Some(&self.ids)
+    }
+    fn get_ids_iter(&self) -> Keys<NodeId, Node> {
+        self.nodes.keys()
     }
     fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node> {
         &mut self.nodes
@@ -98,6 +59,9 @@ impl GraphBase for SimpleUndirectedGraph {
             num_edges += node.neighbors.len();
         }
         num_edges / 2
+    }
+    fn count_nodes(&self) -> usize {
+        self.nodes.len()
     }
 }
 impl SimpleUndirectedGraph {
@@ -817,7 +781,58 @@ impl SimpleUndirectedGraph {
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)
     }
-    pub fn get_max_maxheap(
+}
+
+type Community = HashSet<NodeId>;
+
+#[derive(Clone, Copy, Eq)]
+pub struct CNMCommunityMergeInstruction {
+    delta_ij: OrderedFloat<f64>,
+    i: usize,
+    j: usize,
+}
+impl CNMCommunityMergeInstruction {
+    pub fn new(delta_ij: OrderedFloat<f64>, i: usize, j: usize) -> Self {
+        Self { delta_ij, i, j }
+    }
+    pub fn tuple(self) -> (OrderedFloat<f64>, usize, usize) {
+        (self.delta_ij, self.i, self.j)
+    }
+}
+impl Ord for CNMCommunityMergeInstruction {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.delta_ij < other.delta_ij {
+            Ordering::Less
+        } else if self.delta_ij > other.delta_ij {
+            Ordering::Greater
+        } else if self.i > other.i {
+            Ordering::Less
+        } else if self.i < other.i {
+            Ordering::Greater
+        } else if self.j > other.j {
+            Ordering::Less
+        } else if self.j < other.j {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+impl PartialEq for CNMCommunityMergeInstruction {
+    fn eq(&self, other: &Self) -> bool {
+        self.delta_ij == other.delta_ij && self.i == other.i && self.j == other.j
+    }
+}
+impl PartialOrd for CNMCommunityMergeInstruction {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+type CNMCommunityMergeInstructionHeap = BinaryHeap<CNMCommunityMergeInstruction>;
+
+
+pub trait CNMCommunities : GraphBase {
+    fn get_max_maxheap(
         &self,
         delta_q_maxheap: &HashMap<usize, CNMCommunityMergeInstructionHeap>,
     ) -> CNMCommunityMergeInstructionHeap {
@@ -831,7 +846,7 @@ impl SimpleUndirectedGraph {
         }
         maxh
     }
-    pub fn init_cnm_communities(
+    fn init_cnm_communities(
         &self,
     ) -> (
         HashMap<usize, Community>,
@@ -853,8 +868,8 @@ impl SimpleUndirectedGraph {
         let mut reverse_id_map: HashMap<NodeId, usize> = HashMap::new();
 
         let mut num_edges: usize = 0;
-        let mut sorted_ids: Vec<NodeId> = Vec::with_capacity(self.ids.len());
-        for id in &self.ids {
+        let mut sorted_ids: Vec<NodeId> = Vec::with_capacity(self.count_nodes());
+        for id in self.get_ids_iter() {
             sorted_ids.push(*id);
         }
         sorted_ids.sort();
@@ -863,7 +878,7 @@ impl SimpleUndirectedGraph {
             community.insert(id);
             communities.insert(i, community);
 
-            let d = self.nodes[&id].degree();
+            let d = self.get_node(id).degree();
 
             degree_map.insert(i, d);
             reverse_id_map.insert(id, i);
@@ -875,7 +890,7 @@ impl SimpleUndirectedGraph {
         let q0: f64 = 1.0 / (num_edges as f64);
         for (_i, community) in communities.iter() {
             for id in community {
-                for neighbor_id in &self.nodes[&id].neighbors {
+                for neighbor_id in &self.get_node(*id).neighbors {
                     let i: &usize = reverse_id_map.get(&id).unwrap();
                     let j: &usize = reverse_id_map.get(&neighbor_id.0).unwrap();
                     let k_i: usize = degree_map[i];
@@ -905,7 +920,7 @@ impl SimpleUndirectedGraph {
             num_edges,
         )
     }
-    pub fn iterate_cnm_communities(
+    fn iterate_cnm_communities(
         &self,
         mut communities: HashMap<usize, Community>,
         mut degree_map: HashMap<usize, usize>,
@@ -1016,7 +1031,7 @@ impl SimpleUndirectedGraph {
             num_edges,
         )
     }
-    pub fn get_cnm_communities(&self) -> (HashMap<usize, Community>, Vec<f64>) {
+    fn get_cnm_communities(&self) -> (HashMap<usize, Community>, Vec<f64>) {
         let (
             mut communities,
             mut degree_map,
@@ -1051,3 +1066,5 @@ impl SimpleUndirectedGraph {
         (communities, modularity_changes)
     }
 }
+
+impl CNMCommunities for SimpleUndirectedGraph {}

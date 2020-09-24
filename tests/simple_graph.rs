@@ -12,7 +12,7 @@ use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::simple_transformer::{
     GraphStatsTransformerBase, SimpleParallelTransformer, SimpleTransformer,
 };
-use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
+use lib_dachshund::dachshund::simple_undirected_graph::{CNMCommunities, SimpleUndirectedGraph};
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 use std::collections::{BTreeSet, HashSet};
 use std::iter::FromIterator;
