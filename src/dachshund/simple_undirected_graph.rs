@@ -817,19 +817,19 @@ impl SimpleUndirectedGraph {
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)
     }
-    pub fn get_H_maxheap(
+    pub fn get_max_maxheap(
         &self,
         delta_q_maxheap: &HashMap<usize, CNMCommunityMergeInstructionHeap>,
     ) -> CNMCommunityMergeInstructionHeap {
-        let mut H: CNMCommunityMergeInstructionHeap = BinaryHeap::new();
-        for (k, heap) in delta_q_maxheap.iter() {
+        let mut maxh: CNMCommunityMergeInstructionHeap = BinaryHeap::new();
+        for (_k, heap) in delta_q_maxheap.iter() {
             let maybe_top_elem = heap.peek();
             if maybe_top_elem.is_some() {
                 let top_elem = maybe_top_elem.unwrap();
-                H.push(top_elem.clone());
+                maxh.push(top_elem.clone());
             }
         }
-        H
+        maxh
     }
     pub fn init_cnm_communities(
         &self,
@@ -860,7 +860,6 @@ impl SimpleUndirectedGraph {
         sorted_ids.sort();
         for (i, id) in sorted_ids.into_iter().enumerate() {
             let mut community: Community = HashSet::new();
-            println!("Community {} contains id: {}", i, id);
             community.insert(id);
             communities.insert(i, community);
 
@@ -869,14 +868,12 @@ impl SimpleUndirectedGraph {
             degree_map.insert(i, d);
             reverse_id_map.insert(id, i);
             num_edges += d;
-            println!("Node: {}, id: {}, degree: {}", id, i, d);
             delta_q_maxheap.insert(i, BinaryHeap::new());
             delta_q_bmap.insert(i, HashMap::new());
         }
         num_edges /= 2;
         let q0: f64 = 1.0 / (num_edges as f64);
-        println!("q0: {}, num_edges: {}", q0, num_edges);
-        for (i, community) in communities.iter() {
+        for (_i, community) in communities.iter() {
             for id in community {
                 for neighbor_id in &self.nodes[&id].neighbors {
                     let i: &usize = reverse_id_map.get(&id).unwrap();
@@ -885,7 +882,6 @@ impl SimpleUndirectedGraph {
                     let k_j: usize = degree_map[j];
                     let delta_qij: f64 =
                         q0 - 2. * ((k_i * k_j) as f64) / (((2 * num_edges).pow(2)) as f64);
-                    println!("{}, {}, {}, {}, {}", i, j, k_i, k_j, delta_qij);
                     delta_q_bmap.get_mut(i).unwrap().insert(*j, delta_qij);
                     delta_q_maxheap
                         .get_mut(i)
@@ -898,14 +894,14 @@ impl SimpleUndirectedGraph {
                 }
             }
         }
-        let H = self.get_H_maxheap(&delta_q_maxheap);
+        let maxh = self.get_max_maxheap(&delta_q_maxheap);
 
         (
             communities,
             degree_map,
             delta_q_bmap,
             delta_q_maxheap,
-            H,
+            maxh,
             num_edges,
         )
     }
@@ -915,7 +911,7 @@ impl SimpleUndirectedGraph {
         mut degree_map: HashMap<usize, usize>,
         mut delta_q_bmap: HashMap<usize, HashMap<usize, f64>>,
         mut delta_q_maxheap: HashMap<usize, CNMCommunityMergeInstructionHeap>,
-        mut H: CNMCommunityMergeInstructionHeap,
+        mut maxh: CNMCommunityMergeInstructionHeap,
         num_edges: usize,
     ) -> (
         HashMap<usize, Community>,
@@ -926,7 +922,7 @@ impl SimpleUndirectedGraph {
         usize,
     ) {
         // find largest delta_q_ij
-        let (largest_delta_q_ij, i, j) = H.pop().unwrap().tuple();
+        let (_largest_delta_q_ij, i, j) = maxh.pop().unwrap().tuple();
 
         // we will create community j from communities i and j
         let com_i: Community = communities.remove(&i).unwrap();
@@ -944,7 +940,6 @@ impl SimpleUndirectedGraph {
 
         let mut new_delta_qjk_map: HashMap<usize, f64> = HashMap::new();
         let mut new_community_maxheap: CNMCommunityMergeInstructionHeap = BinaryHeap::new();
-        let mut new_H: CNMCommunityMergeInstructionHeap = BinaryHeap::with_capacity(H.len());
         for k in all_neighbors {
             let delta_qik: Option<&f64> = neighbors_i.get(&k);
             let delta_qjk: Option<&f64> = neighbors_j.get(&k);
@@ -964,12 +959,6 @@ impl SimpleUndirectedGraph {
                             * (degree_map[&k] as f64 / (2 * num_edges) as f64)
                 }
             };
-            println!(
-                "k: {}, i is connected to k: {}, j is connected to k: {}",
-                k,
-                delta_qik.is_some(),
-                delta_qjk.is_some()
-            );
             new_delta_qjk_map.insert(k, new_delta_qjk);
 
             /* Update the binary maps for k */
@@ -984,7 +973,6 @@ impl SimpleUndirectedGraph {
             let mut new_maxheap: CNMCommunityMergeInstructionHeap =
                 BinaryHeap::with_capacity(old_maxheap.len());
             for el in old_maxheap.into_iter_sorted() {
-                let delta_qjk = el.delta_ij;
                 let ll = el.j;
 
                 if ll != i {
@@ -1018,26 +1006,15 @@ impl SimpleUndirectedGraph {
         degree_map.insert(j, new_degree);
         degree_map.remove(&i);
 
-        H = self.get_H_maxheap(&delta_q_maxheap);
+        maxh = self.get_max_maxheap(&delta_q_maxheap);
         (
             communities,
             degree_map,
             delta_q_bmap,
             delta_q_maxheap,
-            H,
+            maxh,
             num_edges,
         )
-    }
-    fn verify_sorted(
-        &self,
-        heap: CNMCommunityMergeInstructionHeap,
-    ) -> CNMCommunityMergeInstructionHeap {
-        let mut new_heap: CNMCommunityMergeInstructionHeap = BinaryHeap::new();
-        for (i, el) in heap.into_sorted_vec().iter().enumerate() {
-            println!("Element {}, ({}, {}, {})", i, el.delta_ij, el.i, el.j);
-            new_heap.push(el.clone());
-        }
-        new_heap
     }
     pub fn get_cnm_communities(&self) -> (HashMap<usize, Community>, Vec<f64>) {
         let (
@@ -1045,43 +1022,29 @@ impl SimpleUndirectedGraph {
             mut degree_map,
             mut delta_q_bmap,
             mut delta_q_maxheap,
-            mut H,
+            mut maxh,
             num_edges,
         ) = self.init_cnm_communities();
 
-        H = self.verify_sorted(H);
-        let mut modularity_change = H.peek().unwrap().delta_ij.into_inner();
+        let mut modularity_change = maxh.peek().unwrap().delta_ij.into_inner();
         let mut modularity_changes: Vec<f64> = vec![modularity_change];
-        println!(
-            "Modularity change: {}, i: {}, j: {}",
-            modularity_change,
-            H.peek().unwrap().i,
-            H.peek().unwrap().j
-        );
 
-        while H.len() > 0 && modularity_change > 0. {
-            println!("iteration: {}", modularity_changes.len());
+        while maxh.len() > 0 && modularity_change > 0. {
             let res = self.iterate_cnm_communities(
                 communities,
                 degree_map,
                 delta_q_bmap,
                 delta_q_maxheap,
-                H,
+                maxh,
                 num_edges,
             );
             communities = res.0;
             degree_map = res.1;
             delta_q_bmap = res.2;
             delta_q_maxheap = res.3;
-            H = res.4;
-            if H.peek().is_some() {
-                modularity_change = H.peek().unwrap().delta_ij.into_inner();
-                println!(
-                    "Modularity change: {}, i: {}, j: {}",
-                    modularity_change,
-                    H.peek().unwrap().i,
-                    H.peek().unwrap().j
-                );
+            maxh = res.4;
+            if maxh.peek().is_some() {
+                modularity_change = maxh.peek().unwrap().delta_ij.into_inner();
                 modularity_changes.push(modularity_change);
             }
         }

@@ -177,7 +177,6 @@ fn test_set_neighborhood() -> CLQResult<()> {
     assert_eq!(graph.non_core_ids.len(), 3);
 
     let initial_id: NodeId = 1.into();
-    let alpha: f32 = 1.0;
     let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
 
     let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
