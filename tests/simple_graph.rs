@@ -134,6 +134,69 @@ fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
         &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
     ))
 }
+fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
+    match idx {
+        0 => Ok(vec![
+            0.03443877551020408,
+            0.033163265306122444,
+            0.03188775510204082,
+            0.03188775510204082,
+            0.03125,
+            0.030612244897959183,
+            0.02933673469387755,
+            0.02933673469387755,
+            0.03571428571428571,
+            0.02806122448979592,
+            0.026785714285714284,
+            0.022959183673469385,
+            0.019770408163265307,
+            0.008928571428571432,
+        ]),
+        1 => Ok(vec![0.1111111111111111, 0.2222222222222222]),
+        2 => Ok(vec![
+            0.07999999999999999,
+            0.09999999999999998,
+            0.07999999999999996,
+        ]),
+        3 => Ok(vec![
+            0.1111111111111111,
+            0.2222222222222222,
+            0.1111111111111111,
+            0.2222222222222222,
+        ]),
+        4 => Ok(vec![
+            0.10204081632653061,
+            0.163265306122449,
+            0.10204081632653061,
+            0.163265306122449,
+        ]),
+        5 => Ok(vec![0.15625, 0.125]),
+        6 => Ok(vec![
+            0.013310185185185185,
+            0.01253858024691358,
+            0.01244212962962963,
+            0.012152777777777776,
+            0.02256944444444444,
+            0.011863425925925927,
+            0.021026234567901234,
+            0.01707175925925926,
+            0.012345679012345678,
+            0.020254629629629633,
+            0.01099537037037037,
+            0.019290123456790122,
+            0.014949845679012346,
+            0.012731481481481483,
+            0.012345679012345678,
+            0.019868827160493825,
+            0.019290123456790122,
+            0.01099537037037037,
+            0.02035108024691358,
+            0.020833333333333336,
+            0.007812500000000002,
+        ]),
+        _ => return Err("Invalid index".to_string()),
+    }
+}
 
 #[cfg(test)]
 #[test]
@@ -249,4 +312,20 @@ fn test_parallel_transformer() {
     let output_set = BTreeSet::from_iter(output_str.split('\n'));
     let expected_set = BTreeSet::from_iter(expected.split('\n'));
     assert_eq!(output_set, expected_set);
+}
+
+#[test]
+fn test_modularity_changes() {
+    for i in 0..7 {
+        let g = get_graph(i).unwrap();
+        let (_, modularity_changes) = g.get_cnm_communities();
+        let expected = get_expected_modularity_changes(i).unwrap();
+        for i in 0..expected.len() {
+            println!(
+                "Modularity changes: {}, {}, {}",
+                i, modularity_changes[i], expected[i]
+            );
+            assert!((modularity_changes[i] - expected[i]).abs() <= 0.001);
+        }
+    }
 }
