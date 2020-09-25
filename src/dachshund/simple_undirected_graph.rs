@@ -6,23 +6,21 @@
  */
 extern crate nalgebra as na;
 use crate::dachshund::cnm_communities::CNMCommunities;
+use crate::dachshund::connected_components::ConnectedComponents;
+use crate::dachshund::coreness::Coreness;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
 use na::{DMatrix, DVector};
-use ordered_float::OrderedFloat;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use std::cmp::Ordering;
-use std::collections::{BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque};
-use std::collections::hash_map::Keys;
-use std::iter::FromIterator;
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::hash_map::{Keys, Values};
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
-type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
 
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
@@ -44,6 +42,9 @@ impl GraphBase for SimpleUndirectedGraph {
     }
     fn get_ids_iter(&self) -> Keys<NodeId, Node> {
         self.nodes.keys()
+    }
+    fn get_nodes_iter(&self) -> Values<NodeId, Node> {
+        self.nodes.values()
     }
     fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node> {
         &mut self.nodes
@@ -574,214 +575,8 @@ impl SimpleUndirectedGraph {
         }
         ev
     }
-    // returns a hashmap of the form node_id => component_id -- can be turned
-    // in to a vector of node_ids inside _get_connected_components.
-    pub fn _get_connected_components_membership(
-        &self,
-        ignore_nodes: Option<&HashSet<NodeId>>,
-        ignore_edges: Option<&HashSet<(NodeId, NodeId)>>,
-    ) -> (HashMap<NodeId, usize>, usize) {
-        let mut components: HashMap<NodeId, usize> = HashMap::new();
-        let mut queue: OrderedNodeSet = BTreeSet::new();
-        for id in self.nodes.keys() {
-            if ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(id) {
-                queue.insert(*id);
-            }
-        }
-        let mut idx = 0;
-        while !queue.is_empty() {
-            let id = queue.pop_first().unwrap();
-            let distinct_nodes: Vec<NodeId> = self.nodes[&id]
-                .edges
-                .iter()
-                .map(|x| x.target_id)
-                .filter(|x| {
-                    ignore_edges.is_none()
-                        || (!ignore_edges.unwrap().contains(&(id, *x))
-                            && !ignore_edges.unwrap().contains(&(*x, id)))
-                })
-                .collect();
-            let mut q2: OrderedNodeSet = BTreeSet::from_iter(distinct_nodes.into_iter());
-
-            while !q2.is_empty() {
-                let nid = q2.pop_first().unwrap();
-                if ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(&nid) {
-                    components.insert(nid, idx);
-                    if queue.contains(&nid) {
-                        queue.remove(&nid);
-                    }
-                    for e in &self.nodes[&nid].edges {
-                        let nid2 = e.target_id;
-                        if (ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(&nid2))
-                            && (ignore_edges.is_none()
-                                || (!ignore_edges.unwrap().contains(&(nid, nid2))
-                                    && !ignore_edges.unwrap().contains(&(nid2, nid))))
-                            && !components.contains_key(&nid2)
-                        {
-                            q2.insert(nid2);
-                        }
-                    }
-                }
-            }
-            idx += 1;
-        }
-        (components, idx)
-    }
-    pub fn _get_connected_components(
-        &self,
-        ignore_nodes: Option<&HashSet<NodeId>>,
-        ignore_edges: Option<&HashSet<(NodeId, NodeId)>>,
-    ) -> Vec<Vec<NodeId>> {
-        let (components, n) = self._get_connected_components_membership(ignore_nodes, ignore_edges);
-        let mut v: Vec<Vec<NodeId>> = vec![Vec::new(); n];
-        for (nid, core_idx) in components {
-            v[core_idx].push(nid);
-        }
-        v
-    }
-    pub fn get_connected_components(&self) -> Vec<Vec<NodeId>> {
-        self._get_connected_components(None, None)
-    }
-
-    pub fn _get_k_cores(&self, k: usize, removed: &mut HashSet<NodeId>) -> Vec<Vec<NodeId>> {
-        let mut queue: OrderedNodeSet = self.nodes.keys().cloned().collect();
-        let mut num_neighbors: HashMap<NodeId, usize> = self
-            .nodes
-            .values()
-            .map(|x| {
-                (
-                    x.node_id,
-                    HashSet::<NodeId>::from_iter(x.edges.iter().map(|y| y.target_id)).len(),
-                )
-            })
-            .collect();
-        // iteratively delete all nodes w/ degree less than k
-        while !queue.is_empty() {
-            let id = queue.pop_first().unwrap();
-            // this assumes no multiple connections to neighbors
-            if num_neighbors[&id] < k {
-                removed.insert(id);
-                for e in &self.nodes[&id].edges {
-                    let nid = e.target_id;
-                    if !removed.contains(&nid) {
-                        queue.insert(nid);
-                        *num_neighbors.get_mut(&id).unwrap() -= 1;
-                        *num_neighbors.get_mut(&nid).unwrap() -= 1;
-                    }
-                }
-            }
-        }
-        self._get_connected_components(Some(removed), None)
-    }
-
-    pub fn get_k_cores(&self, k: usize) -> Vec<Vec<NodeId>> {
-        let mut removed: HashSet<NodeId> = HashSet::new();
-        self._get_k_cores(k, &mut removed)
-    }
-
-    pub fn get_coreness(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
-        let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
-        let mut removed: HashSet<NodeId> = HashSet::new();
-        let mut k: usize = 0;
-        while removed.len() < self.nodes.len() {
-            k += 1;
-            core_assignments.push(self._get_k_cores(k, &mut removed))
-        }
-        let mut coreness: HashMap<NodeId, usize> = HashMap::new();
-        for i in (0..k).rev() {
-            for ids in &core_assignments[i] {
-                for id in ids {
-                    if !coreness.contains_key(id) {
-                        coreness.insert(*id, i + 1);
-                    }
-                }
-            }
-        }
-        (core_assignments, coreness)
-    }
-
-    pub fn _get_k_trusses(
-        &self,
-        k: usize,
-        ignore_nodes: &HashSet<NodeId>,
-    ) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
-        let mut neighbors: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
-        let mut edges: OrderedEdgeSet = BTreeSet::new();
-        for node in self.nodes.values() {
-            // [TODO] This step is unncessary now.
-            neighbors.insert(
-                node.node_id,
-                HashSet::from_iter(
-                    node.edges
-                        .iter()
-                        .map(|x| x.target_id)
-                        .filter(|x| !ignore_nodes.contains(x)),
-                ),
-            );
-            for e in &node.edges {
-                let id_pair: (NodeId, NodeId);
-                if node.node_id < e.target_id {
-                    id_pair = (node.node_id, e.target_id);
-                } else {
-                    id_pair = (e.target_id, node.node_id);
-                }
-                edges.insert(id_pair);
-            }
-        }
-        let mut changes = true;
-        let mut ignore_edges: HashSet<(NodeId, NodeId)> = HashSet::new();
-        while changes {
-            changes = false;
-            let mut to_remove: Vec<(NodeId, NodeId)> = Vec::new();
-            for (id1, id2) in &edges {
-                let n1 = &neighbors[&id1];
-                let n2 = &neighbors[&id2];
-                let intersection = n1.intersection(n2);
-                if intersection.count() < k - 2 {
-                    to_remove.push((*id1, *id2));
-                    neighbors.get_mut(id1).unwrap().remove(id2);
-                    neighbors.get_mut(id2).unwrap().remove(id1);
-                }
-            }
-            for e in &to_remove {
-                changes = true;
-                edges.remove(&e);
-                ignore_edges.insert(*e);
-            }
-        }
-        let (components, num_components) =
-            self._get_connected_components_membership(None, Some(&ignore_edges));
-        let mut trusses: Vec<OrderedEdgeSet> = vec![BTreeSet::new(); num_components];
-        for (id, idx) in &components {
-            // reusing the neighbors sets from above
-            for nid in &neighbors[&id] {
-                // will only return (lesser_id, greater_id) for an UndirectedGraph
-                if components[nid] == *idx && id < nid {
-                    let eid = (*id, *nid);
-                    if !ignore_edges.contains(&eid) && edges.contains(&eid) {
-                        trusses[*idx].insert(eid);
-                    }
-                }
-            }
-        }
-        let filtered_trusses: Vec<OrderedEdgeSet> =
-            trusses.into_iter().filter(|x| !x.is_empty()).collect();
-        let truss_nodes = filtered_trusses
-            .iter()
-            .map(|y| BTreeSet::from_iter(y.iter().map(|x| x.0).chain(y.iter().map(|x| x.1))))
-            .collect::<HashSet<OrderedNodeSet>>();
-        (filtered_trusses, truss_nodes)
-    }
-    pub fn get_k_trusses(&self, k: usize) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
-        // Basic algorithm: https://louridas.github.io/rwa/assignments/finding-trusses/
-
-        // ignore_nodes will contain all the irrelevant nodes after
-        // calling self._get_k_cores();
-        let mut ignore_nodes: HashSet<NodeId> = HashSet::new();
-        // this really only works for an undirected graph
-        self._get_k_cores(k - 1, &mut ignore_nodes);
-        self._get_k_trusses(k, &ignore_nodes)
-    }
 }
 
 impl CNMCommunities for SimpleUndirectedGraph {}
+impl ConnectedComponents for SimpleUndirectedGraph {}
+impl Coreness for SimpleUndirectedGraph {}

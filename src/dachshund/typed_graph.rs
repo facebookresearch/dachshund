@@ -9,7 +9,7 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
 use std::collections::HashMap;
-use std::collections::hash_map::Keys;
+use std::collections::hash_map::{Keys, Values};
 
 /// Keeps track of a bipartite graph composed of "core" and "non-core" nodes. Only core ->
 /// non-core connections may exist in the graph. The neighbors of core nodes are non-cores, the
@@ -37,6 +37,9 @@ impl GraphBase for TypedGraph {
     }
     fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node> {
         &mut self.nodes
+    }
+    fn get_nodes_iter(&self) -> Values<NodeId, Node> {
+        self.nodes.values()
     }
     fn has_node(&self, node_id: NodeId) -> bool {
         self.nodes.contains_key(&node_id)

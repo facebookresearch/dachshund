@@ -7,6 +7,8 @@
 extern crate clap;
 extern crate serde_json;
 
+use crate::dachshund::connected_components::ConnectedComponents;
+use crate::dachshund::coreness::Coreness;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
