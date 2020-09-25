@@ -16,8 +16,8 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::collections::hash_map::{Keys, Values};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
@@ -29,7 +29,6 @@ pub struct SimpleUndirectedGraph {
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleUndirectedGraph {
-
     type NodeType = Node;
 
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.

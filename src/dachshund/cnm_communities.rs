@@ -58,7 +58,7 @@ impl PartialOrd for CNMCommunityMergeInstruction {
 }
 type CNMCommunityMergeInstructionHeap = BinaryHeap<CNMCommunityMergeInstruction>;
 
-pub trait CNMCommunities : GraphBase<NodeType = Node> {
+pub trait CNMCommunities: GraphBase<NodeType = Node> {
     fn get_max_maxheap(
         &self,
         delta_q_maxheap: &HashMap<usize, CNMCommunityMergeInstructionHeap>,
@@ -294,4 +294,3 @@ pub trait CNMCommunities : GraphBase<NodeType = Node> {
         (communities, modularity_changes)
     }
 }
-

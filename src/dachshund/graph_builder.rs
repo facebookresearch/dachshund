@@ -18,7 +18,7 @@ pub trait GraphBuilder<TGraph: GraphBase>
 where
     Self: Sized,
     TGraph: Sized,
-    TGraph: GraphBase<NodeType=Node>
+    TGraph: GraphBase<NodeType = Node>,
 {
     fn _new(
         nodes: HashMap<NodeId, Node>,

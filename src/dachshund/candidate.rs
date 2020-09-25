@@ -111,7 +111,9 @@ impl<'a, T: GraphBase> fmt::Display for Candidate<'a, T> {
 }
 
 impl<'a, TGraph: GraphBase> Candidate<'a, TGraph>
-where TGraph: GraphBase<NodeType=Node> {
+where
+    TGraph: GraphBase<NodeType = Node>,
+{
     /// creates an empty candidate object, refering to a graph.
     pub fn init_blank(graph: &'a TGraph) -> Self {
         Self {

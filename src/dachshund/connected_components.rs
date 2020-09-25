@@ -30,7 +30,8 @@ pub trait ConnectedComponents: GraphBase {
         let mut idx = 0;
         while !queue.is_empty() {
             let id = queue.pop_first().unwrap();
-            let distinct_nodes: Vec<NodeId> = self.get_node(id)
+            let distinct_nodes: Vec<NodeId> = self
+                .get_node(id)
                 .get_edges()
                 .map(|x| x.target_id)
                 .filter(|x| {

@@ -11,11 +11,10 @@ use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
-
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
-pub trait Coreness : GraphBase + ConnectedComponents {
+pub trait Coreness: GraphBase + ConnectedComponents {
     fn _get_k_cores(&self, k: usize, removed: &mut HashSet<NodeId>) -> Vec<Vec<NodeId>> {
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
         let mut num_neighbors: HashMap<NodeId, usize> = self
@@ -156,4 +155,3 @@ pub trait Coreness : GraphBase + ConnectedComponents {
         self._get_k_trusses(k, &ignore_nodes)
     }
 }
-

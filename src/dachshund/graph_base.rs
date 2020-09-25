@@ -6,15 +6,16 @@
  */
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::NodeBase;
-use std::collections::HashMap;
 use std::collections::hash_map::{Keys, Values};
+use std::collections::HashMap;
 
 /// General-purpose trait which indicates the minimum amount of shared context
 /// required between all graph objects. Currently built to accommodate a graph
 /// with "core" and "non-core" ids. A GraphBase is built by a GraphBuilder.
 pub trait GraphBase
 where
-    Self: Sized, Self::NodeType: NodeBase
+    Self: Sized,
+    Self::NodeType: NodeBase,
 {
     type NodeType;
 

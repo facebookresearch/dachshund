@@ -38,7 +38,10 @@ impl Scorer {
         }
     }
     // computes "cliqueness" score, i.e. the objective the search algorithm is maximizing.
-    pub fn score<TGraph: GraphBase<NodeType = Node>>(&self, candidate: &mut Candidate<TGraph>) -> CLQResult<f32> {
+    pub fn score<TGraph: GraphBase<NodeType = Node>>(
+        &self,
+        candidate: &mut Candidate<TGraph>,
+    ) -> CLQResult<f32> {
         // degenerate case where there are no edges.
         if candidate.core_ids.is_empty() || candidate.non_core_ids.is_empty() {
             return Ok(-1.0);

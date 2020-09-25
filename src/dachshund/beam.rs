@@ -37,7 +37,7 @@ where
 /// to avoid exponential blowup of the search space.
 pub struct Beam<'a, TGraph>
 where
-    TGraph: GraphBase<NodeType = Node>
+    TGraph: GraphBase<NodeType = Node>,
 {
     pub candidates: Vec<Candidate<'a, TGraph>>,
     pub graph: &'a TGraph,
