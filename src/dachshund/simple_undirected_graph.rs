@@ -10,11 +10,10 @@ use crate::dachshund::connected_components::ConnectedComponents;
 use crate::dachshund::coreness::Coreness;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::Node;
+use crate::dachshund::node::{Node, NodeBase, NodeEdgeBase};
 use na::{DMatrix, DVector};
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::hash_map::{Keys, Values};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -64,40 +63,22 @@ impl GraphBase for SimpleUndirectedGraph {
     fn count_nodes(&self) -> usize {
         self.nodes.len()
     }
+
 }
-impl SimpleUndirectedGraph {
-    pub fn as_input_rows(&self, graph_id: usize) -> String {
-        let mut rows: Vec<String> = Vec::new();
-        for (id, node) in &self.nodes {
-            for e in &node.edges {
-                if *id < e.target_id {
-                    rows.push(format!(
-                        "{}\t{}\t{}",
-                        graph_id,
-                        id.value(),
-                        e.target_id.value()
-                    ));
-                }
-            }
-        }
-        rows.join("\n")
-    }
-    pub fn get_node_degree(&self, id: NodeId) -> usize {
-        self.nodes[&id].degree()
-    }
-    pub fn get_clustering_coefficient(&self, id: NodeId) -> Option<f64> {
-        let node: &Node = &self.nodes[&id];
+pub trait Clustering: GraphBase {
+    fn get_clustering_coefficient(&self, id: NodeId) -> Option<f64> {
+        let node = self.get_node(id);
         let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
-        for ne in &node.edges {
-            neighbor_ids.insert(ne.target_id);
+        for ne in node.get_edges() {
+            neighbor_ids.insert(ne.get_neighbor_id());
         }
         let num_neighbors: usize = neighbor_ids.len();
         if num_neighbors <= 1 {
             return None;
         }
         let mut num_ties: usize = 0;
-        for ne in &node.edges {
-            let neighbor: &Node = &self.nodes[&ne.target_id];
+        for ne in node.get_edges() {
+            let neighbor = &self.get_node(ne.get_neighbor_id());
             num_ties += neighbor.count_ties_with_ids(&neighbor_ids);
         }
         // different from degree -- this is the number of distinct neighbors,
@@ -105,60 +86,24 @@ impl SimpleUndirectedGraph {
         // edges.
         Some(num_ties as f64 / ((num_neighbors * (num_neighbors - 1)) as f64))
     }
-    pub fn get_avg_clustering(&self) -> f64 {
+    fn get_avg_clustering(&self) -> f64 {
         let coefs = self
-            .ids
-            .iter()
+            .get_ids_iter()
             .map(|x| self.get_clustering_coefficient(*x))
             .filter(|x| x.is_some())
             .map(|x| x.unwrap())
             .collect::<Vec<f64>>();
         Iterator::sum::<f64>(coefs.iter()) / coefs.len() as f64
     }
-
-    // Triangles : Number of triangles a node participates in.
-    pub fn triangle_count(&self, node_id: NodeId) -> usize {
-        let node: &Node = &self.nodes[&node_id];
-        let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
-        for ne in &node.edges {
-            neighbor_ids.insert(ne.target_id);
-        }
-
-        let mut triangle_count = 0;
-        for ne in &node.edges {
-            let neighbor: &Node = &self.nodes[&ne.target_id];
-            triangle_count += neighbor.count_ties_with_ids(&neighbor_ids);
-        }
-
-        triangle_count / 2
-    }
-
-    // Triples : pairs of neighbors of a given node.
-    pub fn triples_count(&self, node_id: NodeId) -> usize {
-        let num_neighbors = &self.nodes[&node_id].edges.len();
-        num_neighbors * (num_neighbors - 1) / 2
-    }
-
-    // Transitivity: 3 * number of triangles  / number of triples
-    pub fn get_transitivity(&self) -> f64 {
-        let num_triangles =
-            Iterator::sum::<usize>(self.ids.iter().map(|x| self.triangle_count(*x)));
-
-        let num_triples = Iterator::sum::<usize>(self.ids.iter().map(|x| self.triples_count(*x)));
-
-        num_triangles as f64 / num_triples as f64
-    }
-
     // Approximate Clustering - Randomly sample neighbors of nodes w/ degree at least 2.
     // k~=26,000 gives an approximation w/ <1% chance of an error of more than 1 percentage point.
     // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
-    pub fn get_approx_avg_clustering(&self, samples: usize) -> f64 {
+    fn get_approx_avg_clustering(&self, samples: usize) -> f64 {
         let ordered_nodes = self
-            .nodes
-            .iter()
-            .filter(|(_node_id, node)| node.degree() >= 2)
-            .map(|(_node_id, node)| node)
-            .collect::<Vec<&Node>>();
+            .get_nodes_iter()
+            .filter(|node| node.degree() >= 2)
+            .map(|node| node)
+            .collect::<Vec<_>>();
 
         let n = ordered_nodes.len();
         let mut successes = 0;
@@ -169,14 +114,15 @@ impl SimpleUndirectedGraph {
             let v = &ordered_nodes[rng.gen_range(0, n)];
 
             // Choose 2 random nodes that are neighbors of j
-            let mut random_neighbors = v.edges.choose_multiple(&mut rng, 2).map(|x| x.target_id);
-            let u_id = random_neighbors.next().unwrap();
-            let w_id = random_neighbors.next().unwrap();
+            let mut random_neighbors = v.get_edges().choose_multiple(&mut rng, 2).into_iter();
+            let next_random_neighbor = random_neighbors.next();
+            let u_id = next_random_neighbor.unwrap().get_neighbor_id();
+            let w_id = random_neighbors.next().unwrap().get_neighbor_id();
 
             // If they're connected, increment l.
             // TODO: No O(1) way to check if there's an edge?
-            for edge in &self.nodes[&u_id].edges {
-                if edge.target_id == w_id {
+            for edge in self.get_node(u_id).get_edges() {
+                if edge.get_neighbor_id() == w_id {
                     successes += 1;
                     break;
                 }
@@ -185,22 +131,54 @@ impl SimpleUndirectedGraph {
         (successes as f64) / (samples as f64)
     }
 
+}
+pub trait Transitivity: GraphBase {
+    // Triangles : Number of triangles a node participates in.
+    fn triangle_count(&self, node_id: NodeId) -> usize {
+        let node = self.get_node(node_id);
+        let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
+        for ne in node.get_edges() {
+            neighbor_ids.insert(ne.target_id);
+        }
+
+        let mut triangle_count = 0;
+        for ne in node.get_edges() {
+            let neighbor = self.get_node(ne.get_neighbor_id());
+            triangle_count += neighbor.count_ties_with_ids(&neighbor_ids);
+        }
+
+        triangle_count / 2
+    }
+
+    // Triples : pairs of neighbors of a given node.
+    fn triples_count(&self, node_id: NodeId) -> usize {
+        let num_neighbors = &self.get_node(node_id).degree();
+        num_neighbors * (num_neighbors - 1) / 2
+    }
+
+    // Transitivity: 3 * number of triangles  / number of triples
+    fn get_transitivity(&self) -> f64 {
+        let num_triangles =
+            Iterator::sum::<usize>(self.get_ids_iter().map(|x| self.triangle_count(*x)));
+
+        let num_triples = Iterator::sum::<usize>(self.get_ids_iter().map(|x| self.triples_count(*x)));
+
+        num_triangles as f64 / num_triples as f64
+    }
+
     // Approximate Transitivity
     // k~=26,000 gives an approximation w/ <1% chance of an error of more than 1 percentage point.
     // See http://jgaa.info/accepted/2005/SchankWagner2005.9.2.pdf for approximation guarantees.
-    pub fn get_approx_transitivity(&self, samples: usize) -> f64 {
+    fn get_approx_transitivity(&self, samples: usize) -> f64 {
         let ordered_nodes = self
-            .nodes
-            .iter()
-            .filter(|(_node_id, node)| node.degree() >= 2)
-            .map(|(_node_id, node)| node)
-            .collect::<Vec<&Node>>();
+            .get_nodes_iter()
+            .filter(|node| node.degree() >= 2)
+            .collect::<Vec<_>>();
 
         let triples_counts: Vec<usize> = self
-            .nodes
-            .iter()
-            .filter(|(_node_id, node)| node.degree() >= 2)
-            .map(|(node_id, _node)| self.triples_count(*node_id))
+            .get_nodes_iter()
+            .filter(|node| node.degree() >= 2)
+            .map(|node| self.triples_count(node.get_id()))
             .collect();
         let dist = WeightedIndex::new(triples_counts).unwrap();
 
@@ -211,12 +189,13 @@ impl SimpleUndirectedGraph {
             let v = &ordered_nodes[dist.sample(&mut rng)];
 
             // Choose 2 random nodes that are neighbors of j
-            let mut random_neighbors = v.edges.choose_multiple(&mut rng, 2).map(|x| x.target_id);
-            let u_id = random_neighbors.next().unwrap();
-            let w_id = random_neighbors.next().unwrap();
+            let mut random_neighbors = v.get_edges().choose_multiple(&mut rng, 2).into_iter();
+            let next_random_neighbor = random_neighbors.next();
+            let u_id = next_random_neighbor.unwrap().get_neighbor_id();
+            let w_id = random_neighbors.next().unwrap().get_neighbor_id();
 
             // TODO: No constant time way to check if there's an edge?
-            for edge in &self.nodes[&u_id].edges {
+            for edge in self.get_node(u_id).get_edges() {
                 if edge.target_id == w_id {
                     successes += 1;
                     break;
@@ -226,15 +205,16 @@ impl SimpleUndirectedGraph {
 
         (successes as f64) / (samples as f64)
     }
-
+}
+pub trait ShortestPaths: GraphBase {
     // Dikstra's algorithm for shortest paths. Returns distance and parent mappings
-    pub fn get_shortest_paths(
+    fn get_shortest_paths(
         &self,
         source: NodeId,
         // nodes in the connected component to which source belongs. If you don't have
         // this available, just pass None. Returned distances will only be to those
         // nodes anyway (but this optimization saves some compute)
-        nodes_in_connected_component: Option<&Vec<NodeId>>,
+        nodes_in_connected_component: &Option<Vec<NodeId>>,
     ) -> (
         HashMap<NodeId, Option<usize>>,
         HashMap<NodeId, HashSet<NodeId>>,
@@ -244,11 +224,11 @@ impl SimpleUndirectedGraph {
         let mut dist: HashMap<NodeId, Option<usize>> = HashMap::new();
         let mut parents: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
 
-        let targets: &Vec<NodeId> = match nodes_in_connected_component {
-            Some(x) => x,
-            None => &self.ids,
+        let targets: Vec<NodeId> = match nodes_in_connected_component {
+            Some(x) => x.iter().cloned().collect(),
+            None => self.get_ids_iter().cloned().collect(),
         };
-        for id in targets {
+        for id in &targets {
             queue.insert(&id);
             dist.insert(*id, None);
             parents.insert(*id, HashSet::new());
@@ -268,7 +248,7 @@ impl SimpleUndirectedGraph {
             }
             // remove u from queue
             queue.remove(u.unwrap());
-            for e in &self.nodes[u.unwrap()].edges {
+            for e in self.get_node(*u.unwrap()).get_edges() {
                 let v = &e.target_id;
                 if queue.contains(v) {
                     let alt = min_dist.unwrap() + 1;
@@ -285,7 +265,7 @@ impl SimpleUndirectedGraph {
 
     /// Single source paths in a unweighted, undirected graph by bfs.
     /// Returns nodes in the order of exploration, distances, and predecesors.
-    pub fn get_shortest_paths_bfs(
+    fn get_shortest_paths_bfs(
         &self,
         source: NodeId,
     ) -> (
@@ -300,7 +280,7 @@ impl SimpleUndirectedGraph {
         // Distances from source to v
         let mut dists: HashMap<NodeId, i32> = HashMap::new();
 
-        for node_id in self.nodes.keys() {
+        for node_id in self.get_ids_iter() {
             preds.insert(*node_id, Vec::new());
             shortest_path_counts.insert(*node_id, if node_id == &source { 1 } else { 0 });
             dists.insert(*node_id, if node_id == &source { 0 } else { -1 });
@@ -315,8 +295,8 @@ impl SimpleUndirectedGraph {
         while !queue.is_empty() {
             let v = queue.pop_front().unwrap();
             stack.push(v);
-            let node = &self.nodes[&v];
-            for edge in &node.edges {
+            let node = &self.get_node(v);
+            for edge in node.get_edges() {
                 let neighbor_id = edge.target_id;
                 // neighbor_id newly discovered
                 if dists[&neighbor_id] < 0 {
@@ -351,7 +331,7 @@ impl SimpleUndirectedGraph {
         new_paths
     }
     // enumerates shortest paths for a single source
-    pub fn enumerate_shortest_paths(
+    fn enumerate_shortest_paths(
         &self,
         dist: &HashMap<NodeId, Option<usize>>,
         parents: &HashMap<NodeId, HashSet<NodeId>>,
@@ -383,14 +363,15 @@ impl SimpleUndirectedGraph {
         }
         paths
     }
-
-    pub fn visit_nodes_from_root(&self, root: &NodeId, visited: &mut OrderedNodeSet) {
+}
+pub trait Connectivity: GraphBase {
+    fn visit_nodes_from_root(&self, root: &NodeId, visited: &mut OrderedNodeSet) {
         let mut to_visit: Vec<NodeId> = Vec::new();
         to_visit.push(*root);
         while !to_visit.is_empty() {
             let node_id = to_visit.pop().unwrap();
-            let node = &self.nodes[&node_id];
-            for edge in &node.edges {
+            let node = &self.get_node(node_id);
+            for edge in node.get_edges() {
                 let neighbor_id = edge.target_id;
                 if !visited.contains(&neighbor_id) {
                     to_visit.push(neighbor_id);
@@ -399,40 +380,36 @@ impl SimpleUndirectedGraph {
             visited.insert(node_id);
         }
     }
-    pub fn get_is_connected(&self) -> Result<bool, &'static str> {
+    fn get_is_connected(&self) -> Result<bool, &'static str> {
         let mut visited: OrderedNodeSet = BTreeSet::new();
-        if self.nodes.is_empty() {
+        if self.count_nodes() == 0 {
             return Err("Graph is empty");
         }
-        let root = self.nodes.keys().next().unwrap();
+        let root = self.get_ids_iter().next().unwrap();
         self.visit_nodes_from_root(&root, &mut visited);
-        Ok(visited.len() == self.nodes.len())
+        Ok(visited.len() == self.count_nodes())
     }
-    pub fn create_empty() -> Self {
-        Self {
-            nodes: HashMap::new(),
-            ids: Vec::new(),
-        }
-    }
-    pub fn get_node_betweenness_starting_from_sources(
+}
+pub trait Betweenness: GraphBase + Connectivity + ShortestPaths {
+    fn get_node_betweenness_starting_from_sources(
         &self,
         sources: &[NodeId],
         check_is_connected: bool,
-        nodes_in_connected_component: Option<&Vec<NodeId>>,
+        nodes_in_connected_component: Option<Vec<NodeId>>,
     ) -> Result<HashMap<NodeId, f64>, &'static str> {
-        if self.nodes.is_empty() {
+        if self.count_nodes() == 0 {
             return Err("Graph is empty");
         }
         if check_is_connected && !self.get_is_connected().unwrap() {
             return Err("Graph should be connected to compute betweenness.");
         }
         let mut path_counts: HashMap<NodeId, f64> = HashMap::new();
-        for node_id in self.nodes.keys() {
+        for node_id in self.get_ids_iter() {
             path_counts.insert(*node_id, 0.0);
         }
 
         for source in sources.iter() {
-            let (dist, parents) = self.get_shortest_paths(*source, nodes_in_connected_component);
+            let (dist, parents) = self.get_shortest_paths(*source, &nodes_in_connected_component);
             let shortest_paths = self.enumerate_shortest_paths(&dist, &parents, *source);
             for paths in shortest_paths.values() {
                 let weight: f64 = 0.5 / paths.len() as f64;
@@ -446,21 +423,16 @@ impl SimpleUndirectedGraph {
         Ok(path_counts)
     }
     // graph must be connected if you're calling this
-    pub fn get_node_betweenness(&self) -> Result<HashMap<NodeId, f64>, &'static str> {
-        self.get_node_betweenness_starting_from_sources(&self.ids, true, None)
+    fn get_node_betweenness(&self) -> Result<HashMap<NodeId, f64>, &'static str> {
+        let ids: Vec<NodeId> = self.get_ids_iter().cloned().collect();
+        self.get_node_betweenness_starting_from_sources(&ids, true, None)
     }
 
-    fn get_ordered_node_ids(&self) -> Vec<NodeId> {
-        let mut node_ids: Vec<NodeId> = self.nodes.keys().cloned().collect();
-        node_ids.sort();
-        node_ids
-    }
-
-    pub fn get_node_betweenness_brandes(&self) -> Result<HashMap<NodeId, f64>, &'static str> {
+    fn get_node_betweenness_brandes(&self) -> Result<HashMap<NodeId, f64>, &'static str> {
         // Algorithm: Brandes, Ulrik. A Faster Algorithm For Betweeness Centrality.
         // https://www.eecs.wsu.edu/~assefaw/CptS580-06/papers/brandes01centrality.pdf
 
-        if self.nodes.is_empty() {
+        if self.count_nodes() == 0 {
             return Err("Graph is empty");
         }
         if !self.get_is_connected().unwrap() {
@@ -468,15 +440,15 @@ impl SimpleUndirectedGraph {
         }
 
         let mut betweenness: HashMap<NodeId, f64> = HashMap::new();
-        for node_id in self.nodes.keys() {
+        for node_id in self.get_ids_iter() {
             betweenness.insert(*node_id, 0.0);
         }
 
-        for source in self.nodes.keys() {
+        for source in self.get_ids_iter() {
             let (mut stack, shortest_path_counts, preds) = self.get_shortest_paths_bfs(*source);
 
             let mut dependencies: HashMap<NodeId, f64> = HashMap::new();
-            for node_id in self.nodes.keys() {
+            for node_id in self.get_ids_iter() {
                 dependencies.insert(*node_id, 0.0);
             }
 
@@ -496,20 +468,9 @@ impl SimpleUndirectedGraph {
 
         Ok(betweenness)
     }
-
-    pub fn get_degree_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
-        let node_ids = self.get_ordered_node_ids();
-        let diag: Vec<f64> = node_ids
-            .iter()
-            .map(|x| self.nodes[x].degree() as f64)
-            .collect();
-        (
-            GraphMatrix::from_diagonal(&DVector::from_row_slice(&diag)),
-            node_ids,
-        )
-    }
-
-    pub fn get_adjacency_matrix_given_node_ids(&self, node_ids: &[NodeId]) -> GraphMatrix {
+}
+pub trait AdjacencyMatrix: GraphBase {
+    fn get_adjacency_matrix_given_node_ids(&self, node_ids: &[NodeId]) -> GraphMatrix {
         let num_nodes = node_ids.len();
         let mut data: Vec<f64> = vec![0.0; num_nodes * num_nodes];
         let pos_map: HashMap<NodeId, usize> = node_ids
@@ -520,7 +481,7 @@ impl SimpleUndirectedGraph {
             .collect();
 
         for (i, node_id) in node_ids.iter().enumerate() {
-            for e in &self.nodes[node_id].edges {
+            for e in self.get_node(*node_id).get_edges() {
                 let j = pos_map.get(&e.target_id).unwrap();
                 let pos = i * num_nodes + j;
                 data[pos] += 1.0;
@@ -528,31 +489,46 @@ impl SimpleUndirectedGraph {
         }
         GraphMatrix::from_vec(num_nodes, num_nodes, data)
     }
-    pub fn get_adjacency_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
+    fn get_adjacency_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
         let node_ids = self.get_ordered_node_ids();
         (
             self.get_adjacency_matrix_given_node_ids(&node_ids),
             node_ids,
         )
     }
-
-    pub fn get_laplacian_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
+}
+pub trait Laplacian: GraphBase + AdjacencyMatrix {
+    fn get_degree_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
+        let node_ids = self.get_ordered_node_ids();
+        let diag: Vec<f64> = node_ids
+            .iter()
+            .map(|x| self.get_node(*x).degree() as f64)
+            .collect();
+        (
+            GraphMatrix::from_diagonal(&DVector::from_row_slice(&diag)),
+            node_ids,
+        )
+    }
+    fn get_laplacian_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
         let (deg_mat, node_ids) = self.get_degree_matrix();
         let adj_mat = self.get_adjacency_matrix_given_node_ids(&node_ids);
         (deg_mat - adj_mat, node_ids)
     }
+}
+pub trait AlgebraicConnectivity: GraphBase + Laplacian {
     // Algebraic Connectivity, or the Fiedler Measure, is the second-smallest eigenvalue of the graph Laplacian.
     // The lower the value, the less decomposable the graph's adjacency matrix is. Thanks to the nalgebra
     // crate computing this is quite straightforward.
-    pub fn get_algebraic_connectivity(&self) -> f64 {
+    fn get_algebraic_connectivity(&self) -> f64 {
         let (laplacian, _ids) = self.get_laplacian_matrix();
         let eigen = laplacian.symmetric_eigen();
         let mut eigenvalues: Vec<f64> = eigen.eigenvalues.iter().cloned().collect();
         eigenvalues.sort_by(|a, b| a.partial_cmp(b).unwrap());
         eigenvalues[1]
     }
-
-    pub fn get_eigenvector_centrality(&self, eps: f64, max_iter: usize) -> HashMap<NodeId, f64> {
+}
+pub trait EigenvectorCentrality: GraphBase + AdjacencyMatrix {
+    fn get_eigenvector_centrality(&self, eps: f64, max_iter: usize) -> HashMap<NodeId, f64> {
         let (adj_mat, node_ids) = self.get_adjacency_matrix();
         // Power iteration adaptation from
         // https://www.sci.unich.it/~francesc/teaching/network/eigenvector.html
@@ -576,6 +552,44 @@ impl SimpleUndirectedGraph {
     }
 }
 
+impl SimpleUndirectedGraph {
+    pub fn as_input_rows(&self, graph_id: usize) -> String {
+        let mut rows: Vec<String> = Vec::new();
+        for (id, node) in &self.nodes {
+            for e in &node.edges {
+                if *id < e.target_id {
+                    rows.push(format!(
+                        "{}\t{}\t{}",
+                        graph_id,
+                        id.value(),
+                        e.target_id.value()
+                    ));
+                }
+            }
+        }
+        rows.join("\n")
+    }
+    pub fn get_node_degree(&self, id: NodeId) -> usize {
+        self.nodes[&id].degree()
+    }
+    pub fn create_empty() -> Self {
+        Self {
+            nodes: HashMap::new(),
+            ids: Vec::new(),
+        }
+    }
+}
+
 impl CNMCommunities for SimpleUndirectedGraph {}
 impl ConnectedComponents for SimpleUndirectedGraph {}
 impl Coreness for SimpleUndirectedGraph {}
+
+impl AdjacencyMatrix for SimpleUndirectedGraph {}
+impl Betweenness for SimpleUndirectedGraph {}
+impl Clustering for SimpleUndirectedGraph {}
+impl Connectivity for SimpleUndirectedGraph {}
+impl Laplacian for SimpleUndirectedGraph {}
+impl Transitivity for SimpleUndirectedGraph {}
+impl ShortestPaths for SimpleUndirectedGraph {}
+impl AlgebraicConnectivity for SimpleUndirectedGraph {}
+impl EigenvectorCentrality for SimpleUndirectedGraph {}
