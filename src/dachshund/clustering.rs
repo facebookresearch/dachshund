@@ -8,8 +8,8 @@ extern crate nalgebra as na;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
-use rand::prelude::*;
 use rand::Rng;
+use rand::prelude::*;
 use std::collections::HashSet;
 
 pub trait Clustering: GraphBase {

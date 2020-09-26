@@ -17,7 +17,7 @@ pub trait Transitivity: GraphBase {
         let node = self.get_node(node_id);
         let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
         for ne in node.get_edges() {
-            neighbor_ids.insert(ne.target_id);
+            neighbor_ids.insert(ne.get_neighbor_id());
         }
 
         let mut triangle_count = 0;
@@ -76,7 +76,7 @@ pub trait Transitivity: GraphBase {
 
             // TODO: No constant time way to check if there's an edge?
             for edge in self.get_node(u_id).get_edges() {
-                if edge.target_id == w_id {
+                if edge.get_neighbor_id() == w_id {
                     successes += 1;
                     break;
                 }

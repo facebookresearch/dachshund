@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::NodeBase;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
@@ -33,7 +33,7 @@ pub trait ConnectedComponents: GraphBase {
             let distinct_nodes: Vec<NodeId> = self
                 .get_node(id)
                 .get_edges()
-                .map(|x| x.target_id)
+                .map(|x| x.get_neighbor_id())
                 .filter(|x| {
                     ignore_edges.is_none()
                         || (!ignore_edges.unwrap().contains(&(id, *x))
@@ -50,7 +50,7 @@ pub trait ConnectedComponents: GraphBase {
                         queue.remove(&nid);
                     }
                     for e in self.get_node(nid).get_edges() {
-                        let nid2 = e.target_id;
+                        let nid2 = e.get_neighbor_id();
                         if (ignore_nodes.is_none() || !ignore_nodes.unwrap().contains(&nid2))
                             && (ignore_edges.is_none()
                                 || (!ignore_edges.unwrap().contains(&(nid, nid2))

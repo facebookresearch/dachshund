@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 use std::cmp::{Eq, PartialEq};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 use crate::dachshund::error::{CLQError, CLQResult};
@@ -33,11 +33,29 @@ impl NodeEdge {
     }
 }
 
-pub trait NodeBase {
+impl NodeEdgeBase for NodeId {
+    fn get_neighbor_id(&self) -> NodeId {
+        *self
+    }
+}
+
+pub trait NodeBase where
+    Self: Sized,
+    Self::NodeEdgeType: NodeEdgeBase
+{
+    type NodeEdgeType;
     fn get_id(&self) -> NodeId;
-    fn get_edges(&self) -> std::slice::Iter<NodeEdge>;
+    fn get_edges(&self) -> std::slice::Iter<Self::NodeEdgeType>;
     fn degree(&self) -> usize;
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize;
+}
+pub trait DirectedGraphNodeBase: NodeBase where
+    Self: Sized,
+{
+    fn get_in_neighbors(&self) -> std::collections::btree_set::Iter<'_, NodeId>;
+    fn get_out_neighbors(&self) -> std::collections::btree_set::Iter<'_, NodeId>;
+    fn has_in_neighbor(&self, id: NodeId) -> bool;
+    fn has_out_neighbor(&self, id: NodeId) -> bool;
 }
 /// Core data structure used to represent a node in our graph. A node can be
 /// either a "core" node, or a non-core node. Non-core nodes also have a type (e.g.
@@ -62,6 +80,7 @@ impl PartialEq for Node {
 }
 impl Eq for Node {}
 impl NodeBase for Node {
+    type NodeEdgeType = NodeEdge;
     fn get_id(&self) -> NodeId {
         self.node_id
     }
@@ -122,5 +141,58 @@ impl Node {
             ))
         })?;
         Ok(non_core_type.max_edge_count_with_core_node())
+    }
+}
+
+pub struct SimpleDirectedNode {
+    pub node_id: NodeId,
+    pub neighbors: Vec<NodeId>,
+    pub in_neighbors: BTreeSet<NodeId>,
+    pub out_neighbors: BTreeSet<NodeId>,
+}
+impl Hash for SimpleDirectedNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+    }
+}
+impl PartialEq for SimpleDirectedNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.node_id == other.node_id
+    }
+}
+impl Eq for SimpleDirectedNode {}
+impl NodeBase for SimpleDirectedNode {
+    type NodeEdgeType = NodeId;
+    fn get_id(&self) -> NodeId {
+        self.node_id
+    }
+    fn get_edges(&self) -> std::slice::Iter<NodeId> {
+        self.neighbors.iter()
+    }
+    /// degree is the edge count (in an unweighted graph)
+    fn degree(&self) -> usize {
+        self.in_neighbors.len() + self.out_neighbors.len()
+    }
+    /// used to determine degree in a subgraph (i.e., the clique we're considering).
+    /// HashSet is supplied by Candidate struct.
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+        ids.iter()
+            .filter(|x| self.in_neighbors.contains(x) || self.out_neighbors.contains(x))
+            .collect::<Vec<&NodeId>>()
+            .len()
+    }
+}
+impl DirectedGraphNodeBase for SimpleDirectedNode {
+    fn get_in_neighbors(&self) -> std::collections::btree_set::Iter<'_, NodeId> {
+        self.in_neighbors.iter()
+    }
+    fn get_out_neighbors(&self) -> std::collections::btree_set::Iter<'_, NodeId> {
+        self.out_neighbors.iter()
+    }
+    fn has_in_neighbor(&self, id: NodeId) -> bool {
+        self.in_neighbors.contains(&id)
+    }
+    fn has_out_neighbor(&self, id: NodeId) -> bool {
+        self.out_neighbors.contains(&id)
     }
 }

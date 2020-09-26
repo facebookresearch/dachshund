@@ -22,7 +22,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
             .map(|x| {
                 (
                     x.get_id(),
-                    HashSet::<NodeId>::from_iter(x.get_edges().map(|y| y.target_id)).len(),
+                    HashSet::<NodeId>::from_iter(x.get_edges().map(|y| y.get_neighbor_id())).len(),
                 )
             })
             .collect();
@@ -84,7 +84,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
                 node.get_id(),
                 HashSet::from_iter(
                     node.get_edges()
-                        .map(|x| x.target_id)
+                        .map(|x| x.get_neighbor_id())
                         .filter(|x| !ignore_nodes.contains(x)),
                 ),
             );

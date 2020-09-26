@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::NodeBase;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use std::collections::BTreeSet;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
@@ -19,7 +19,7 @@ pub trait Connectivity: GraphBase {
             let node_id = to_visit.pop().unwrap();
             let node = &self.get_node(node_id);
             for edge in node.get_edges() {
-                let neighbor_id = edge.target_id;
+                let neighbor_id = edge.get_neighbor_id();
                 if !visited.contains(&neighbor_id) {
                     to_visit.push(neighbor_id);
                 }

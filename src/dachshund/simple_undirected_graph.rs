@@ -7,6 +7,7 @@
 use crate::dachshund::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::algebraic_connectivity::AlgebraicConnectivity;
 use crate::dachshund::betweenness::Betweenness;
+use crate::dachshund::brokerage::Brokerage;
 use crate::dachshund::clustering::Clustering;
 use crate::dachshund::cnm_communities::CNMCommunities;
 use crate::dachshund::connected_components::ConnectedComponents;
