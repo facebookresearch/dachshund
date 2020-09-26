@@ -19,7 +19,7 @@ use crate::dachshund::algorithms::transitivity::Transitivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::laplacian::Laplacian;
-use crate::dachshund::node::{SimpleNode, NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{NodeBase, NodeEdgeBase, SimpleNode};
 use crate::dachshund::shortest_paths::ShortestPaths;
 use crate::dachshund::transitivity::Transitivity;
 use std::collections::hash_map::{Keys, Values};
