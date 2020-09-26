@@ -26,7 +26,6 @@ where
         non_core_ids: Vec<NodeId>,
     ) -> CLQResult<TGraph>;
 
-
     // initializes nodes in the graph with empty neighbors fields.
     fn init_nodes(
         core_ids: &[NodeId],
