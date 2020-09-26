@@ -178,10 +178,30 @@ impl NodeBase for SimpleNode {
     }
 }
 
+pub trait DirectedNodeBase: NodeBase {
+    fn get_in_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
+    fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
+    fn has_in_neighbor(&self, nid: NodeId) -> bool;
+    fn has_out_neighbor(&self, nid: NodeId) -> bool;
+}
 pub struct SimpleDirectedNode {
     pub node_id: NodeId,
     pub in_neighbors: BTreeSet<NodeId>,
     pub out_neighbors: BTreeSet<NodeId>,
+}
+impl DirectedNodeBase for SimpleDirectedNode {
+    fn get_in_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_> {
+        Box::new(self.in_neighbors.iter())
+    }
+    fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_> {
+        Box::new(self.out_neighbors.iter())
+    }
+    fn has_in_neighbor(&self, nid: NodeId) -> bool {
+        self.in_neighbors.contains(&nid)
+    }
+    fn has_out_neighbor(&self, nid: NodeId) -> bool {
+        self.out_neighbors.contains(&nid)
+    }
 }
 impl Hash for SimpleDirectedNode {
     fn hash<H: Hasher>(&self, state: &mut H) {

@@ -7,6 +7,7 @@
 pub mod adjacency_matrix;
 pub mod algebraic_connectivity;
 pub mod betweenness;
+pub mod brokerage;
 pub mod clustering;
 pub mod cnm_communities;
 pub mod connected_components;
