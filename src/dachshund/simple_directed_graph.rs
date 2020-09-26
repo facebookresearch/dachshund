@@ -4,13 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+use crate::dachshund::brokerage::Brokerage;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
 use std::collections::hash_map::{Keys, Values};
 use std::collections::HashMap;
 
-/// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleDirectedGraph {
     pub nodes: HashMap<NodeId, SimpleDirectedNode>,
     pub ids: Vec<NodeId>,
@@ -53,3 +53,4 @@ impl GraphBase for SimpleDirectedGraph {
         self.nodes.len()
     }
 }
+impl Brokerage for SimpleDirectedGraph {}
