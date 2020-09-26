@@ -7,7 +7,7 @@
 extern crate nalgebra as na;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{Node, NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{SimpleNode, NodeBase, NodeEdgeBase};
 use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -58,7 +58,7 @@ impl PartialOrd for CNMCommunityMergeInstruction {
 }
 type CNMCommunityMergeInstructionHeap = BinaryHeap<CNMCommunityMergeInstruction>;
 
-pub trait CNMCommunities: GraphBase<NodeType = Node> {
+pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
     fn get_max_maxheap(
         &self,
         delta_q_maxheap: &HashMap<usize, CNMCommunityMergeInstructionHeap>,

@@ -16,7 +16,7 @@ use crate::dachshund::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::laplacian::Laplacian;
-use crate::dachshund::node::{Node, NodeBase};
+use crate::dachshund::node::{SimpleNode, NodeBase, NodeEdgeBase};
 use crate::dachshund::shortest_paths::ShortestPaths;
 use crate::dachshund::transitivity::Transitivity;
 use std::collections::hash_map::{Keys, Values};
@@ -24,11 +24,11 @@ use std::collections::HashMap;
 
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleUndirectedGraph {
-    pub nodes: HashMap<NodeId, Node>,
+    pub nodes: HashMap<NodeId, SimpleNode>,
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleUndirectedGraph {
-    type NodeType = Node;
+    type NodeType = SimpleNode;
 
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.
     fn get_core_ids(&self) -> &Vec<NodeId> {
@@ -38,19 +38,19 @@ impl GraphBase for SimpleUndirectedGraph {
     fn get_non_core_ids(&self) -> Option<&Vec<NodeId>> {
         Some(&self.ids)
     }
-    fn get_ids_iter(&self) -> Keys<NodeId, Node> {
+    fn get_ids_iter(&self) -> Keys<NodeId, SimpleNode> {
         self.nodes.keys()
     }
-    fn get_nodes_iter(&self) -> Values<NodeId, Node> {
+    fn get_nodes_iter(&self) -> Values<NodeId, SimpleNode> {
         self.nodes.values()
     }
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node> {
+    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, SimpleNode> {
         &mut self.nodes
     }
     fn has_node(&self, node_id: NodeId) -> bool {
         self.nodes.contains_key(&node_id)
     }
-    fn get_node(&self, node_id: NodeId) -> &Node {
+    fn get_node(&self, node_id: NodeId) -> &SimpleNode {
         &self.nodes[&node_id]
     }
     fn count_edges(&self) -> usize {
@@ -68,13 +68,13 @@ impl SimpleUndirectedGraph {
     pub fn as_input_rows(&self, graph_id: usize) -> String {
         let mut rows: Vec<String> = Vec::new();
         for (id, node) in &self.nodes {
-            for e in &node.edges {
-                if *id < e.target_id {
+            for e in node.get_edges() {
+                if *id < e.get_neighbor_id() {
                     rows.push(format!(
                         "{}\t{}\t{}",
                         graph_id,
                         id.value(),
-                        e.target_id.value()
+                        e.get_neighbor_id().value()
                     ));
                 }
             }
