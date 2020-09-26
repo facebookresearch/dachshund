@@ -34,7 +34,7 @@ impl SimpleUndirectedGraphBuilder {
                 id,
                 SimpleNode {
                     node_id: id,
-                    neighbors: neighbors
+                    neighbors: neighbors,
                 },
             );
         }
