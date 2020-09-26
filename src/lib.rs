@@ -38,6 +38,8 @@ pub use dachshund::row::EdgeRow;
 pub use dachshund::scorer::Scorer;
 pub use dachshund::search_problem::SearchProblem;
 pub use dachshund::shortest_paths::ShortestPaths;
+pub use dachshund::simple_directed_graph::SimpleDirectedGraph;
+pub use dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 pub use dachshund::simple_transformer::SimpleTransformer;
 pub use dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 pub use dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;

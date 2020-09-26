@@ -113,7 +113,10 @@ fn get_karate_club_graph_with_one_extra_edge() -> SimpleUndirectedGraph {
     let mut rows = get_karate_club_edges();
     rows.push((35, 36));
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 
@@ -128,7 +131,10 @@ fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
 fn get_two_karate_clubs() -> SimpleUndirectedGraph {
     let rows = get_two_karate_clubs_edges();
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 
@@ -136,13 +142,19 @@ fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
     let mut rows = get_two_karate_clubs_edges();
     rows.push((34, 35));
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 fn get_karate_club_graph() -> SimpleUndirectedGraph {
     let rows = get_karate_club_edges();
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 

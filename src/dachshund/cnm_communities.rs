@@ -7,7 +7,7 @@
 extern crate nalgebra as na;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{SimpleNode, NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{NodeBase, NodeEdgeBase, SimpleNode};
 use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
