@@ -12,7 +12,7 @@ use crate::dachshund::algorithms::cnm_communities::CNMCommunities;
 use crate::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
-use crate::dachshund::algorithms::connectivity::Connectivity;
+use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityUndirected};
 use crate::dachshund::algorithms::coreness::Coreness;
 use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::algorithms::laplacian::Laplacian;
@@ -106,9 +106,10 @@ impl ConnectedComponentsUndirected for SimpleUndirectedGraph {}
 impl Coreness for SimpleUndirectedGraph {}
 
 impl AdjacencyMatrix for SimpleUndirectedGraph {}
-impl Betweenness for SimpleUndirectedGraph {}
 impl Clustering for SimpleUndirectedGraph {}
 impl Connectivity for SimpleUndirectedGraph {}
+impl ConnectivityUndirected for SimpleUndirectedGraph {}
+impl Betweenness for SimpleUndirectedGraph {}
 impl Laplacian for SimpleUndirectedGraph {}
 impl Transitivity for SimpleUndirectedGraph {}
 impl ShortestPaths for SimpleUndirectedGraph {}

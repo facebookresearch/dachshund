@@ -76,7 +76,6 @@ impl SimpleUndirectedGraphBuilder {
     }
 }
 impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
-
     type GraphType = SimpleUndirectedGraph;
 
     // builds a graph from a vector of IDs. Repeated edges are ignored.
@@ -107,5 +106,4 @@ impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
             nodes,
         }
     }
-
 }

@@ -8,10 +8,9 @@ use crate::dachshund::graph_base::GraphBase;
 pub trait GraphBuilderBase
 where
     Self: Sized,
-    Self::GraphType: GraphBase
+    Self::GraphType: GraphBase,
 {
     type GraphType;
 
     fn from_vector(data: &Vec<(i64, i64)>) -> Self::GraphType;
 }
-

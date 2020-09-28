@@ -17,7 +17,9 @@ use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::algorithms::connected_components::{
     ConnectedComponentsDirected, ConnectedComponentsUndirected,
 };
-use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
+use lib_dachshund::dachshund::algorithms::connectivity::{
+    ConnectivityDirected, ConnectivityUndirected,
+};
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
@@ -116,7 +118,10 @@ fn get_karate_club_edges() -> Vec<(usize, usize)> {
     ]
 }
 fn _get_karate_club_graph_with_one_extra_edge<T, R>() -> R
-where R: GraphBase, T: GraphBuilderBase<GraphType = R> {
+where
+    R: GraphBase,
+    T: GraphBuilderBase<GraphType = R>,
+{
     let mut rows = get_karate_club_edges();
     rows.push((35, 36));
     T::from_vector(
@@ -142,7 +147,10 @@ fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
 }
 
 fn _get_two_karate_clubs<T, R>() -> R
-where R: GraphBase, T: GraphBuilderBase<GraphType = R> {
+where
+    R: GraphBase,
+    T: GraphBuilderBase<GraphType = R>,
+{
     let rows = get_two_karate_clubs_edges();
     T::from_vector(
         &rows
@@ -156,7 +164,10 @@ fn get_two_karate_clubs() -> SimpleUndirectedGraph {
 }
 
 fn _get_two_karate_clubs_with_bridge<T, R>() -> R
-where R: GraphBase, T: GraphBuilderBase<GraphType = R> {
+where
+    R: GraphBase,
+    T: GraphBuilderBase<GraphType = R>,
+{
     let mut rows = get_two_karate_clubs_edges();
     rows.push((34, 35));
     T::from_vector(
@@ -171,7 +182,10 @@ fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
 }
 
 fn _get_karate_club_graph<T, R>() -> R
-where R: GraphBase, T: GraphBuilderBase<GraphType = R> {
+where
+    R: GraphBase,
+    T: GraphBuilderBase<GraphType = R>,
+{
     let rows = get_karate_club_edges();
     T::from_vector(
         &rows
@@ -576,7 +590,10 @@ fn test_connectivity_directed() {
     assert!(!graph_unconnected.get_is_weakly_connected().unwrap());
 
     let graph_empty = SimpleDirectedGraph::create_empty();
-    assert!(graph_empty.get_is_weakly_connected().is_err(), "Graph is empty");
+    assert!(
+        graph_empty.get_is_weakly_connected().is_err(),
+        "Graph is empty"
+    );
 
     assert!(graph.get_is_weakly_connected().unwrap());
 }
