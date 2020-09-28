@@ -21,14 +21,27 @@ use crate::dachshund::algorithms::transitivity::Transitivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, SimpleNode};
+use na::{DMatrix, DVector};
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
+use rand::seq::SliceRandom;
+use rand::Rng;
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::collections::hash_map::{Keys, Values};
 use std::collections::HashMap;
+use std::iter::FromIterator;
 
 pub trait UndirectedGraph
 where
     Self: GraphBase,
 {
 }
+
+type GraphMatrix = DMatrix<f64>;
+type OrderedNodeSet = BTreeSet<NodeId>;
+type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
+type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
+
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleUndirectedGraph {
     pub nodes: HashMap<NodeId, SimpleNode>,
