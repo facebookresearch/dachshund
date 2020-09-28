@@ -103,21 +103,40 @@ where
 
         let mut visited: OrderedNodeSet = BTreeSet::new();
         let num_nodes = self.count_nodes();
+
+        // First, create an ordered set of all the visited nodes, where each node is visited starting
+        // from an unvisited root, following outgoing edges.
         while visited.len() < num_nodes {
             let mut iter = self.get_ids_iter();
             let mut node_id = iter.next().unwrap();
             while visited.contains(node_id) {
                 node_id = iter.next().unwrap();
             }
-            self.visit_nodes_from_root(node_id, &mut visited, Self::NodeType::get_outgoing_edges);
+            visited.insert(*node_id);
+            self.visit_nodes_from_root(node_id, &mut visited, &mut Vec::new(), Self::NodeType::get_outgoing_edges);
         }
+
+        // We will collect components here
         let mut components: Vec<Vec<NodeId>> = Vec::new();
+        // While there are still nodes to proces...
+        // Note that we will remove nodes from visited now and place them into upstream
+        let mut upstream: OrderedNodeSet = BTreeSet::new();
         while visited.len() > 0 {
-            let node_id = visited.first().unwrap();
-            let mut upstream: OrderedNodeSet = BTreeSet::new();
-            self.visit_nodes_from_root(&node_id, &mut upstream, Self::NodeType::get_in_neighbors);
-            let mut component: Vec<NodeId> = upstream.into_iter().collect();
-            component.push(*node_id);
+            let mut newly_visited: Vec<NodeId> = Vec::new();
+            let node_id = visited.pop_first().unwrap();
+            let mut component: Vec<NodeId> = vec![node_id];
+
+            // we recursively visit nodes from root. We only look at nodes which are not already in
+            // upstream, following get_in_neigbors. Results are collected in newly_visited.
+            self.visit_nodes_from_root(&node_id, &mut upstream, &mut newly_visited,
+                                       Self::NodeType::get_in_neighbors);
+            for upstream_node_id in newly_visited.into_iter() {
+                // this only happens once, the first time this is encountered in visited
+                if visited.contains(&upstream_node_id) {
+                    visited.remove(&upstream_node_id);
+                    component.push(upstream_node_id);
+                }
+            }
             components.push(component);
         }
         components
