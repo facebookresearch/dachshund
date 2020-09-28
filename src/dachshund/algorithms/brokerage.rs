@@ -10,12 +10,12 @@ use crate::dachshund::node::{DirectedNodeBase, NodeEdgeBase};
 use std::collections::HashMap;
 
 pub struct BrokerageScores {
-    num_coordinator_ties: usize,
-    num_itinerant_broker_ties: usize,
-    num_gatekeeper_ties: usize,
-    num_representative_ties: usize,
-    num_liaison_ties: usize,
-    total_open_twopaths: usize,
+    pub num_coordinator_ties: usize,
+    pub num_itinerant_broker_ties: usize,
+    pub num_gatekeeper_ties: usize,
+    pub num_representative_ties: usize,
+    pub num_liaison_ties: usize,
+    pub total_open_twopaths: usize,
 }
 
 pub trait Brokerage: GraphBase
@@ -26,7 +26,7 @@ where
     fn get_brokerage_scores_for_node(
         &self,
         node_id: NodeId,
-        community_membership: HashMap<NodeId, usize>,
+        community_membership: &HashMap<NodeId, usize>,
     ) -> BrokerageScores {
         let mut scores = BrokerageScores {
             num_coordinator_ties: 0,
