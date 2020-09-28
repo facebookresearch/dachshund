@@ -5,12 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 use crate::dachshund::algorithms::brokerage::Brokerage;
+use crate::dachshund::algorithms::connected_components::{
+    ConnectedComponents, ConnectedComponentsDirected,
+};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
 use std::collections::hash_map::{Keys, Values};
 use std::collections::HashMap;
 
+pub trait DirectedGraph
+where
+    Self: GraphBase,
+{
+}
 pub struct SimpleDirectedGraph {
     pub nodes: HashMap<NodeId, SimpleDirectedNode>,
     pub ids: Vec<NodeId>,
@@ -53,4 +61,7 @@ impl GraphBase for SimpleDirectedGraph {
         self.nodes.len()
     }
 }
+impl DirectedGraph for SimpleDirectedGraph {}
 impl Brokerage for SimpleDirectedGraph {}
+impl ConnectedComponents for SimpleDirectedGraph {}
+impl ConnectedComponentsDirected for SimpleDirectedGraph {}

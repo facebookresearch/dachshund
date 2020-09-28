@@ -7,6 +7,8 @@
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use crate::dachshund::simple_directed_graph::DirectedGraph;
+use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
@@ -78,7 +80,23 @@ pub trait ConnectedComponents: GraphBase {
         }
         v
     }
+}
+
+pub trait ConnectedComponentsUndirected: GraphBase
+where
+    Self: ConnectedComponents,
+    Self: UndirectedGraph,
+{
     fn get_connected_components(&self) -> Vec<Vec<NodeId>> {
+        self._get_connected_components(None, None)
+    }
+}
+pub trait ConnectedComponentsDirected: GraphBase
+where
+    Self: ConnectedComponents,
+    Self: DirectedGraph,
+{
+    fn get_weakly_connected_components(&self) -> Vec<Vec<NodeId>> {
         self._get_connected_components(None, None)
     }
 }
