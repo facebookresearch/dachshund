@@ -10,6 +10,7 @@ pub mod candidate;
 pub mod error;
 pub mod graph_base;
 pub mod graph_builder;
+pub mod graph_builder_base;
 pub mod id_types;
 pub mod input;
 pub mod line_processor;

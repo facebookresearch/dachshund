@@ -28,6 +28,7 @@ where
     fn get_node(&self, node_id: NodeId) -> &Self::NodeType;
     fn count_edges(&self) -> usize;
     fn count_nodes(&self) -> usize;
+    fn create_empty() -> Self;
 
     fn get_ordered_node_ids(&self) -> Vec<NodeId> {
         let mut node_ids: Vec<NodeId> = self.get_ids_iter().cloned().collect();

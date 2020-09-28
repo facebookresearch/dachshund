@@ -4,46 +4,15 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-extern crate nalgebra as na;
+use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::SimpleNode;
 use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use rand::prelude::*;
-
 pub struct SimpleUndirectedGraphBuilder {}
-
 impl SimpleUndirectedGraphBuilder {
-    // builds a graph from a vector of IDs. Repeated edges are ignored.
-    // Edges only need to be provided once (this being an undirected graph)
-    #[allow(clippy::ptr_arg)]
-    pub fn from_vector(data: &Vec<(i64, i64)>) -> SimpleUndirectedGraph {
-        let mut ids: BTreeMap<NodeId, BTreeSet<NodeId>> = BTreeMap::new();
-        for (id1, id2) in data {
-            ids.entry(NodeId::from(*id1))
-                .or_insert_with(BTreeSet::new)
-                .insert(NodeId::from(*id2));
-            ids.entry(NodeId::from(*id2))
-                .or_insert_with(BTreeSet::new)
-                .insert(NodeId::from(*id1));
-        }
-        let mut nodes: HashMap<NodeId, SimpleNode> = HashMap::new();
-        for (id, neighbors) in ids.into_iter() {
-            nodes.insert(
-                id,
-                SimpleNode {
-                    node_id: id,
-                    neighbors: neighbors,
-                },
-            );
-        }
-        SimpleUndirectedGraph {
-            ids: nodes.keys().cloned().collect(),
-            nodes,
-        }
-    }
-
     // Build a graph with n vertices with every possible edge.
     pub fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();
@@ -105,4 +74,38 @@ impl SimpleUndirectedGraphBuilder {
             &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
         )
     }
+}
+impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
+
+    type GraphType = SimpleUndirectedGraph;
+
+    // builds a graph from a vector of IDs. Repeated edges are ignored.
+    // Edges only need to be provided once (this being an undirected graph)
+    #[allow(clippy::ptr_arg)]
+    fn from_vector(data: &Vec<(i64, i64)>) -> SimpleUndirectedGraph {
+        let mut ids: BTreeMap<NodeId, BTreeSet<NodeId>> = BTreeMap::new();
+        for (id1, id2) in data {
+            ids.entry(NodeId::from(*id1))
+                .or_insert_with(BTreeSet::new)
+                .insert(NodeId::from(*id2));
+            ids.entry(NodeId::from(*id2))
+                .or_insert_with(BTreeSet::new)
+                .insert(NodeId::from(*id1));
+        }
+        let mut nodes: HashMap<NodeId, SimpleNode> = HashMap::new();
+        for (id, neighbors) in ids.into_iter() {
+            nodes.insert(
+                id,
+                SimpleNode {
+                    node_id: id,
+                    neighbors: neighbors,
+                },
+            );
+        }
+        SimpleUndirectedGraph {
+            ids: nodes.keys().cloned().collect(),
+            nodes,
+        }
+    }
+
 }

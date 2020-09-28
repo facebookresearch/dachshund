@@ -11,6 +11,7 @@ use lib_dachshund::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
+use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;

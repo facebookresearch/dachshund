@@ -30,6 +30,7 @@ pub use dachshund::beam::Beam;
 pub use dachshund::candidate::Candidate;
 pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
+pub use dachshund::graph_builder_base::GraphBuilderBase;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 pub use dachshund::input::Input;
 pub use dachshund::line_processor::LineProcessor;

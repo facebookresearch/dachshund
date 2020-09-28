@@ -7,6 +7,8 @@
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use crate::dachshund::simple_directed_graph::DirectedGraph;
+use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::BTreeSet;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
@@ -35,5 +37,23 @@ pub trait Connectivity: GraphBase {
         let root = self.get_ids_iter().next().unwrap();
         self.visit_nodes_from_root(&root, &mut visited);
         Ok(visited.len() == self.count_nodes())
+    }
+}
+pub trait ConnectivityUndirected: GraphBase
+where
+    Self: Connectivity,
+    Self: UndirectedGraph,
+{
+    fn get_is_connected(&self) -> Result<bool, &'static str> {
+        self._get_is_connected(Self::NodeType::get_edges)
+    }
+}
+pub trait ConnectivityDirected: GraphBase
+where
+    Self: Connectivity,
+    Self: DirectedGraph,
+{
+    fn get_is_weakly_connected(&self) -> Result<bool, &'static str> {
+        self._get_is_connected(Self::NodeType::get_edges)
     }
 }

@@ -56,4 +56,11 @@ impl GraphBase for TypedGraph {
     fn count_nodes(&self) -> usize {
         self.nodes.len()
     }
+    fn create_empty() -> Self {
+        TypedGraph {
+            nodes: HashMap::new(),
+            core_ids: Vec::new(),
+            non_core_ids: Vec::new(),
+        }
+    }
 }

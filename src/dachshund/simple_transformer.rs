@@ -14,6 +14,7 @@ use crate::dachshund::algorithms::coreness::Coreness;
 use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
 use crate::dachshund::line_processor::{LineProcessor, LineProcessorBase};
 use crate::dachshund::row::{Row, SimpleEdgeRow};
