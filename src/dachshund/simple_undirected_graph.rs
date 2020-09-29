@@ -16,8 +16,14 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
+<<<<<<< HEAD
 use std::collections::hash_map::{Keys, Values};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+=======
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::hash_map::Keys;
+use std::iter::FromIterator;
+>>>>>>> upstream/master
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
