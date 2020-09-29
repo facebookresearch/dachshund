@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate nalgebra as na;
+use crate::dachshund::cnm_communities::CNMCommunities;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
@@ -14,6 +15,7 @@ use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::hash_map::Keys;
 use std::iter::FromIterator;
 
 type GraphMatrix = DMatrix<f64>;
@@ -27,6 +29,9 @@ pub struct SimpleUndirectedGraph {
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleUndirectedGraph {
+
+    type NodeType = Node;
+
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.
     fn get_core_ids(&self) -> &Vec<NodeId> {
         &self.ids
@@ -34,6 +39,9 @@ impl GraphBase for SimpleUndirectedGraph {
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.
     fn get_non_core_ids(&self) -> Option<&Vec<NodeId>> {
         Some(&self.ids)
+    }
+    fn get_ids_iter(&self) -> Keys<NodeId, Node> {
+        self.nodes.keys()
     }
     fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node> {
         &mut self.nodes
@@ -50,6 +58,9 @@ impl GraphBase for SimpleUndirectedGraph {
             num_edges += node.neighbors.len();
         }
         num_edges / 2
+    }
+    fn count_nodes(&self) -> usize {
+        self.nodes.len()
     }
 }
 impl SimpleUndirectedGraph {
@@ -770,3 +781,5 @@ impl SimpleUndirectedGraph {
         self._get_k_trusses(k, &ignore_nodes)
     }
 }
+
+impl CNMCommunities for SimpleUndirectedGraph {}

@@ -6,6 +6,7 @@
  */
 
 #![feature(map_first_last)]
+#![feature(binary_heap_into_iter_sorted)]
 extern crate clap;
 extern crate rand;
 extern crate rustc_serialize;
@@ -15,6 +16,7 @@ pub mod dachshund;
 
 pub use dachshund::beam::Beam;
 pub use dachshund::candidate::Candidate;
+pub use dachshund::cnm_communities::CNMCommunities;
 pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};

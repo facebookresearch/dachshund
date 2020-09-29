@@ -8,6 +8,7 @@
 
 extern crate lib_dachshund;
 extern crate test;
+use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::row::EdgeRow;
@@ -470,4 +471,51 @@ fn test_transitivity() {
     let approx_trans = graph.get_approx_transitivity(1000);
     println!("{}", approx_trans);
     assert!((approx_trans - trans).abs() <= 0.05);
+}
+
+#[test]
+fn test_cnm_community() {
+    let expected: Vec<f64> = vec![
+        0.012163050624589085,
+        0.023668639053254437,
+        0.012491781722550954,
+        0.019230769230769232,
+        0.03131163708086785,
+        0.012163050624589085,
+        0.017258382642998026,
+        0.016190006574621957,
+        0.01643655489809336,
+        0.012080867850098619,
+        0.022682445759368834,
+        0.011834319526627219,
+        0.011341222879684417,
+        0.011176857330703484,
+        0.011176857330703484,
+        0.01676528599605523,
+        0.01101249178172255,
+        0.010190664036817884,
+        0.010190664036817882,
+        0.01380670611439842,
+        0.015779092702169626,
+        0.0202991452991453,
+        0.009861932938856014,
+        0.011834319526627215,
+        0.009368836291913214,
+        0.009040105193951348,
+        0.008711374095989481,
+        0.011094674556213022,
+        0.013477975016436557,
+        0.01314924391847469,
+        0.004684418145956606,
+    ];
+
+    let g = get_karate_club_graph();
+    let (_, modularity_changes) = g.get_cnm_communities();
+    for i in 0..expected.len() {
+        println!(
+            "Modularity changes: {}, {}, {}",
+            i, modularity_changes[i], expected[i]
+        );
+        assert!((modularity_changes[i] - expected[i]).abs() <= 0.001);
+    }
 }
