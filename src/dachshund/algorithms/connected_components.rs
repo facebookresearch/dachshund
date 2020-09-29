@@ -4,10 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+use crate::dachshund::connectivity::Connectivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase};
-use crate::dachshund::simple_directed_graph::DirectedGraph;
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase, SimpleDirectedNode};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
@@ -91,12 +91,35 @@ where
         self._get_connected_components(None, None)
     }
 }
-pub trait ConnectedComponentsDirected: GraphBase
+pub trait ConnectedComponentsDirected: GraphBase<NodeType = SimpleDirectedNode>
 where
     Self: ConnectedComponents,
-    Self: DirectedGraph,
+    Self: Connectivity,
 {
     fn get_weakly_connected_components(&self) -> Vec<Vec<NodeId>> {
         self._get_connected_components(None, None)
+    }
+    fn get_strongly_connected_components(&self) -> Vec<Vec<NodeId>> {
+
+        let mut visited: OrderedNodeSet = BTreeSet::new();
+        let num_nodes = self.count_nodes();
+        while visited.len() < num_nodes {
+            let mut iter = self.get_ids_iter();
+            let mut node_id = iter.next().unwrap();
+            while visited.contains(node_id) {
+                node_id = iter.next().unwrap();
+            }
+            self.visit_nodes_from_root(node_id, &mut visited, Self::NodeType::get_outgoing_edges);
+        }
+        let mut components: Vec<Vec<NodeId>> = Vec::new();
+        while visited.len() > 0 {
+            let node_id = visited.first().unwrap();
+            let mut upstream: OrderedNodeSet = BTreeSet::new();
+            self.visit_nodes_from_root(&node_id, &mut upstream, Self::NodeType::get_in_neighbors);
+            let mut component: Vec<NodeId> = upstream.into_iter().collect();
+            component.push(*node_id);
+            components.push(component);
+        }
+        components
     }
 }
