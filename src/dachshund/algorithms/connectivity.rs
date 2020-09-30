@@ -18,6 +18,7 @@ pub trait Connectivity: GraphBase {
         &'a self,
         root: &NodeId,
         visited: &mut OrderedNodeSet,
+        newly_visited: &mut Vec<NodeId>,
         edge_fn: fn(
             &'a Self::NodeType,
         ) -> Box<
@@ -35,6 +36,7 @@ pub trait Connectivity: GraphBase {
                     to_visit.push(neighbor_id);
                 }
             }
+            newly_visited.push(node_id);
             visited.insert(node_id);
         }
     }
@@ -51,7 +53,7 @@ pub trait Connectivity: GraphBase {
             return Err("Graph is empty");
         }
         let root = self.get_ids_iter().next().unwrap();
-        self.visit_nodes_from_root(&root, &mut visited, edge_fn);
+        self.visit_nodes_from_root(&root, &mut visited, &mut Vec::new(), edge_fn);
         Ok(visited.len() == self.count_nodes())
     }
 }
