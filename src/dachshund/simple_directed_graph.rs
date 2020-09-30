@@ -27,7 +27,8 @@ where
         while leaves.len() < num_nodes {
             let mut leaf_was_found: bool = false;
             for node in self.get_nodes_iter() {
-                if node.has_no_out_neighbors_except_set(&leaves) {
+                let node_id = node.get_id();
+                if !leaves.contains(&node_id) && node.has_no_out_neighbors_except_set(&leaves) {
                     leaves.insert(node.get_id());
                     leaf_was_found = true;
                 }
