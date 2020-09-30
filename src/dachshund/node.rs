@@ -194,6 +194,16 @@ pub trait DirectedNodeBase: NodeBase {
     fn has_out_neighbor(&self, nid: NodeId) -> bool;
     fn get_in_degree(&self) -> usize;
     fn get_out_degree(&self) -> usize;
+    // used to determine if the node is a leaf
+    fn has_no_out_neighbors_except_set(&self, exclude_set: &HashSet<NodeId>) -> bool {
+        for e in self.get_out_neighbors() {
+            let nid = e.get_neighbor_id();
+            if !exclude_set.contains(&nid) {
+                return false;
+            }
+        }
+        true
+    }
 }
 pub struct SimpleDirectedNode {
     pub node_id: NodeId,

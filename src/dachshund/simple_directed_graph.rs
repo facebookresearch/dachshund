@@ -13,12 +13,14 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
 use std::collections::hash_map::{Keys, Values};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use crate::dachshund::node::DirectedNodeBase;
 
 pub trait DirectedGraph
 where
     Self: GraphBase,
 {
+    fn is_acyclic(&self) -> bool;
 }
 pub struct SimpleDirectedGraph {
     pub nodes: HashMap<NodeId, SimpleDirectedNode>,
@@ -68,7 +70,26 @@ impl GraphBase for SimpleDirectedGraph {
         }
     }
 }
-impl DirectedGraph for SimpleDirectedGraph {}
+impl DirectedGraph for SimpleDirectedGraph {
+    fn is_acyclic(&self) -> bool {
+        // from https://www.cs.hmc.edu/~keller/courses/cs60/s98/examples/acyclic/
+        let mut leaves: HashSet<NodeId> = HashSet::new();
+        let num_nodes = self.count_nodes();
+        while leaves.len() < num_nodes {
+            let mut leaf_was_found: bool = false;
+            for node in self.get_nodes_iter() {
+                if node.has_no_out_neighbors_except_set(&leaves) {
+                    leaves.insert(node.get_id());
+                    leaf_was_found = true;
+                }
+            }
+            if !leaf_was_found {
+                return false;
+            }
+        }
+        return true;
+    }
+}
 impl Brokerage for SimpleDirectedGraph {}
 impl ConnectedComponents for SimpleDirectedGraph {}
 impl ConnectedComponentsDirected for SimpleDirectedGraph {}
