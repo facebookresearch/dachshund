@@ -8,6 +8,7 @@
 
 extern crate lib_dachshund;
 extern crate test;
+use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::row::EdgeRow;

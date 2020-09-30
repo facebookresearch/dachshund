@@ -76,7 +76,7 @@ fn test_approx_avg_clustering() {
     assert_eq!(1.0, k4.get_approx_avg_clustering(10));
 
     let almost_k4 = &get_almost_k4_graph();
-    let approx_clustering = almost_k4.get_approx_avg_clustering(10000);
+    let approx_clustering = almost_k4.get_approx_avg_clustering(100000);
     assert!(((5 as f64 / 6 as f64) - approx_clustering).abs() <= 0.01);
 }
 
