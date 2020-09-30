@@ -11,16 +11,33 @@ use crate::dachshund::algorithms::connected_components::{
 use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityDirected};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, SimpleDirectedNode};
 use std::collections::hash_map::{Keys, Values};
 use std::collections::{HashMap, HashSet};
-use crate::dachshund::node::DirectedNodeBase;
 
 pub trait DirectedGraph
 where
     Self: GraphBase,
+    <Self as GraphBase>::NodeType: DirectedNodeBase
 {
-    fn is_acyclic(&self) -> bool;
+    fn is_acyclic(&self) -> bool {
+        // from https://www.cs.hmc.edu/~keller/courses/cs60/s98/examples/acyclic/
+        let mut leaves: HashSet<NodeId> = HashSet::new();
+        let num_nodes = self.count_nodes();
+        while leaves.len() < num_nodes {
+            let mut leaf_was_found: bool = false;
+            for node in self.get_nodes_iter() {
+                if node.has_no_out_neighbors_except_set(&leaves) {
+                    leaves.insert(node.get_id());
+                    leaf_was_found = true;
+                }
+            }
+            if !leaf_was_found {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 pub struct SimpleDirectedGraph {
     pub nodes: HashMap<NodeId, SimpleDirectedNode>,
@@ -70,26 +87,7 @@ impl GraphBase for SimpleDirectedGraph {
         }
     }
 }
-impl DirectedGraph for SimpleDirectedGraph {
-    fn is_acyclic(&self) -> bool {
-        // from https://www.cs.hmc.edu/~keller/courses/cs60/s98/examples/acyclic/
-        let mut leaves: HashSet<NodeId> = HashSet::new();
-        let num_nodes = self.count_nodes();
-        while leaves.len() < num_nodes {
-            let mut leaf_was_found: bool = false;
-            for node in self.get_nodes_iter() {
-                if node.has_no_out_neighbors_except_set(&leaves) {
-                    leaves.insert(node.get_id());
-                    leaf_was_found = true;
-                }
-            }
-            if !leaf_was_found {
-                return false;
-            }
-        }
-        return true;
-    }
-}
+impl DirectedGraph for SimpleDirectedGraph {}
 impl Brokerage for SimpleDirectedGraph {}
 impl ConnectedComponents for SimpleDirectedGraph {}
 impl ConnectedComponentsDirected for SimpleDirectedGraph {}
