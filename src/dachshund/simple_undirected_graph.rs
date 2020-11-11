@@ -6,8 +6,8 @@
  */
 extern crate nalgebra as na;
 use crate::dachshund::cnm_communities::CNMCommunities;
-use crate::dachshund::connected_components::ConnectedComponents;
-use crate::dachshund::coreness::Coreness;
+use crate::dachshund::algorithms::connected_components::ConnectedComponents;
+use crate::dachshund::algorithms::coreness::Coreness;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
@@ -16,14 +16,8 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
-<<<<<<< HEAD
 use std::collections::hash_map::{Keys, Values};
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
-=======
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
-use std::collections::hash_map::Keys;
-use std::iter::FromIterator;
->>>>>>> upstream/master
 
 type GraphMatrix = DMatrix<f64>;
 type OrderedNodeSet = BTreeSet<NodeId>;
