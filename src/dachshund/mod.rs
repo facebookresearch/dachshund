@@ -6,14 +6,13 @@
  */
 pub mod adjacency_matrix;
 pub mod algebraic_connectivity;
+pub mod algorithms;
 pub mod beam;
 pub mod betweenness;
 pub mod candidate;
 pub mod clustering;
 pub mod cnm_communities;
-pub mod connected_components;
 pub mod connectivity;
-pub mod coreness;
 pub mod eigenvector_centrality;
 pub mod error;
 pub mod graph_base;
