@@ -8,25 +8,25 @@
 
 extern crate lib_dachshund;
 extern crate test;
-use lib_dachshund::dachshund::adjacency_matrix::AdjacencyMatrix;
-use lib_dachshund::dachshund::algebraic_connectivity::AlgebraicConnectivity;
+use lib_dachshund::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
+use lib_dachshund::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
 use lib_dachshund::dachshund::algorithms::connected_components::ConnectedComponents;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
-use lib_dachshund::dachshund::betweenness::Betweenness;
-use lib_dachshund::dachshund::clustering::Clustering;
-use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
-use lib_dachshund::dachshund::connectivity::Connectivity;
-use lib_dachshund::dachshund::eigenvector_centrality::EigenvectorCentrality;
+use lib_dachshund::dachshund::algorithms::betweenness::Betweenness;
+use lib_dachshund::dachshund::algorithms::clustering::Clustering;
+use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
+use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
-use lib_dachshund::dachshund::laplacian::Laplacian;
+use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
 use lib_dachshund::dachshund::row::EdgeRow;
-use lib_dachshund::dachshund::shortest_paths::ShortestPaths;
+use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
+use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 use lib_dachshund::dachshund::transformer::Transformer;
-use lib_dachshund::dachshund::transitivity::Transitivity;
 use std::collections::HashSet;
 use test::Bencher;
 

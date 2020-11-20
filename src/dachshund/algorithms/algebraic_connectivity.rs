@@ -4,8 +4,8 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+use crate::dachshund::algorithms::laplacian::Laplacian;
 use crate::dachshund::graph_base::GraphBase;
-use crate::dachshund::laplacian::Laplacian;
 
 pub trait AlgebraicConnectivity: GraphBase + Laplacian {
     // Algebraic Connectivity, or the Fiedler Measure, is the second-smallest eigenvalue of the graph Laplacian.
