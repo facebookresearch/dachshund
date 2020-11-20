@@ -16,13 +16,13 @@ pub mod dachshund;
 
 pub use dachshund::adjacency_matrix::AdjacencyMatrix;
 pub use dachshund::algebraic_connectivity::AlgebraicConnectivity;
+pub use dachshund::algorithms::connected_components::ConnectedComponents;
+pub use dachshund::algorithms::coreness::Coreness;
 pub use dachshund::beam::Beam;
 pub use dachshund::betweenness::Betweenness;
 pub use dachshund::candidate::Candidate;
 pub use dachshund::clustering::Clustering;
 pub use dachshund::cnm_communities::CNMCommunities;
-pub use dachshund::algorithms::connected_components::ConnectedComponents;
-pub use dachshund::algorithms::coreness::Coreness;
 pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};

@@ -6,12 +6,12 @@
  */
 use crate::dachshund::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::algebraic_connectivity::AlgebraicConnectivity;
+use crate::dachshund::algorithms::connected_components::ConnectedComponents;
+use crate::dachshund::algorithms::coreness::Coreness;
 use crate::dachshund::betweenness::Betweenness;
 use crate::dachshund::clustering::Clustering;
 use crate::dachshund::cnm_communities::CNMCommunities;
-use crate::dachshund::algorithms::connected_components::ConnectedComponents;
-use crate::dachshund::algorithms::coreness::Coreness;
-use crate::dachshund::coreness::Coreness;
+use crate::dachshund::connectivity::Connectivity;
 use crate::dachshund::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;

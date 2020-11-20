@@ -91,9 +91,7 @@ pub trait CNMCommunities: GraphBase<NodeType = Node> {
         }
         maxh
     }
-    fn init_cnm_communities(
-        &self,
-    ) -> CNMCommunityIntermediaryState {
+    fn init_cnm_communities(&self) -> CNMCommunityIntermediaryState {
         // stores current communities
         let mut communities: HashMap<usize, Community> = HashMap::new();
         let mut degree_map: HashMap<usize, usize> = HashMap::new();
