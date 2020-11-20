@@ -4,12 +4,11 @@ name: build
 
 jobs:
   check:
-    name: Rust project
+    name: cargo check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly
             override: true
@@ -20,7 +19,18 @@ jobs:
         with:
           command: check
 
-      - name: Run cargo check
+  test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt, clippy
+
+      - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
