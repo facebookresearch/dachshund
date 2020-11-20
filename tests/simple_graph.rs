@@ -7,6 +7,8 @@
 extern crate lib_dachshund;
 use crate::lib_dachshund::TransformerBase;
 use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::connected_components::ConnectedComponents;
+use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;

@@ -7,6 +7,7 @@
 extern crate nalgebra as na;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
+use crate::dachshund::node::{Node, NodeBase, NodeEdgeBase};
 use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -75,7 +76,7 @@ pub struct CNMCommunityIntermediaryState {
     pub num_edges: usize,
 }
 
-pub trait CNMCommunities : GraphBase {
+pub trait CNMCommunities: GraphBase<NodeType = Node> {
     fn get_max_maxheap(
         &self,
         delta_q_maxheap: &HashMap<usize, CNMCommunityMergeInstructionHeap>,
@@ -127,9 +128,10 @@ pub trait CNMCommunities : GraphBase {
         let q0: f64 = 1.0 / (num_edges as f64);
         for (_i, community) in communities.iter() {
             for id in community {
-                for neighbor_id in &self.get_node(*id).neighbors {
+                for e in self.get_node(*id).get_edges() {
+                    let neighbor_id = e.get_neighbor_id();
                     let i: &usize = reverse_id_map.get(&id).unwrap();
-                    let j: &usize = reverse_id_map.get(&neighbor_id.0).unwrap();
+                    let j: &usize = reverse_id_map.get(&neighbor_id).unwrap();
                     let k_i: usize = degree_map[i];
                     let k_j: usize = degree_map[j];
                     let delta_qij: f64 =
@@ -279,4 +281,3 @@ pub trait CNMCommunities : GraphBase {
         (state.communities, modularity_changes)
     }
 }
-

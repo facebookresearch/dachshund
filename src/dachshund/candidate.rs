@@ -110,7 +110,10 @@ impl<'a, T: GraphBase> fmt::Display for Candidate<'a, T> {
     }
 }
 
-impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
+impl<'a, TGraph: GraphBase> Candidate<'a, TGraph>
+where
+    TGraph: GraphBase<NodeType = Node>,
+{
     /// creates an empty candidate object, refering to a graph.
     pub fn init_blank(graph: &'a TGraph) -> Self {
         Self {
@@ -149,7 +152,7 @@ impl<'a, TGraph: GraphBase> Candidate<'a, TGraph> {
         let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph);
         for row in rows {
             if graph.has_node(row.node_id) {
-                let node: &Node = graph.get_node(row.node_id);
+                let node = graph.get_node(row.node_id);
                 assert_eq!(node.non_core_type, row.target_type);
                 candidate.add_node(node.node_id)?;
             }
