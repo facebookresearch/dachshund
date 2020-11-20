@@ -16,6 +16,7 @@ use crate::dachshund::candidate::Candidate;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
+use crate::dachshund::node::Node;
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
 use crate::dachshund::search_problem::SearchProblem;
@@ -25,7 +26,7 @@ use std::rc::Rc;
 /// The result of a beam search.
 pub struct BeamSearchResult<'a, TGraph>
 where
-    TGraph: GraphBase,
+    TGraph: GraphBase<NodeType = Node>,
 {
     pub top_candidate: Candidate<'a, TGraph>,
     pub num_steps: usize,
@@ -36,7 +37,7 @@ where
 /// to avoid exponential blowup of the search space.
 pub struct Beam<'a, TGraph>
 where
-    TGraph: GraphBase,
+    TGraph: GraphBase<NodeType = Node>,
 {
     pub candidates: Vec<Candidate<'a, TGraph>>,
     pub graph: &'a TGraph,
@@ -47,7 +48,7 @@ where
     scorer: Scorer,
 }
 
-impl<'a, TGraph: GraphBase> Beam<'a, TGraph> {
+impl<'a, TGraph: GraphBase<NodeType = Node>> Beam<'a, TGraph> {
     /// performs a random walk of length `length` along the graph,
     /// starting at a particular node.
     fn random_walk(

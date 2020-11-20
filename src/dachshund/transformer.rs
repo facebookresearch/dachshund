@@ -15,6 +15,7 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::graph_builder::GraphBuilder;
 use crate::dachshund::id_types::{GraphId, NodeTypeId};
 use crate::dachshund::line_processor::LineProcessorBase;
+use crate::dachshund::node::Node;
 use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
 use crate::dachshund::search_problem::SearchProblem;
@@ -235,7 +236,10 @@ impl Transformer {
     /// with other nodes in the graph. This is done via a greedy algorithm which removes
     /// low-degree nodes iteratively.
     #[allow(clippy::ptr_arg)]
-    pub fn build_pruned_graph<TGraphBuilder: GraphBuilder<TGraph>, TGraph: GraphBase>(
+    pub fn build_pruned_graph<
+        TGraphBuilder: GraphBuilder<TGraph>,
+        TGraph: GraphBase<NodeType = Node>,
+    >(
         &self,
         graph_id: GraphId,
         rows: &Vec<EdgeRow>,
@@ -244,7 +248,7 @@ impl Transformer {
     }
 
     /// Given a properly-built graph, runs the quasi-clique detection beam search on it.
-    pub fn process_graph<'a, TGraph: GraphBase>(
+    pub fn process_graph<'a, TGraph: GraphBase<NodeType = Node>>(
         &'a self,
         graph: &'a TGraph,
         clique_rows: &'a Vec<CliqueRow>,
@@ -264,7 +268,11 @@ impl Transformer {
     }
     /// Used to "seed" the beam search with an existing best (quasi-)clique (if any provided),
     /// and then run the search under the parameters specified in the constructor.
-    pub fn process_clique_rows<'a, TGraphBuilder: GraphBuilder<TGraph>, TGraph: GraphBase>(
+    pub fn process_clique_rows<
+        'a,
+        TGraphBuilder: GraphBuilder<TGraph>,
+        TGraph: GraphBase<NodeType = Node>,
+    >(
         &'a self,
         graph: &'a TGraph,
         clique_rows: &'a Vec<CliqueRow>,

@@ -16,6 +16,14 @@ pub struct NodeEdge {
     pub edge_type: EdgeTypeId,
     pub target_id: NodeId,
 }
+pub trait NodeEdgeBase {
+    fn get_neighbor_id(&self) -> NodeId;
+}
+impl NodeEdgeBase for NodeEdge {
+    fn get_neighbor_id(&self) -> NodeId {
+        self.target_id
+    }
+}
 impl NodeEdge {
     pub fn new(edge_type: EdgeTypeId, target_id: NodeId) -> Self {
         Self {
@@ -25,6 +33,10 @@ impl NodeEdge {
     }
 }
 
+pub trait NodeBase {
+    fn get_id(&self) -> NodeId;
+    fn get_edges(&self) -> std::slice::Iter<NodeEdge>;
+}
 /// Core data structure used to represent a node in our graph. A node can be
 /// either a "core" node, or a non-core node. Non-core nodes also have a type (e.g.
 /// IP, URL, etc.) Each node also keeps track of its neighbors, via a vector of
@@ -47,6 +59,14 @@ impl PartialEq for Node {
     }
 }
 impl Eq for Node {}
+impl NodeBase for Node {
+    fn get_id(&self) -> NodeId {
+        self.node_id
+    }
+    fn get_edges(&self) -> std::slice::Iter<NodeEdge> {
+        self.edges.iter()
+    }
+}
 
 impl Node {
     pub fn new(
