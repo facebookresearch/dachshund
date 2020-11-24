@@ -7,7 +7,6 @@
 pub mod algorithms;
 pub mod beam;
 pub mod candidate;
-pub mod cnm_communities;
 pub mod error;
 pub mod graph_base;
 pub mod graph_builder;

@@ -36,6 +36,8 @@ impl NodeEdge {
 pub trait NodeBase {
     fn get_id(&self) -> NodeId;
     fn get_edges(&self) -> std::slice::Iter<NodeEdge>;
+    fn degree(&self) -> usize;
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize;
 }
 /// Core data structure used to represent a node in our graph. A node can be
 /// either a "core" node, or a non-core node. Non-core nodes also have a type (e.g.
@@ -66,27 +68,13 @@ impl NodeBase for Node {
     fn get_edges(&self) -> std::slice::Iter<NodeEdge> {
         self.edges.iter()
     }
-}
-
-impl Node {
-    pub fn new(
-        node_id: NodeId,
-        is_core: bool,
-        non_core_type: Option<NodeTypeId>,
-        edges: Vec<NodeEdge>,
-        neighbors: HashMap<NodeId, Vec<NodeEdge>>,
-    ) -> Node {
-        Node {
-            node_id,
-            is_core,
-            non_core_type,
-            edges,
-            neighbors,
-        }
+    /// degree is the edge count (in an unweighted graph)
+    fn degree(&self) -> usize {
+        self.edges.len()
     }
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
-    pub fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
         let mut num_ties: usize = 0;
         // If we have low degree and we're checking against a big set, iterate through our neighbors
         if self.neighbors.len() <= ids.len() {
@@ -105,6 +93,24 @@ impl Node {
         };
         num_ties
     }
+}
+
+impl Node {
+    pub fn new(
+        node_id: NodeId,
+        is_core: bool,
+        non_core_type: Option<NodeTypeId>,
+        edges: Vec<NodeEdge>,
+        neighbors: HashMap<NodeId, Vec<NodeEdge>>,
+    ) -> Node {
+        Node {
+            node_id,
+            is_core,
+            non_core_type,
+            edges,
+            neighbors,
+        }
+    }
     pub fn is_core(&self) -> bool {
         self.is_core
     }
@@ -116,9 +122,5 @@ impl Node {
             ))
         })?;
         Ok(non_core_type.max_edge_count_with_core_node())
-    }
-    /// degree is the edge count (in an unweighted graph)
-    pub fn degree(&self) -> usize {
-        self.edges.len()
     }
 }

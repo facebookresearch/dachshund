@@ -8,14 +8,23 @@
 
 extern crate lib_dachshund;
 extern crate test;
-use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
+use lib_dachshund::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
 use lib_dachshund::dachshund::algorithms::connected_components::ConnectedComponents;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
+use lib_dachshund::dachshund::algorithms::betweenness::Betweenness;
+use lib_dachshund::dachshund::algorithms::clustering::Clustering;
+use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
+use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
+use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
 use lib_dachshund::dachshund::row::EdgeRow;
+use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
+use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 use lib_dachshund::dachshund::transformer::Transformer;
 use std::collections::HashSet;
@@ -267,7 +276,7 @@ fn test_karate_club() {
 fn test_shortest_paths() {
     let graph = get_karate_club_graph();
     let source = NodeId::from(1 as i64);
-    let (dist, parents) = graph.get_shortest_paths(source, None);
+    let (dist, parents) = graph.get_shortest_paths(source, &None);
     assert_eq!(dist[&NodeId::from(1 as i64)], Some(0));
     assert_eq!(parents[&NodeId::from(1 as i64)].len(), 1);
     assert!(parents[&NodeId::from(1 as i64)].contains(&NodeId::from(1 as i64)));
@@ -317,7 +326,7 @@ fn bench_shortest_paths(b: &mut Bencher) {
     b.iter(|| {
         let graph = get_karate_club_graph();
         let source = NodeId::from(1 as i64);
-        let (_dist, _parents) = graph.get_shortest_paths(source, None);
+        let (_dist, _parents) = graph.get_shortest_paths(source, &None);
     });
 }
 

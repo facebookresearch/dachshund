@@ -7,8 +7,11 @@
 extern crate clap;
 extern crate serde_json;
 
+use crate::dachshund::algorithms::betweenness::Betweenness;
+use crate::dachshund::algorithms::clustering::Clustering;
 use crate::dachshund::algorithms::connected_components::ConnectedComponents;
 use crate::dachshund::algorithms::coreness::Coreness;
+use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
@@ -36,13 +39,14 @@ pub struct SimpleParallelTransformer {
 pub trait GraphStatsTransformerBase: TransformerBase {
     fn compute_graph_stats_json(graph: &SimpleUndirectedGraph) -> String {
         let conn_comp = graph.get_connected_components();
-        let largest_cc = conn_comp.iter().max_by_key(|x| x.len()).unwrap();
+        let largest_cc = conn_comp.iter().max_by_key(|x| x.len()).unwrap().to_vec();
+        let size_of_largest_cc = largest_cc.len();
         let sources: Vec<NodeId> = largest_cc
             .choose_multiple(&mut rand::thread_rng(), 100)
             .copied()
             .collect();
         let betcent = graph
-            .get_node_betweenness_starting_from_sources(&sources, false, Some(&largest_cc))
+            .get_node_betweenness_starting_from_sources(&sources, false, Some(largest_cc))
             .unwrap();
         let evcent = graph.get_eigenvector_centrality(0.001, 1000);
 
@@ -67,7 +71,7 @@ pub trait GraphStatsTransformerBase: TransformerBase {
             "num_9_trusses": k_trusses_9.len(),
             "num_17_trusses": k_trusses_17.len(),
             "num_connected_components": conn_comp.len(),
-            "size_of_largest_cc": largest_cc.len(),
+            "size_of_largest_cc": size_of_largest_cc,
             "bet_cent": (Iterator::sum::<f64>(betcent.values()) /
                 (betcent.len() as f64) * 1000.0).floor() / 1000.0,
             "evcent": (Iterator::sum::<f64>(evcent.values()) /

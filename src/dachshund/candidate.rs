@@ -17,7 +17,7 @@ use rustc_serialize::json;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
-use crate::dachshund::node::Node;
+use crate::dachshund::node::{Node, NodeBase};
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
 
