@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate lib_dachshund;
-use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 
@@ -41,65 +41,48 @@ fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
 #[test]
 fn test_triad_cnm_iter() {
     let g = get_graph(0).unwrap();
-    let (communities, degree_map, delta_q_bmap, delta_q_maxheap, maxh, num_edges) =
-        g.init_cnm_communities();
-    assert_eq!(communities.len(), 3);
-    assert_eq!(degree_map.len(), 3);
-    assert_eq!(delta_q_bmap.len(), 3);
-    assert_eq!(delta_q_maxheap.len(), 3);
-    assert_eq!(maxh.len(), 3);
-    assert_eq!(num_edges, 3);
+    let x = g.init_cnm_communities();
+    assert_eq!(x.communities.len(), 3);
+    assert_eq!(x.degree_map.len(), 3);
+    assert_eq!(x.delta_q_bmap.len(), 3);
+    assert_eq!(x.delta_q_maxheap.len(), 3);
+    assert_eq!(x.maxh.len(), 3);
+    assert_eq!(x.num_edges, 3);
 
-    assert_eq!(degree_map[&0], 2);
-    assert_eq!(degree_map[&1], 2);
-    assert_eq!(degree_map[&2], 2);
+    assert_eq!(x.degree_map[&0], 2);
+    assert_eq!(x.degree_map[&1], 2);
+    assert_eq!(x.degree_map[&2], 2);
 
-    let (delta_ij, i, j) = maxh.peek().unwrap().tuple();
+    let (delta_ij, i, j) = x.maxh.peek().unwrap().tuple();
     assert_eq!(delta_ij, 2.0 * (1.0 / 6.0 - (2.0 * 2.0) / 36.0));
     assert_eq!(i, 0);
     assert_eq!(j, 1);
 
-    let (communities, degree_map, delta_q_bmap, delta_q_maxheap, maxh, num_edges) = g
-        .iterate_cnm_communities(
-            communities,
-            degree_map,
-            delta_q_bmap,
-            delta_q_maxheap,
-            maxh,
-            num_edges,
-        );
-    assert_eq!(communities.len(), 2);
-    assert_eq!(degree_map.len(), 2);
-    assert_eq!(delta_q_bmap.len(), 2);
-    assert_eq!(delta_q_maxheap.len(), 2);
-    assert_eq!(maxh.len(), 2);
-    assert_eq!(num_edges, 3);
+    let x = g.iterate_cnm_communities(x);
+    assert_eq!(x.communities.len(), 2);
+    assert_eq!(x.degree_map.len(), 2);
+    assert_eq!(x.delta_q_bmap.len(), 2);
+    assert_eq!(x.delta_q_maxheap.len(), 2);
+    assert_eq!(x.maxh.len(), 2);
+    assert_eq!(x.num_edges, 3);
 
-    assert_eq!(degree_map[&1], 4);
-    assert_eq!(degree_map[&2], 2);
-    let (delta_ij, i, j) = maxh.peek().unwrap().tuple();
+    assert_eq!(x.degree_map[&1], 4);
+    assert_eq!(x.degree_map[&2], 2);
+    let (delta_ij, i, j) = x.maxh.peek().unwrap().tuple();
     assert_eq!(delta_ij, 4.0 * (1.0 / 6.0 - (2.0 * 2.0) / 36.0));
     assert_eq!(i, 1);
     assert_eq!(j, 2);
 
-    let (communities, degree_map, delta_q_bmap, delta_q_maxheap, maxh, num_edges) = g
-        .iterate_cnm_communities(
-            communities,
-            degree_map,
-            delta_q_bmap,
-            delta_q_maxheap,
-            maxh,
-            num_edges,
-        );
-    assert_eq!(communities.len(), 1);
-    assert_eq!(degree_map.len(), 1);
-    assert_eq!(delta_q_bmap.len(), 1);
-    assert_eq!(delta_q_maxheap.len(), 1);
+    let x = g.iterate_cnm_communities(x);
+    assert_eq!(x.communities.len(), 1);
+    assert_eq!(x.degree_map.len(), 1);
+    assert_eq!(x.delta_q_bmap.len(), 1);
+    assert_eq!(x.delta_q_maxheap.len(), 1);
     // H drops down to 0 at this point
-    assert_eq!(maxh.len(), 0);
-    assert_eq!(num_edges, 3);
+    assert_eq!(x.maxh.len(), 0);
+    assert_eq!(x.num_edges, 3);
 
-    assert_eq!(degree_map[&2], 6);
+    assert_eq!(x.degree_map[&2], 6);
 }
 
 #[test]
@@ -136,16 +119,15 @@ fn test_two_triads_cnm() {
 #[test]
 fn test_tendril_cnm() {
     let g = get_graph(2).unwrap();
-    let (communities, degree_map, delta_q_bmap, delta_q_maxheap, maxh, num_edges) =
-        g.init_cnm_communities();
-    assert_eq!(communities.len(), 4);
-    assert_eq!(degree_map.len(), 4);
-    assert_eq!(delta_q_bmap.len(), 4);
-    assert_eq!(delta_q_maxheap.len(), 4);
-    assert_eq!(maxh.len(), 4);
-    assert_eq!(num_edges, 4);
+    let x = g.init_cnm_communities();
+    assert_eq!(x.communities.len(), 4);
+    assert_eq!(x.degree_map.len(), 4);
+    assert_eq!(x.delta_q_bmap.len(), 4);
+    assert_eq!(x.delta_q_maxheap.len(), 4);
+    assert_eq!(x.maxh.len(), 4);
+    assert_eq!(x.num_edges, 4);
 
-    let (delta_ij, _i, _j) = maxh.peek().unwrap().tuple();
+    let (delta_ij, _i, _j) = x.maxh.peek().unwrap().tuple();
     assert_eq!(delta_ij, 2.0 / 8.0 - 2.0 * (1.0 * 3.0) / 64.0);
 }
 

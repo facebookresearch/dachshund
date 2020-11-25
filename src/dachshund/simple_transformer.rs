@@ -7,11 +7,11 @@
 extern crate clap;
 extern crate serde_json;
 
-use crate::dachshund::betweenness::Betweenness;
-use crate::dachshund::clustering::Clustering;
-use crate::dachshund::connected_components::ConnectedComponents;
-use crate::dachshund::coreness::Coreness;
-use crate::dachshund::eigenvector_centrality::EigenvectorCentrality;
+use crate::dachshund::algorithms::betweenness::Betweenness;
+use crate::dachshund::algorithms::clustering::Clustering;
+use crate::dachshund::algorithms::connected_components::ConnectedComponents;
+use crate::dachshund::algorithms::coreness::Coreness;
+use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
