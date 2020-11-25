@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate lib_dachshund;
-use lib_dachshund::dachshund::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 

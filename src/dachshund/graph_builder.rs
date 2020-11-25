@@ -8,7 +8,7 @@ extern crate nalgebra as na;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
-use crate::dachshund::node::{Node, NodeEdge};
+use crate::dachshund::node::{Node, NodeBase, NodeEdge};
 use crate::dachshund::row::EdgeRow;
 use std::collections::{HashMap, HashSet};
 

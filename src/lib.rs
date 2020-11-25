@@ -14,11 +14,18 @@ extern crate thiserror;
 
 pub mod dachshund;
 
-pub use dachshund::beam::Beam;
-pub use dachshund::candidate::Candidate;
-pub use dachshund::cnm_communities::CNMCommunities;
+pub use dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
+pub use dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
+pub use dachshund::algorithms::betweenness::Betweenness;
+pub use dachshund::algorithms::clustering::Clustering;
+pub use dachshund::algorithms::cnm_communities::CNMCommunities;
 pub use dachshund::algorithms::connected_components::ConnectedComponents;
 pub use dachshund::algorithms::coreness::Coreness;
+pub use dachshund::algorithms::laplacian::Laplacian;
+pub use dachshund::algorithms::shortest_paths::ShortestPaths;
+pub use dachshund::algorithms::transitivity::Transitivity;
+pub use dachshund::beam::Beam;
+pub use dachshund::candidate::Candidate;
 pub use dachshund::graph_base::GraphBase;
 pub use dachshund::graph_builder::GraphBuilder;
 pub use dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
