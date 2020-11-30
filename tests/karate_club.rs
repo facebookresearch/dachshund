@@ -10,23 +10,17 @@ extern crate lib_dachshund;
 extern crate test;
 use lib_dachshund::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use lib_dachshund::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
-use lib_dachshund::dachshund::algorithms::connected_components::ConnectedComponents;
-use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::betweenness::Betweenness;
 use lib_dachshund::dachshund::algorithms::clustering::Clustering;
 use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::algorithms::connected_components::ConnectedComponents;
 use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
+use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
-use lib_dachshund::dachshund::graph_base::GraphBase;
-use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
-use lib_dachshund::dachshund::row::EdgeRow;
 use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
-use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
-use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
-use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
-use lib_dachshund::dachshund::transformer::Transformer;
+use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
@@ -119,7 +113,10 @@ fn get_karate_club_graph_with_one_extra_edge() -> SimpleUndirectedGraph {
     let mut rows = get_karate_club_edges();
     rows.push((35, 36));
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 
@@ -134,7 +131,10 @@ fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
 fn get_two_karate_clubs() -> SimpleUndirectedGraph {
     let rows = get_two_karate_clubs_edges();
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 
@@ -142,13 +142,19 @@ fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
     let mut rows = get_two_karate_clubs_edges();
     rows.push((34, 35));
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 fn get_karate_club_graph() -> SimpleUndirectedGraph {
     let rows = get_karate_club_edges();
     SimpleUndirectedGraphBuilder::from_vector(
-        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
     )
 }
 
