@@ -13,17 +13,18 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 type Community = HashSet<NodeId>;
 
+type CommunityId = usize;
 #[derive(Clone, Copy, Eq)]
 pub struct CNMCommunityMergeInstruction {
     delta_ij: OrderedFloat<f64>,
-    i: usize,
-    j: usize,
+    i: CommunityId,
+    j: CommunityId,
 }
 impl CNMCommunityMergeInstruction {
-    pub fn new(delta_ij: OrderedFloat<f64>, i: usize, j: usize) -> Self {
+    pub fn new(delta_ij: OrderedFloat<f64>, i: CommunityId, j: CommunityId) -> Self {
         Self { delta_ij, i, j }
     }
-    pub fn tuple(self) -> (OrderedFloat<f64>, usize, usize) {
+    pub fn tuple(self) -> (OrderedFloat<f64>, CommunityId, CommunityId) {
         (self.delta_ij, self.i, self.j)
     }
 }
@@ -58,6 +59,23 @@ impl PartialOrd for CNMCommunityMergeInstruction {
 }
 type CNMCommunityMergeInstructionHeap = BinaryHeap<CNMCommunityMergeInstruction>;
 
+// encapsulates state that gets passed around between functions implementing the
+// Clauset-Newman-Moore algorithm.
+pub struct CNMCommunityIntermediaryState {
+    // map from community ID to community set
+    pub communities: HashMap<CommunityId, Community>,
+    // map from community ID to degree
+    pub degree_map: HashMap<CommunityId, usize>,
+    // H matrix from CNM paper stored as BTree (for easy index-based retrieval)
+    pub delta_q_bmap: HashMap<CommunityId, HashMap<CommunityId, f64>>,
+    // H matrix from CNM paper stored as MaxHeap (for easy max's)
+    pub delta_q_maxheap: HashMap<CommunityId, CNMCommunityMergeInstructionHeap>,
+    // Max over max over rows of H matrix
+    pub maxh: CNMCommunityMergeInstructionHeap,
+    // total number of edges (m in CNM paper)
+    pub num_edges: usize,
+}
+
 pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
     fn get_max_maxheap(
         &self,
@@ -73,16 +91,7 @@ pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
         }
         maxh
     }
-    fn init_cnm_communities(
-        &self,
-    ) -> (
-        HashMap<usize, Community>,
-        HashMap<usize, usize>,
-        HashMap<usize, HashMap<usize, f64>>,
-        HashMap<usize, CNMCommunityMergeInstructionHeap>,
-        CNMCommunityMergeInstructionHeap,
-        usize,
-    ) {
+    fn init_cnm_communities(&self) -> CNMCommunityIntermediaryState {
         // stores current communities
         let mut communities: HashMap<usize, Community> = HashMap::new();
         let mut degree_map: HashMap<usize, usize> = HashMap::new();
@@ -139,31 +148,26 @@ pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
         }
         let maxh = self.get_max_maxheap(&delta_q_maxheap);
 
-        (
+        CNMCommunityIntermediaryState {
             communities,
             degree_map,
             delta_q_bmap,
             delta_q_maxheap,
             maxh,
             num_edges,
-        )
+        }
     }
     fn iterate_cnm_communities(
         &self,
-        mut communities: HashMap<usize, Community>,
-        mut degree_map: HashMap<usize, usize>,
-        mut delta_q_bmap: HashMap<usize, HashMap<usize, f64>>,
-        mut delta_q_maxheap: HashMap<usize, CNMCommunityMergeInstructionHeap>,
-        mut maxh: CNMCommunityMergeInstructionHeap,
-        num_edges: usize,
-    ) -> (
-        HashMap<usize, Community>,
-        HashMap<usize, usize>,
-        HashMap<usize, HashMap<usize, f64>>,
-        HashMap<usize, CNMCommunityMergeInstructionHeap>,
-        CNMCommunityMergeInstructionHeap,
-        usize,
-    ) {
+        state: CNMCommunityIntermediaryState,
+    ) -> CNMCommunityIntermediaryState {
+        let mut communities = state.communities;
+        let mut degree_map = state.degree_map;
+        let mut delta_q_bmap = state.delta_q_bmap;
+        let mut delta_q_maxheap = state.delta_q_maxheap;
+        let mut maxh = state.maxh;
+        let num_edges = state.num_edges;
+
         // find largest delta_q_ij
         let (_largest_delta_q_ij, i, j) = maxh.pop().unwrap().tuple();
 
@@ -250,47 +254,28 @@ pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
         degree_map.remove(&i);
 
         maxh = self.get_max_maxheap(&delta_q_maxheap);
-        (
+        CNMCommunityIntermediaryState {
             communities,
             degree_map,
             delta_q_bmap,
             delta_q_maxheap,
             maxh,
             num_edges,
-        )
+        }
     }
     fn get_cnm_communities(&self) -> (HashMap<usize, Community>, Vec<f64>) {
-        let (
-            mut communities,
-            mut degree_map,
-            mut delta_q_bmap,
-            mut delta_q_maxheap,
-            mut maxh,
-            num_edges,
-        ) = self.init_cnm_communities();
+        let mut state = self.init_cnm_communities();
 
-        let mut modularity_change = maxh.peek().unwrap().delta_ij.into_inner();
+        let mut modularity_change = state.maxh.peek().unwrap().delta_ij.into_inner();
         let mut modularity_changes: Vec<f64> = vec![modularity_change];
 
-        while maxh.len() > 0 && modularity_change > 0. {
-            let res = self.iterate_cnm_communities(
-                communities,
-                degree_map,
-                delta_q_bmap,
-                delta_q_maxheap,
-                maxh,
-                num_edges,
-            );
-            communities = res.0;
-            degree_map = res.1;
-            delta_q_bmap = res.2;
-            delta_q_maxheap = res.3;
-            maxh = res.4;
-            if maxh.peek().is_some() {
-                modularity_change = maxh.peek().unwrap().delta_ij.into_inner();
+        while state.maxh.len() > 0 && modularity_change > 0. {
+            state = self.iterate_cnm_communities(state);
+            if state.maxh.peek().is_some() {
+                modularity_change = state.maxh.peek().unwrap().delta_ij.into_inner();
                 modularity_changes.push(modularity_change);
             }
         }
-        (communities, modularity_changes)
+        (state.communities, modularity_changes)
     }
 }

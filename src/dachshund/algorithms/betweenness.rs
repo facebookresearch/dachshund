@@ -4,10 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-use crate::dachshund::connectivity::Connectivity;
+use crate::dachshund::algorithms::connectivity::Connectivity;
+use crate::dachshund::algorithms::shortest_paths::ShortestPaths;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::shortest_paths::ShortestPaths;
 use std::collections::HashMap;
 
 pub trait Betweenness: GraphBase + Connectivity + ShortestPaths {

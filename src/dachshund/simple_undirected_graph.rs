@@ -4,21 +4,21 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-use crate::dachshund::adjacency_matrix::AdjacencyMatrix;
-use crate::dachshund::algebraic_connectivity::AlgebraicConnectivity;
-use crate::dachshund::betweenness::Betweenness;
-use crate::dachshund::clustering::Clustering;
-use crate::dachshund::cnm_communities::CNMCommunities;
-use crate::dachshund::connected_components::ConnectedComponents;
-use crate::dachshund::connectivity::Connectivity;
-use crate::dachshund::coreness::Coreness;
-use crate::dachshund::eigenvector_centrality::EigenvectorCentrality;
+use crate::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
+use crate::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
+use crate::dachshund::algorithms::betweenness::Betweenness;
+use crate::dachshund::algorithms::clustering::Clustering;
+use crate::dachshund::algorithms::cnm_communities::CNMCommunities;
+use crate::dachshund::algorithms::connected_components::ConnectedComponents;
+use crate::dachshund::algorithms::connectivity::Connectivity;
+use crate::dachshund::algorithms::coreness::Coreness;
+use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
+use crate::dachshund::algorithms::laplacian::Laplacian;
+use crate::dachshund::algorithms::shortest_paths::ShortestPaths;
+use crate::dachshund::algorithms::transitivity::Transitivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::laplacian::Laplacian;
 use crate::dachshund::node::{SimpleNode, NodeBase, NodeEdgeBase};
-use crate::dachshund::shortest_paths::ShortestPaths;
-use crate::dachshund::transitivity::Transitivity;
 use std::collections::hash_map::{Keys, Values};
 use std::collections::HashMap;
 
