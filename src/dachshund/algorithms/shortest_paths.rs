@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::NodeBase;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
@@ -53,7 +53,7 @@ pub trait ShortestPaths: GraphBase {
             // remove u from queue
             queue.remove(u.unwrap());
             for e in self.get_node(*u.unwrap()).get_edges() {
-                let v = &e.target_id;
+                let v = &e.get_neighbor_id();
                 if queue.contains(v) {
                     let alt = min_dist.unwrap() + 1;
                     if dist[v] == None || alt <= dist[v].unwrap() {
@@ -101,7 +101,7 @@ pub trait ShortestPaths: GraphBase {
             stack.push(v);
             let node = &self.get_node(v);
             for edge in node.get_edges() {
-                let neighbor_id = edge.target_id;
+                let neighbor_id = edge.get_neighbor_id();
                 // neighbor_id newly discovered
                 if dists[&neighbor_id] < 0 {
                     queue.push_back(neighbor_id);

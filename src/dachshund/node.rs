@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 use std::cmp::{Eq, PartialEq};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 use crate::dachshund::error::{CLQError, CLQResult};
@@ -16,7 +16,8 @@ pub struct NodeEdge {
     pub edge_type: EdgeTypeId,
     pub target_id: NodeId,
 }
-pub trait NodeEdgeBase {
+pub trait NodeEdgeBase 
+where Self: Sized {
     fn get_neighbor_id(&self) -> NodeId;
 }
 impl NodeEdgeBase for NodeEdge {
@@ -33,9 +34,19 @@ impl NodeEdge {
     }
 }
 
-pub trait NodeBase {
+impl NodeEdgeBase for NodeId {
+    fn get_neighbor_id(&self) -> NodeId {
+        *self
+    }
+}
+
+pub trait NodeBase where
+    Self: Sized
+{
+    type NodeEdgeType: NodeEdgeBase + Sized;
+
     fn get_id(&self) -> NodeId;
-    fn get_edges(&self) -> std::slice::Iter<NodeEdge>;
+    fn get_edges(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn degree(&self) -> usize;
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize;
 }
@@ -62,11 +73,12 @@ impl PartialEq for Node {
 }
 impl Eq for Node {}
 impl NodeBase for Node {
+    type NodeEdgeType = NodeEdge;
     fn get_id(&self) -> NodeId {
         self.node_id
     }
-    fn get_edges(&self) -> std::slice::Iter<NodeEdge> {
-        self.edges.iter()
+    fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeEdge> + '_> {
+        Box::new(self.edges.iter())
     }
     /// degree is the edge count (in an unweighted graph)
     fn degree(&self) -> usize {
@@ -122,5 +134,40 @@ impl Node {
             ))
         })?;
         Ok(non_core_type.max_edge_count_with_core_node())
+    }
+}
+
+pub struct SimpleNode {
+    pub node_id: NodeId,
+    pub neighbors: BTreeSet<NodeId>,
+}
+impl Hash for SimpleNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+    }
+}
+impl PartialEq for SimpleNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.node_id == other.node_id
+    }
+}
+impl Eq for SimpleNode {}
+impl NodeBase for SimpleNode {
+    type NodeEdgeType = NodeId;
+
+    fn get_id(&self) -> NodeId {
+        self.node_id
+    }
+    fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
+        Box::new(self.neighbors.iter())
+    }
+    /// degree is the edge count (in an unweighted graph)
+    fn degree(&self) -> usize {
+        self.neighbors.len()
+    }
+    /// used to determine degree in a subgraph (i.e., the clique we're considering).
+    /// HashSet is supplied by Candidate struct.
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+        ids.iter().filter(|x| self.neighbors.contains(x)).collect::<Vec<&NodeId>>().len()
     }
 }
