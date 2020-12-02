@@ -18,11 +18,16 @@ use lib_dachshund::dachshund::algorithms::connected_components::ConnectedCompone
 use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
+use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
+use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
+use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::NodeId;
+use lib_dachshund::dachshund::simple_directed_graph::SimpleDirectedGraph;
+use lib_dachshund::dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use test::Bencher;
 
 fn get_karate_club_edges() -> Vec<(usize, usize)> {
@@ -469,7 +474,6 @@ fn test_cnm_community() {
 
 #[test]
 fn test_brokerage() {
-
     let expected_counts = vec![
         (0, 0, 0, 0, 0, 0),
         (0, 0, 0, 0, 0, 0),
@@ -513,21 +517,30 @@ fn test_brokerage() {
         c.insert(*node_id, 1 + ((node_id.value() <= 17) as usize));
     }
     for node_id in g.get_ids_iter() {
-        let scores = g.get_brokerage_scores_for_node(
-            *node_id, &c
+        let scores = g.get_brokerage_scores_for_node(*node_id, &c);
+        assert_eq!(
+            scores.total_open_twopaths,
+            expected_counts[node_id.value() as usize].5
         );
-        assert_eq!(scores.total_open_twopaths,
-                   expected_counts[node_id.value() as usize].5);
-        assert_eq!(scores.num_coordinator_ties,
-                   expected_counts[node_id.value() as usize].0);
-        assert_eq!(scores.num_itinerant_broker_ties,
-                   expected_counts[node_id.value() as usize].1);
-        assert_eq!(scores.num_representative_ties,
-                   expected_counts[node_id.value() as usize].2);
-        assert_eq!(scores.num_gatekeeper_ties,
-                   expected_counts[node_id.value() as usize].3);
-        assert_eq!(scores.num_liaison_ties,
-                   expected_counts[node_id.value() as usize].4);
-
-    };
+        assert_eq!(
+            scores.num_coordinator_ties,
+            expected_counts[node_id.value() as usize].0
+        );
+        assert_eq!(
+            scores.num_itinerant_broker_ties,
+            expected_counts[node_id.value() as usize].1
+        );
+        assert_eq!(
+            scores.num_representative_ties,
+            expected_counts[node_id.value() as usize].2
+        );
+        assert_eq!(
+            scores.num_gatekeeper_ties,
+            expected_counts[node_id.value() as usize].3
+        );
+        assert_eq!(
+            scores.num_liaison_ties,
+            expected_counts[node_id.value() as usize].4
+        );
+    }
 }
