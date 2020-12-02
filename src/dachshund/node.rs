@@ -177,3 +177,42 @@ impl NodeBase for SimpleNode {
             .len()
     }
 }
+
+pub struct SimpleDirectedNode {
+    pub node_id: NodeId,
+    pub in_neighbors: BTreeSet<NodeId>,
+    pub out_neighbors: BTreeSet<NodeId>,
+}
+impl Hash for SimpleDirectedNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+    }
+}
+impl PartialEq for SimpleDirectedNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.node_id == other.node_id
+    }
+}
+impl Eq for SimpleDirectedNode {}
+impl NodeBase for SimpleDirectedNode {
+    type NodeEdgeType = NodeId;
+
+    fn get_id(&self) -> NodeId {
+        self.node_id
+    }
+    fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
+        Box::new(self.in_neighbors.iter().chain(self.out_neighbors.iter()))
+    }
+    /// degree is the edge count (in an unweighted graph)
+    fn degree(&self) -> usize {
+        self.in_neighbors.len() + self.out_neighbors.len()
+    }
+    /// used to determine degree in a subgraph (i.e., the clique we're considering).
+    /// HashSet is supplied by Candidate struct.
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+        ids.iter()
+            .filter(|x| self.in_neighbors.contains(x) || self.out_neighbors.contains(x))
+            .collect::<Vec<&NodeId>>()
+            .len()
+    }
+}
