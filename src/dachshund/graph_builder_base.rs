@@ -11,6 +11,6 @@ where
     Self::GraphType: GraphBase,
 {
     type GraphType;
-
-    fn from_vector(&self, data: &Vec<(i64, i64)>) -> Self::GraphType;
+    type RowType;
+    fn from_vector(&self, data: &Vec<Self::RowType>) -> Self::GraphType;
 }

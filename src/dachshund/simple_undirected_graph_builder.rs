@@ -16,7 +16,8 @@ use itertools::Itertools;
 use rand::prelude::*;
 pub struct SimpleUndirectedGraphBuilder {}
 
-pub trait TSimpleUndirectedGraphBuilder: GraphBuilderBase {
+pub trait TSimpleUndirectedGraphBuilder: GraphBuilderBase<RowType=(i64, i64)> {
+
     // Build a graph with n vertices with every possible edge.
     fn get_complete_graph(&self, n: u64) -> Self::GraphType {
         let mut v = Vec::new();
@@ -100,6 +101,7 @@ pub trait TSimpleUndirectedGraphBuilder: GraphBuilderBase {
 
 impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
     type GraphType = SimpleUndirectedGraph;
+    type RowType = (i64, i64);
 
     // builds a graph from a vector of IDs. Repeated edges are ignored.
     // Edges only need to be provided once (this being an undirected graph)
@@ -126,6 +128,7 @@ impl SimpleUndirectedGraphBuilderWithCliques {
 impl TSimpleUndirectedGraphBuilder for SimpleUndirectedGraphBuilderWithCliques {}
 impl GraphBuilderBase for SimpleUndirectedGraphBuilderWithCliques {
     type GraphType = SimpleUndirectedGraph;
+    type RowType = (i64, i64);
 
     // builds a graph from a vector of IDs. Repeated edges are ignored.
     // Edges only need to be provided once (this being an undirected graph)
