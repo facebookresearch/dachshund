@@ -18,7 +18,6 @@ use lib_dachshund::dachshund::scorer::Scorer;
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
-use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 extern crate fxhash;
 use fxhash::FxHashMap;
@@ -59,7 +58,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
     let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+        transformer.build_pruned_graph(graph_id, &rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     let core_node_id: NodeId = *graph.core_ids.first().unwrap();
     assert_eq!(graph.non_core_ids.len(), 1);
@@ -111,7 +110,7 @@ fn build_sample_graph() -> (TypedGraph, Transformer) {
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw).unwrap();
     (
         transformer
-            .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)
+            .build_pruned_graph(graph_id, &rows)
             .unwrap(),
         transformer,
     )

@@ -16,7 +16,6 @@ use lib_dachshund::dachshund::scorer::Scorer;
 use lib_dachshund::dachshund::search_problem::SearchProblem;
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
-use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 
@@ -36,7 +35,7 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
     let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+        transformer.build_pruned_graph(graph_id, &rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     assert_eq!(graph.non_core_ids.len(), 1);
 

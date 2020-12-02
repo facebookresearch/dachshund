@@ -23,7 +23,6 @@ use lib_dachshund::dachshund::test_utils::{
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::transformer_base::TransformerBase;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
-use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
 #[cfg(test)]
 #[test]
@@ -52,7 +51,7 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
         CliqueRow::new(graph_id, 4, Some(article_type)),
     ];
     let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+        transformer.build_pruned_graph(graph_id, &rows)?;
     let test_node_id: NodeId = NodeId::from(3 as i64);
     graph.nodes[&test_node_id]
         .non_core_type
@@ -101,7 +100,7 @@ fn test_init_beam_with_partially_overlapping_clique_rows() -> CLQResult<()> {
         CliqueRow::new(graph_id, 7, Some(article_type)),
     ];
     let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+        transformer.build_pruned_graph(graph_id, &rows)?;
     let beam: Beam<TypedGraph> = Beam::new(
         &graph,
         &clique_rows,
