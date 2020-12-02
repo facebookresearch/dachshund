@@ -8,7 +8,9 @@ extern crate nalgebra as na;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::SimpleNode;
 use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
+extern crate fxhash;
+use fxhash::FxHashMap;
 
 use rand::prelude::*;
 
@@ -28,13 +30,13 @@ impl SimpleUndirectedGraphBuilder {
                 .or_insert_with(BTreeSet::new)
                 .insert(NodeId::from(*id1));
         }
-        let mut nodes: HashMap<NodeId, SimpleNode> = HashMap::new();
+        let mut nodes: FxHashMap<NodeId, SimpleNode> = FxHashMap::default();
         for (id, neighbors) in ids.into_iter() {
             nodes.insert(
                 id,
                 SimpleNode {
                     node_id: id,
-                    neighbors: neighbors,
+                    neighbors,
                 },
             );
         }

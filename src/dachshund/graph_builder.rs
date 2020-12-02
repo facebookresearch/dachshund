@@ -4,12 +4,14 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
 extern crate nalgebra as na;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::node::{Node, NodeBase, NodeEdge};
 use crate::dachshund::row::EdgeRow;
+use fxhash::FxHashMap;
 use std::collections::{HashMap, HashSet};
 
 /// Trait encapsulting the logic required to build a graph from a set of edge
@@ -21,7 +23,7 @@ where
     TGraph: GraphBase<NodeType = Node>,
 {
     fn _new(
-        nodes: HashMap<NodeId, Node>,
+        nodes: FxHashMap<NodeId, Node>,
         core_ids: Vec<NodeId>,
         non_core_ids: Vec<NodeId>,
     ) -> CLQResult<TGraph>;
@@ -31,8 +33,8 @@ where
         core_ids: &[NodeId],
         non_core_ids: &[NodeId],
         non_core_type_ids: &HashMap<NodeId, NodeTypeId>,
-    ) -> HashMap<NodeId, Node> {
-        let mut node_map: HashMap<NodeId, Node> = HashMap::new();
+    ) -> FxHashMap<NodeId, Node> {
+        let mut node_map: FxHashMap<NodeId, Node> = FxHashMap::default();
         for &id in core_ids {
             let node = Node::new(
                 id,             // node_id,
@@ -58,7 +60,7 @@ where
 
     /// given a set of initialized Nodes, populates the respective neighbors fields
     /// appropriately.
-    fn populate_edges(rows: &[EdgeRow], node_map: &mut HashMap<NodeId, Node>) -> CLQResult<()> {
+    fn populate_edges(rows: &[EdgeRow], node_map: &mut FxHashMap<NodeId, Node>) -> CLQResult<()> {
         for r in rows.iter() {
             assert!(node_map.contains_key(&r.source_id));
             assert!(node_map.contains_key(&r.target_id));
@@ -110,7 +112,7 @@ where
     /// Trims edges greedily, until all edges in the graph have degree at least min_degree.
     /// Note that this function does not delete any nodes -- just finds nodes to delete. It is
     /// called by `prune`, which actually does the deletion.
-    fn trim_edges(node_map: &mut HashMap<NodeId, Node>, min_degree: &usize) -> HashSet<NodeId> {
+    fn trim_edges(node_map: &mut FxHashMap<NodeId, Node>, min_degree: &usize) -> HashSet<NodeId> {
         let mut degree_map: HashMap<NodeId, usize> = HashMap::new();
         for (node_id, node) in node_map.iter() {
             let node_degree: usize = node.degree();
@@ -159,7 +161,7 @@ where
         let mut target_ids_vec: Vec<NodeId> = target_ids.into_iter().collect();
         target_ids_vec.sort();
 
-        let mut node_map: HashMap<NodeId, Node> =
+        let mut node_map: FxHashMap<NodeId, Node> =
             Self::init_nodes(&source_ids_vec, &target_ids_vec, &target_type_ids);
         Self::populate_edges(rows, &mut node_map)?;
         let mut graph = Self::_new(node_map, source_ids_vec, target_ids_vec)?;
@@ -179,7 +181,7 @@ where
         }
         let (filtered_source_ids, filtered_target_ids, filtered_rows) =
             Self::get_filtered_sources_targets_rows(graph, min_degree, rows);
-        let mut filtered_node_map: HashMap<NodeId, Node> =
+        let mut filtered_node_map: FxHashMap<NodeId, Node> =
             Self::init_nodes(&filtered_source_ids, &filtered_target_ids, &target_type_ids);
         Self::populate_edges(&filtered_rows, &mut filtered_node_map)?;
         Self::_new(filtered_node_map, filtered_source_ids, filtered_target_ids)

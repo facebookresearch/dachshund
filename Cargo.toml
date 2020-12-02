@@ -57,6 +57,9 @@ version = "0.7.3"
 [dependencies.ordered-float]
 version = "2.0.0"
 
+[dependencies.fxhash]
+version = "0.2.1"
+
 [[bin]]
 name = "clique_miner"
 path = "src/clique_miner.rs"

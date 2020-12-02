@@ -20,13 +20,16 @@ use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
 use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 
+extern crate fxhash;
+use fxhash::FxHashMap;
+
 #[cfg(test)]
 #[test]
 fn test_output_simple_candidate() -> CLQResult<()> {
     let node_id = NodeId::from(0);
     let node: Node = Node::new(node_id, true, None, Vec::new(), HashMap::new());
     let mut graph: TypedGraph = TypedGraph {
-        nodes: HashMap::new(),
+        nodes: FxHashMap::default(),
         core_ids: vec![],
         non_core_ids: vec![],
     };
