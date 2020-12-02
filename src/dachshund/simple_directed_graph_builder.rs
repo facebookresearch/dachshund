@@ -5,10 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate nalgebra as na;
+extern crate fxhash;
+
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::SimpleDirectedNode;
 use crate::dachshund::simple_directed_graph::SimpleDirectedGraph;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
+use fxhash::FxHashMap;
 
 pub struct SimpleDirectedGraphBuilder {}
 
@@ -27,7 +30,7 @@ impl SimpleDirectedGraphBuilder {
                 .0
                 .insert(NodeId::from(*id1));
         }
-        let mut nodes: HashMap<NodeId, SimpleDirectedNode> = HashMap::new();
+        let mut nodes: FxHashMap<NodeId, SimpleDirectedNode> = FxHashMap::default();
         for (id, (in_neighbors, out_neighbors)) in ids.into_iter() {
             nodes.insert(
                 id,

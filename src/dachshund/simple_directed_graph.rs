@@ -4,15 +4,16 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
 use crate::dachshund::algorithms::brokerage::Brokerage;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
 use std::collections::hash_map::{Keys, Values};
-use std::collections::HashMap;
+use fxhash::FxHashMap;
 
 pub struct SimpleDirectedGraph {
-    pub nodes: HashMap<NodeId, SimpleDirectedNode>,
+    pub nodes: FxHashMap<NodeId, SimpleDirectedNode>,
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleDirectedGraph {
@@ -32,7 +33,7 @@ impl GraphBase for SimpleDirectedGraph {
     fn get_nodes_iter(&self) -> Values<NodeId, SimpleDirectedNode> {
         self.nodes.values()
     }
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, SimpleDirectedNode> {
+    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, SimpleDirectedNode> {
         &mut self.nodes
     }
     fn has_node(&self, node_id: NodeId) -> bool {

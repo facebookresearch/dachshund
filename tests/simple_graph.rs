@@ -250,6 +250,17 @@ fn test_truss_graph() {
     )));
 }
 
+#[cfg(test)]
+#[test]
+fn test_coreness() {
+    let coreness = get_graph(3).unwrap().get_coreness();
+    let two_cores = get_graph(3).unwrap().get_k_cores(2);
+    let three_cores = get_graph(3).unwrap().get_k_cores(3);
+    println!("Coreness: {:?}", coreness);
+    println!("Two Cores: {:?}", two_cores);
+    println!("Three Cores: {:?}", three_cores);
+}
+
 #[test]
 fn test_simple_transformer() {
     let mut transformer = SimpleTransformer::new();
