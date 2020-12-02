@@ -17,13 +17,17 @@ use lib_dachshund::dachshund::algorithms::connected_components::ConnectedCompone
 use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
+use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
 use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
 use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
 use lib_dachshund::dachshund::graph_base::GraphBase;
-use lib_dachshund::dachshund::id_types::NodeId;
+use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
+use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
+use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
+use lib_dachshund::dachshund::transformer::Transformer;
 use std::collections::HashSet;
 use test::Bencher;
 
