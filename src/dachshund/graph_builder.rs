@@ -22,7 +22,7 @@ where
     TGraph: Sized,
     TGraph: GraphBase<NodeType = Node>,
 {
-    fn _new(
+    fn create_graph(
         nodes: FxHashMap<NodeId, Node>,
         core_ids: Vec<NodeId>,
         non_core_ids: Vec<NodeId>,
@@ -117,7 +117,7 @@ where
         let mut node_map: FxHashMap<NodeId, Node> =
             Self::init_nodes(&source_ids_vec, &target_ids_vec, &target_type_ids);
         Self::populate_edges(rows, &mut node_map)?;
-        let mut graph = Self::_new(node_map, source_ids_vec, target_ids_vec)?;
+        let mut graph = Self::create_graph(node_map, source_ids_vec, target_ids_vec)?;
         if let Some(min_degree) = min_degree {
             graph = Self::prune(graph, rows, min_degree)?;
         }
@@ -137,7 +137,7 @@ where
         let mut filtered_node_map: FxHashMap<NodeId, Node> =
             Self::init_nodes(&filtered_source_ids, &filtered_target_ids, &target_type_ids);
         Self::populate_edges(&filtered_rows, &mut filtered_node_map)?;
-        Self::_new(filtered_node_map, filtered_source_ids, filtered_target_ids)
+        Self::create_graph(filtered_node_map, filtered_source_ids, filtered_target_ids)
     }
     /// called by `prune`, finds source and target nodes to exclude, as well as edges to exclude
     /// when rebuilding the graph from a filtered vector of `EdgeRows`.
