@@ -11,6 +11,7 @@ extern crate test;
 use lib_dachshund::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use lib_dachshund::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
 use lib_dachshund::dachshund::algorithms::betweenness::Betweenness;
+use lib_dachshund::dachshund::algorithms::brokerage::Brokerage;
 use lib_dachshund::dachshund::algorithms::clustering::Clustering;
 use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::algorithms::connected_components::ConnectedComponents;
@@ -22,9 +23,11 @@ use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
 use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::NodeId;
+use lib_dachshund::dachshund::simple_directed_graph::SimpleDirectedGraph;
+use lib_dachshund::dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use test::Bencher;
 
 fn get_karate_club_edges() -> Vec<(usize, usize)> {
@@ -151,6 +154,15 @@ fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
 fn get_karate_club_graph() -> SimpleUndirectedGraph {
     let rows = get_karate_club_edges();
     SimpleUndirectedGraphBuilder::from_vector(
+        &rows
+            .into_iter()
+            .map(|(x, y)| (x as i64, y as i64))
+            .collect(),
+    )
+}
+fn get_directed_karate_club_graph() -> SimpleDirectedGraph {
+    let rows = get_karate_club_edges();
+    SimpleDirectedGraphBuilder::from_vector(
         &rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
@@ -457,5 +469,78 @@ fn test_cnm_community() {
             i, modularity_changes[i], expected[i]
         );
         assert!((modularity_changes[i] - expected[i]).abs() <= 0.001);
+    }
+}
+
+#[test]
+fn test_brokerage() {
+    let expected_counts = vec![
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 1, 0, 0, 1),
+        (3, 0, 6, 0, 0, 9),
+        (2, 0, 0, 0, 0, 2),
+        (0, 0, 0, 0, 0, 0),
+        (1, 0, 0, 0, 0, 1),
+        (2, 0, 0, 0, 0, 2),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 5, 0, 0, 5),
+        (0, 0, 1, 0, 0, 1),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 4, 0, 0, 4),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 2, 0, 2),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0),
+        (1, 0, 0, 0, 0, 1),
+        (0, 0, 0, 0, 0, 0),
+        (1, 0, 0, 1, 0, 2),
+        (0, 0, 0, 2, 0, 2),
+        (1, 0, 0, 0, 0, 1),
+        (0, 0, 0, 2, 0, 2),
+        (5, 0, 0, 2, 0, 7),
+        (0, 0, 0, 1, 0, 1),
+        (0, 0, 0, 0, 0, 0),
+    ];
+    let g = get_directed_karate_club_graph();
+    let mut c: HashMap<NodeId, usize> = HashMap::new();
+    for node_id in g.get_ids_iter() {
+        c.insert(*node_id, 1 + ((node_id.value() <= 17) as usize));
+    }
+    for node_id in g.get_ids_iter() {
+        let scores = g.get_brokerage_scores_for_node(*node_id, &c);
+        assert_eq!(
+            scores.total_open_twopaths,
+            expected_counts[node_id.value() as usize].5
+        );
+        assert_eq!(
+            scores.num_coordinator_ties,
+            expected_counts[node_id.value() as usize].0
+        );
+        assert_eq!(
+            scores.num_itinerant_broker_ties,
+            expected_counts[node_id.value() as usize].1
+        );
+        assert_eq!(
+            scores.num_representative_ties,
+            expected_counts[node_id.value() as usize].2
+        );
+        assert_eq!(
+            scores.num_gatekeeper_ties,
+            expected_counts[node_id.value() as usize].3
+        );
+        assert_eq!(
+            scores.num_liaison_ties,
+            expected_counts[node_id.value() as usize].4
+        );
     }
 }
