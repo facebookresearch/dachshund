@@ -30,203 +30,123 @@ use lib_dachshund::dachshund::transformer::Transformer;
 use std::collections::HashSet;
 use test::Bencher;
 
-fn get_rows(transformer: &Transformer) -> Vec<EdgeRow> {
-    let mut raw = vec![
-        "0\t1\t2\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t3\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t3\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t4\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t4\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t4\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t5\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t6\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t7\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t5\t7\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t6\t7\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t8\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t8\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t8\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t4\t8\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t9\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t9\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t10\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t11\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t5\t11\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t6\t11\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t12\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t13\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t4\t13\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t14\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t14\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t14\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t4\t14\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t6\t17\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t7\t17\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t18\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t18\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t20\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t20\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t22\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t22\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t24\t26\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t25\t26\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t28\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t24\t28\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t25\t28\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t29\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t24\t30\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t27\t30\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t2\t31\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t9\t31\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t1\t32\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t25\t32\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t26\t32\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t29\t32\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t3\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t9\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t15\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t16\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t19\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t21\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t23\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t24\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t30\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t31\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t32\t33\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t9\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t10\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t14\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t15\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t16\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t19\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t20\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t21\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t23\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t24\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t27\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t28\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t29\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t30\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t31\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t32\t34\tstudent\tis_friends_with\tstudent".to_string(),
-        "0\t33\t34\tstudent\tis_friends_with\tstudent".to_string(),
-    ];
-    let mut reversed: Vec<String> = Vec::new();
-    for el in &raw {
-        let mut vec: Vec<&str> = el.split('\t').collect();
-        vec.swap(1, 2);
-        reversed.push(vec.join("\t"));
-    }
-    for el in &reversed {
-        raw.push(el.to_string());
-    }
-    assert_eq!(raw.len(), 78 * 2);
-    let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw).unwrap();
-    rows
+fn get_karate_club_edges() -> Vec<(usize, usize)> {
+    vec![
+        (1, 2),
+        (1, 3),
+        (2, 3),
+        (1, 4),
+        (2, 4),
+        (3, 4),
+        (1, 5),
+        (1, 6),
+        (1, 7),
+        (5, 7),
+        (6, 7),
+        (1, 8),
+        (2, 8),
+        (3, 8),
+        (4, 8),
+        (1, 9),
+        (3, 9),
+        (3, 10),
+        (1, 11),
+        (5, 11),
+        (6, 11),
+        (1, 12),
+        (1, 13),
+        (4, 13),
+        (1, 14),
+        (2, 14),
+        (3, 14),
+        (4, 14),
+        (6, 17),
+        (7, 17),
+        (1, 18),
+        (2, 18),
+        (1, 20),
+        (2, 20),
+        (1, 22),
+        (2, 22),
+        (24, 26),
+        (25, 26),
+        (3, 28),
+        (24, 28),
+        (25, 28),
+        (3, 29),
+        (24, 30),
+        (27, 30),
+        (2, 31),
+        (9, 31),
+        (1, 32),
+        (25, 32),
+        (26, 32),
+        (29, 32),
+        (3, 33),
+        (9, 33),
+        (15, 33),
+        (16, 33),
+        (19, 33),
+        (21, 33),
+        (23, 33),
+        (24, 33),
+        (30, 33),
+        (31, 33),
+        (32, 33),
+        (9, 34),
+        (10, 34),
+        (14, 34),
+        (15, 34),
+        (16, 34),
+        (19, 34),
+        (20, 34),
+        (21, 34),
+        (23, 34),
+        (24, 34),
+        (27, 34),
+        (28, 34),
+        (29, 34),
+        (30, 34),
+        (31, 34),
+        (32, 34),
+        (33, 34),
+    ]
 }
-
-fn get_transformer() -> Transformer {
-    let typespec: Vec<Vec<String>> = vec![vec![
-        "student".to_string(),
-        "is_friends_with".into(),
-        "student".into(),
-    ]];
-    gen_test_transformer(typespec, "student".to_string()).unwrap()
-}
-
 fn get_karate_club_graph_with_one_extra_edge() -> SimpleUndirectedGraph {
-    let graph_id: GraphId = 0.into();
-    let transformer = get_transformer();
-    let mut rows: Vec<EdgeRow> = get_rows(&transformer);
-    let source = NodeId::from(35 as i64);
-    let target = NodeId::from(36 as i64);
-    let new_edge = EdgeRow {
-        graph_id: rows[0].graph_id,
-        source_id: source,
-        target_id: target,
-        source_type_id: rows[0].source_type_id,
-        target_type_id: rows[0].target_type_id,
-        edge_type_id: rows[0].edge_type_id,
-    };
-    let rev_edge = EdgeRow {
-        graph_id: rows[0].graph_id,
-        source_id: target,
-        target_id: source,
-        source_type_id: rows[0].source_type_id,
-        target_type_id: rows[0].target_type_id,
-        edge_type_id: rows[0].edge_type_id,
-    };
-    rows.push(new_edge);
-    rows.push(rev_edge);
-    let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
-        .unwrap();
-    graph
+    let mut rows = get_karate_club_edges();
+    rows.push((35, 36));
+    SimpleUndirectedGraphBuilder::from_vector(
+        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+    )
 }
 
-fn get_two_karate_clubs_edges(transformer: &Transformer) -> Vec<EdgeRow> {
-    let mut rows: Vec<EdgeRow> = get_rows(&transformer);
-    for i in 1..rows.len() {
-        let new_edge = EdgeRow {
-            graph_id: rows[i].graph_id,
-            source_id: NodeId::from(rows[i].source_id.value() + 35),
-            target_id: NodeId::from(rows[i].target_id.value() + 35),
-            source_type_id: rows[0].source_type_id,
-            target_type_id: rows[0].target_type_id,
-            edge_type_id: rows[0].edge_type_id,
-        };
-        rows.push(new_edge);
+fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
+    let mut rows = get_karate_club_edges();
+    for (i, j) in get_karate_club_edges() {
+        rows.push((i + 35, j + 35));
     }
     rows
 }
 
 fn get_two_karate_clubs() -> SimpleUndirectedGraph {
-    let graph_id: GraphId = 0.into();
-    let transformer = get_transformer();
-    let rows = get_two_karate_clubs_edges(&transformer);
-    let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
-        .unwrap();
-    return graph;
+    let rows = get_two_karate_clubs_edges();
+    SimpleUndirectedGraphBuilder::from_vector(
+        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+    )
 }
 
 fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
-    let graph_id: GraphId = 0.into();
-    let transformer = get_transformer();
-    let mut rows = get_two_karate_clubs_edges(&transformer);
-    let source = NodeId::from(34 as i64);
-    let target = NodeId::from(35 as i64);
-    let new_edge = EdgeRow {
-        graph_id: rows[0].graph_id,
-        source_id: source,
-        target_id: target,
-        source_type_id: rows[0].source_type_id,
-        target_type_id: rows[0].target_type_id,
-        edge_type_id: rows[0].edge_type_id,
-    };
-    let rev_edge = EdgeRow {
-        graph_id: rows[0].graph_id,
-        source_id: target,
-        target_id: source,
-        source_type_id: rows[0].source_type_id,
-        target_type_id: rows[0].target_type_id,
-        edge_type_id: rows[0].edge_type_id,
-    };
-    rows.push(new_edge);
-    rows.push(rev_edge);
-    let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
-        .unwrap();
-    graph
+    let mut rows = get_two_karate_clubs_edges();
+    rows.push((34, 35));
+    SimpleUndirectedGraphBuilder::from_vector(
+        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+    )
 }
 fn get_karate_club_graph() -> SimpleUndirectedGraph {
-    let graph_id: GraphId = 0.into();
-    let transformer = get_transformer();
-    let rows: Vec<EdgeRow> = get_rows(&transformer);
-    let graph: SimpleUndirectedGraph = transformer
-        .build_pruned_graph::<SimpleUndirectedGraphBuilder, SimpleUndirectedGraph>(graph_id, &rows)
-        .unwrap();
-    graph
+    let rows = get_karate_club_edges();
+    SimpleUndirectedGraphBuilder::from_vector(
+        &rows.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
+    )
 }
 
 #[cfg(test)]

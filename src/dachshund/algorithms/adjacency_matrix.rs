@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::NodeBase;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use nalgebra::DMatrix;
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ pub trait AdjacencyMatrix: GraphBase {
 
         for (i, node_id) in node_ids.iter().enumerate() {
             for e in self.get_node(*node_id).get_edges() {
-                let j = pos_map.get(&e.target_id).unwrap();
+                let j = pos_map.get(&e.get_neighbor_id()).unwrap();
                 let pos = i * num_nodes + j;
                 data[pos] += 1.0;
             }
