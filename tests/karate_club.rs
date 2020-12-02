@@ -18,9 +18,6 @@ use lib_dachshund::dachshund::algorithms::connected_components::ConnectedCompone
 use lib_dachshund::dachshund::algorithms::connectivity::Connectivity;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
-use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
-use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
-use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
