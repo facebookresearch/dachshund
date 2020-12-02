@@ -16,8 +16,10 @@ pub struct NodeEdge {
     pub edge_type: EdgeTypeId,
     pub target_id: NodeId,
 }
-pub trait NodeEdgeBase 
-where Self: Sized {
+pub trait NodeEdgeBase
+where
+    Self: Sized,
+{
     fn get_neighbor_id(&self) -> NodeId;
 }
 impl NodeEdgeBase for NodeEdge {
@@ -40,8 +42,9 @@ impl NodeEdgeBase for NodeId {
     }
 }
 
-pub trait NodeBase where
-    Self: Sized
+pub trait NodeBase
+where
+    Self: Sized,
 {
     type NodeEdgeType: NodeEdgeBase + Sized;
 
@@ -168,6 +171,9 @@ impl NodeBase for SimpleNode {
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
-        ids.iter().filter(|x| self.neighbors.contains(x)).collect::<Vec<&NodeId>>().len()
+        ids.iter()
+            .filter(|x| self.neighbors.contains(x))
+            .collect::<Vec<&NodeId>>()
+            .len()
     }
 }
