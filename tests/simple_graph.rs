@@ -11,6 +11,7 @@ use lib_dachshund::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
+use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::input::Input;
@@ -23,7 +24,7 @@ use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedG
 use std::collections::{BTreeSet, HashSet};
 use std::iter::FromIterator;
 
-fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
+fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
     let v = match idx {
         0 => vec![
             (0, 1),
@@ -134,10 +135,10 @@ fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
             (20, 22),
             (20, 24),
         ],
-        _ => return Err("Invalid index".to_string()),
+        _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
-    Ok(SimpleUndirectedGraphBuilder {}
-        .from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect()))
+    SimpleUndirectedGraphBuilder {}
+        .from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
 }
 fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
     match idx {

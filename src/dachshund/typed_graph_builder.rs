@@ -16,7 +16,6 @@ use fxhash::FxHashMap;
 
 pub struct TypedGraphBuilder {}
 impl GraphBuilder<TypedGraph> for TypedGraphBuilder {
-
     fn create_graph(
         nodes: FxHashMap<NodeId, Node>,
         core_ids: Vec<NodeId>,
