@@ -6,10 +6,10 @@
  */
 extern crate fxhash;
 extern crate nalgebra as na;
-use crate::dachshund::error::{CLQError, CLQResult};
+use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
-use crate::dachshund::node::{Node, NodeBase, NodeEdge};
+use crate::dachshund::node::{Node, NodeBase};
 use crate::dachshund::row::EdgeRow;
 use fxhash::FxHashMap;
 use std::collections::{HashMap, HashSet};
@@ -27,6 +27,10 @@ where
         core_ids: Vec<NodeId>,
         non_core_ids: Vec<NodeId>,
     ) -> CLQResult<TGraph>;
+
+    /// given a set of initialized Nodes, populates the respective neighbors fields
+    /// appropriately.
+    fn populate_edges(rows: &[EdgeRow], node_map: &mut FxHashMap<NodeId, Node>) -> CLQResult<()>;
 
     // initializes nodes in the graph with empty neighbors fields.
     fn init_nodes(
@@ -58,57 +62,6 @@ where
         node_map
     }
 
-    /// given a set of initialized Nodes, populates the respective neighbors fields
-    /// appropriately.
-    fn populate_edges(rows: &[EdgeRow], node_map: &mut FxHashMap<NodeId, Node>) -> CLQResult<()> {
-        for r in rows.iter() {
-            assert!(node_map.contains_key(&r.source_id));
-            assert!(node_map.contains_key(&r.target_id));
-
-            let source_node = node_map
-                .get_mut(&r.source_id)
-                .ok_or_else(CLQError::err_none)?;
-
-            source_node
-                .neighbors
-                .entry(r.target_id)
-                .or_insert_with(Vec::new);
-            source_node
-                .neighbors
-                .get_mut(&r.target_id)
-                .unwrap()
-                .push(NodeEdge::new(r.edge_type_id, r.target_id));
-
-            // probably unnecessary.
-            node_map
-                .get_mut(&r.source_id)
-                .ok_or_else(CLQError::err_none)?
-                .edges
-                .push(NodeEdge::new(r.edge_type_id, r.target_id));
-
-            // edges with the same source and target type should not be repeated
-            if r.source_type_id != r.target_type_id {
-                let target_node = node_map
-                    .get_mut(&r.target_id)
-                    .ok_or_else(CLQError::err_none)?;
-
-                target_node
-                    .neighbors
-                    .entry(r.source_id)
-                    .or_insert_with(Vec::new);
-                target_node
-                    .neighbors
-                    .get_mut(&r.source_id)
-                    .unwrap()
-                    .push(NodeEdge::new(r.edge_type_id, r.source_id));
-
-                target_node
-                    .edges
-                    .push(NodeEdge::new(r.edge_type_id, r.source_id));
-            }
-        }
-        Ok(())
-    }
     /// Trims edges greedily, until all edges in the graph have degree at least min_degree.
     /// Note that this function does not delete any nodes -- just finds nodes to delete. It is
     /// called by `prune`, which actually does the deletion.
