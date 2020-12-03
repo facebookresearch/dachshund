@@ -6,12 +6,21 @@
  */
 extern crate fxhash;
 use crate::dachshund::algorithms::brokerage::Brokerage;
+use crate::dachshund::algorithms::connected_components::{
+    ConnectedComponents, ConnectedComponentsDirected,
+};
+use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityDirected};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
 use std::collections::hash_map::{Keys, Values};
 use fxhash::FxHashMap;
 
+pub trait DirectedGraph
+where
+    Self: GraphBase,
+{
+}
 pub struct SimpleDirectedGraph {
     pub nodes: FxHashMap<NodeId, SimpleDirectedNode>,
     pub ids: Vec<NodeId>,
@@ -53,5 +62,16 @@ impl GraphBase for SimpleDirectedGraph {
     fn count_nodes(&self) -> usize {
         self.nodes.len()
     }
+    fn create_empty() -> Self {
+        SimpleDirectedGraph {
+            nodes: HashMap::new(),
+            ids: Vec::new(),
+        }
+    }
 }
+impl DirectedGraph for SimpleDirectedGraph {}
 impl Brokerage for SimpleDirectedGraph {}
+impl ConnectedComponents for SimpleDirectedGraph {}
+impl ConnectedComponentsDirected for SimpleDirectedGraph {}
+impl Connectivity for SimpleDirectedGraph {}
+impl ConnectivityDirected for SimpleDirectedGraph {}

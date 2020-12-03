@@ -7,6 +7,7 @@
 extern crate nalgebra as na;
 extern crate fxhash;
 
+use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::SimpleDirectedNode;
 use crate::dachshund::simple_directed_graph::SimpleDirectedGraph;
@@ -15,10 +16,12 @@ use fxhash::FxHashMap;
 
 pub struct SimpleDirectedGraphBuilder {}
 
-impl SimpleDirectedGraphBuilder {
+impl GraphBuilderBase for SimpleDirectedGraphBuilder {
+    type GraphType = SimpleDirectedGraph;
+
     // builds a graph from a vector of IDs. Repeated edges are ignored.
     #[allow(clippy::ptr_arg)]
-    pub fn from_vector(data: &Vec<(i64, i64)>) -> SimpleDirectedGraph {
+    fn from_vector(data: &Vec<(i64, i64)>) -> SimpleDirectedGraph {
         let mut ids: BTreeMap<NodeId, (BTreeSet<NodeId>, BTreeSet<NodeId>)> = BTreeMap::new();
         for (id1, id2) in data {
             ids.entry(NodeId::from(*id1))
