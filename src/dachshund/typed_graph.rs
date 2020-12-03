@@ -59,7 +59,7 @@ impl GraphBase for TypedGraph {
     }
     fn create_empty() -> Self {
         TypedGraph {
-            nodes: HashMap::new(),
+            nodes: FxHashMap::default(),
             core_ids: Vec::new(),
             non_core_ids: Vec::new(),
         }

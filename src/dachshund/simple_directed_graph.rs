@@ -64,7 +64,7 @@ impl GraphBase for SimpleDirectedGraph {
     }
     fn create_empty() -> Self {
         SimpleDirectedGraph {
-            nodes: HashMap::new(),
+            nodes: FxHashMap::default(),
             ids: Vec::new(),
         }
     }

@@ -94,7 +94,7 @@ impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
                 .or_insert_with(BTreeSet::new)
                 .insert(NodeId::from(*id1));
         }
-        let mut nodes: FxHashMap<NodeId, SimpleNode> = FxHashMap::new();
+        let mut nodes: FxHashMap<NodeId, SimpleNode> = FxHashMap::default();
         for (id, neighbors) in ids.into_iter() {
             nodes.insert(
                 id,

@@ -73,7 +73,7 @@ impl GraphBase for SimpleUndirectedGraph {
     }
     fn create_empty() -> Self {
         SimpleUndirectedGraph {
-            nodes: FxHashMap::new(),
+            nodes: FxHashMap::default(),
             ids: Vec::new(),
         }
     }
