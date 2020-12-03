@@ -6,6 +6,7 @@
  */
 extern crate lib_dachshund;
 use lib_dachshund::dachshund::graph_base::GraphBase;
+use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::simple_directed_graph::SimpleDirectedGraph;
 use lib_dachshund::dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 use std::collections::HashSet;
