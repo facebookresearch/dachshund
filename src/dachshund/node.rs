@@ -16,8 +16,10 @@ pub struct NodeEdge {
     pub edge_type: EdgeTypeId,
     pub target_id: NodeId,
 }
-pub trait NodeEdgeBase 
-where Self: Sized {
+pub trait NodeEdgeBase
+where
+    Self: Sized,
+{
     fn get_neighbor_id(&self) -> NodeId;
 }
 impl NodeEdgeBase for NodeEdge {
@@ -40,13 +42,17 @@ impl NodeEdgeBase for NodeId {
     }
 }
 
-pub trait NodeBase where
-    Self: Sized
+pub trait NodeBase
+where
+    Self: Sized,
 {
     type NodeEdgeType: NodeEdgeBase + Sized;
 
     fn get_id(&self) -> NodeId;
+    // used to return *all* edges
     fn get_edges(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
+    // used to return *outgoing* edges only (to perform a traversal)
+    fn get_outgoing_edges(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn degree(&self) -> usize;
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize;
 }
@@ -79,6 +85,9 @@ impl NodeBase for Node {
     }
     fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeEdge> + '_> {
         Box::new(self.edges.iter())
+    }
+    fn get_outgoing_edges(&self) -> Box<dyn Iterator<Item = &NodeEdge> + '_> {
+        self.get_edges()
     }
     /// degree is the edge count (in an unweighted graph)
     fn degree(&self) -> usize {
@@ -161,6 +170,9 @@ impl NodeBase for SimpleNode {
     fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
         Box::new(self.neighbors.iter())
     }
+    fn get_outgoing_edges(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
+        self.get_edges()
+    }
     /// degree is the edge count (in an unweighted graph)
     fn degree(&self) -> usize {
         self.neighbors.len()
@@ -168,6 +180,71 @@ impl NodeBase for SimpleNode {
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
-        ids.iter().filter(|x| self.neighbors.contains(x)).collect::<Vec<&NodeId>>().len()
+        ids.iter()
+            .filter(|x| self.neighbors.contains(x))
+            .collect::<Vec<&NodeId>>()
+            .len()
+    }
+}
+
+pub trait DirectedNodeBase: NodeBase {
+    fn get_in_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
+    fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
+    fn has_in_neighbor(&self, nid: NodeId) -> bool;
+    fn has_out_neighbor(&self, nid: NodeId) -> bool;
+}
+pub struct SimpleDirectedNode {
+    pub node_id: NodeId,
+    pub in_neighbors: BTreeSet<NodeId>,
+    pub out_neighbors: BTreeSet<NodeId>,
+}
+impl DirectedNodeBase for SimpleDirectedNode {
+    fn get_in_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_> {
+        Box::new(self.in_neighbors.iter())
+    }
+    fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_> {
+        Box::new(self.out_neighbors.iter())
+    }
+    fn has_in_neighbor(&self, nid: NodeId) -> bool {
+        self.in_neighbors.contains(&nid)
+    }
+    fn has_out_neighbor(&self, nid: NodeId) -> bool {
+        self.out_neighbors.contains(&nid)
+    }
+}
+impl Hash for SimpleDirectedNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+    }
+}
+impl PartialEq for SimpleDirectedNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.node_id == other.node_id
+    }
+}
+impl Eq for SimpleDirectedNode {}
+impl NodeBase for SimpleDirectedNode {
+    type NodeEdgeType = NodeId;
+
+    fn get_id(&self) -> NodeId {
+        self.node_id
+    }
+    fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
+        Box::new(self.in_neighbors.iter().chain(self.out_neighbors.iter()))
+    }
+    fn get_outgoing_edges(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
+        self.get_edges()
+    }
+    /// degree is the edge count (in an unweighted graph)
+    fn degree(&self) -> usize {
+        self.in_neighbors.len() + self.out_neighbors.len()
+    }
+    /// used to determine degree in a subgraph (i.e., the clique we're considering).
+    /// HashSet is supplied by Candidate struct.
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+        ids.iter()
+            .filter(|x| self.in_neighbors.contains(x) || self.out_neighbors.contains(x))
+            .collect::<Vec<&NodeId>>()
+            .len()
     }
 }
