@@ -167,10 +167,11 @@ fn get_directed_karate_club_graph_both_ways() -> SimpleDirectedGraph {
     let rows = get_karate_club_edges();
     let graph = SimpleDirectedGraphBuilder::from_vector(
         &rows
-            .iter().cloned()
+            .iter()
+            .cloned()
             .map(|(x, y)| (x as i64, y as i64))
             .chain(rows.iter().cloned().map(|(x, y)| (y as i64, x as i64)))
-            .collect()
+            .collect(),
     );
     for node in graph.get_nodes_iter() {
         assert_eq!(node.get_in_degree(), node.get_out_degree());
@@ -181,10 +182,16 @@ fn get_directed_karate_club_graph_with_core(core: HashSet<usize>) -> SimpleDirec
     let rows = get_karate_club_edges();
     let graph = SimpleDirectedGraphBuilder::from_vector(
         &rows
-            .iter().cloned()
+            .iter()
+            .cloned()
             .map(|(x, y)| (x as i64, y as i64))
-            .chain(rows.iter().cloned().filter(|(x, y)| core.contains(x) && core.contains(y)).map(|(x, y)| (y as i64, x as i64)))
-            .collect()
+            .chain(
+                rows.iter()
+                    .cloned()
+                    .filter(|(x, y)| core.contains(x) && core.contains(y))
+                    .map(|(x, y)| (y as i64, x as i64)),
+            )
+            .collect(),
     );
     graph
 }
@@ -621,18 +628,30 @@ fn test_connectivity_directed() {
         "Graph is empty"
     );
 
-    assert_eq!(graph.get_strongly_connected_components().len(),
-               graph.count_nodes());
+    assert_eq!(
+        graph.get_strongly_connected_components().len(),
+        graph.count_nodes()
+    );
 
     let graph_both_ways = get_directed_karate_club_graph_both_ways();
     assert_eq!(graph_both_ways.get_strongly_connected_components().len(), 1);
 
     let core = vec![1, 2, 3];
-    let graph_with_core = get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>());
+    let graph_with_core =
+        get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>());
     let scc = graph_with_core.get_strongly_connected_components();
     assert_eq!(scc.len(), 32);
     assert_eq!(scc[0].len(), 3);
-    assert!(scc[0].iter().collect::<HashSet<&NodeId>>().contains(&NodeId::from(1)));
-    assert!(scc[0].iter().collect::<HashSet<&NodeId>>().contains(&NodeId::from(2)));
-    assert!(scc[0].iter().collect::<HashSet<&NodeId>>().contains(&NodeId::from(3)));
+    assert!(scc[0]
+        .iter()
+        .collect::<HashSet<&NodeId>>()
+        .contains(&NodeId::from(1)));
+    assert!(scc[0]
+        .iter()
+        .collect::<HashSet<&NodeId>>()
+        .contains(&NodeId::from(2)));
+    assert!(scc[0]
+        .iter()
+        .collect::<HashSet<&NodeId>>()
+        .contains(&NodeId::from(3)));
 }

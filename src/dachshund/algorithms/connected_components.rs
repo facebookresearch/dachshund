@@ -100,7 +100,6 @@ where
         self._get_connected_components(None, None)
     }
     fn get_strongly_connected_components(&self) -> Vec<Vec<NodeId>> {
-
         let mut visited: OrderedNodeSet = BTreeSet::new();
         let num_nodes = self.count_nodes();
 
@@ -113,7 +112,12 @@ where
                 node_id = iter.next().unwrap();
             }
             visited.insert(*node_id);
-            self.visit_nodes_from_root(node_id, &mut visited, &mut Vec::new(), Self::NodeType::get_outgoing_edges);
+            self.visit_nodes_from_root(
+                node_id,
+                &mut visited,
+                &mut Vec::new(),
+                Self::NodeType::get_outgoing_edges,
+            );
         }
 
         // We will collect components here
@@ -128,8 +132,12 @@ where
 
             // we recursively visit nodes from root. We only look at nodes which are not already in
             // upstream, following get_in_neigbors. Results are collected in newly_visited.
-            self.visit_nodes_from_root(&node_id, &mut upstream, &mut newly_visited,
-                                       Self::NodeType::get_in_neighbors);
+            self.visit_nodes_from_root(
+                &node_id,
+                &mut upstream,
+                &mut newly_visited,
+                Self::NodeType::get_in_neighbors,
+            );
             for upstream_node_id in newly_visited.into_iter() {
                 // this only happens once, the first time this is encountered in visited
                 if visited.contains(&upstream_node_id) {
