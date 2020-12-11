@@ -29,6 +29,7 @@ where
     Self: GraphBase,
 {
 }
+
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleUndirectedGraph {
     pub nodes: HashMap<NodeId, SimpleNode>,
