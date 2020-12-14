@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase};
 use crate::dachshund::simple_directed_graph::DirectedGraph;
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::BTreeSet;
@@ -70,6 +70,7 @@ pub trait ConnectivityDirected: GraphBase
 where
     Self: Connectivity,
     Self: DirectedGraph,
+    <Self as GraphBase>::NodeType: DirectedNodeBase
 {
     fn get_is_weakly_connected(&self) -> Result<bool, &'static str> {
         self._get_is_connected(Self::NodeType::get_edges)
