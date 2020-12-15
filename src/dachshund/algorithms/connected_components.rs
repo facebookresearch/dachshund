@@ -4,10 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+use crate::dachshund::algorithms::connectivity::Connectivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase};
-use crate::dachshund::simple_directed_graph::DirectedGraph;
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase, SimpleDirectedNode};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
@@ -91,12 +91,62 @@ where
         self._get_connected_components(None, None)
     }
 }
-pub trait ConnectedComponentsDirected: GraphBase
+pub trait ConnectedComponentsDirected: GraphBase<NodeType = SimpleDirectedNode>
 where
     Self: ConnectedComponents,
-    Self: DirectedGraph,
+    Self: Connectivity,
 {
     fn get_weakly_connected_components(&self) -> Vec<Vec<NodeId>> {
         self._get_connected_components(None, None)
+    }
+    fn get_strongly_connected_components(&self) -> Vec<Vec<NodeId>> {
+        let mut visited: OrderedNodeSet = BTreeSet::new();
+        let num_nodes = self.count_nodes();
+
+        // First, create an ordered set of all the visited nodes, where each node is visited starting
+        // from an unvisited root, following outgoing edges.
+        while visited.len() < num_nodes {
+            let mut iter = self.get_ids_iter();
+            let mut node_id = iter.next().unwrap();
+            while visited.contains(node_id) {
+                node_id = iter.next().unwrap();
+            }
+            visited.insert(*node_id);
+            self.visit_nodes_from_root(
+                node_id,
+                &mut visited,
+                &mut Vec::new(),
+                Self::NodeType::get_outgoing_edges,
+            );
+        }
+
+        // We will collect components here
+        let mut components: Vec<Vec<NodeId>> = Vec::new();
+        // While there are still nodes to proces...
+        // Note that we will remove nodes from visited now and place them into upstream
+        let mut upstream: OrderedNodeSet = BTreeSet::new();
+        while visited.len() > 0 {
+            let mut newly_visited: Vec<NodeId> = Vec::new();
+            let node_id = visited.pop_first().unwrap();
+            let mut component: Vec<NodeId> = vec![node_id];
+
+            // we recursively visit nodes from root. We only look at nodes which are not already in
+            // upstream, following get_in_neigbors. Results are collected in newly_visited.
+            self.visit_nodes_from_root(
+                &node_id,
+                &mut upstream,
+                &mut newly_visited,
+                Self::NodeType::get_in_neighbors,
+            );
+            for upstream_node_id in newly_visited.into_iter() {
+                // this only happens once, the first time this is encountered in visited
+                if visited.contains(&upstream_node_id) {
+                    visited.remove(&upstream_node_id);
+                    component.push(upstream_node_id);
+                }
+            }
+            components.push(component);
+        }
+        components
     }
 }

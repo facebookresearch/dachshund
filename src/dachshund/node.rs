@@ -192,6 +192,18 @@ pub trait DirectedNodeBase: NodeBase {
     fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn has_in_neighbor(&self, nid: NodeId) -> bool;
     fn has_out_neighbor(&self, nid: NodeId) -> bool;
+    fn get_in_degree(&self) -> usize;
+    fn get_out_degree(&self) -> usize;
+    // used to determine if the node is a leaf
+    fn has_no_out_neighbors_except_set(&self, exclude_set: &HashSet<NodeId>) -> bool {
+        for e in self.get_out_neighbors() {
+            let nid = e.get_neighbor_id();
+            if !exclude_set.contains(&nid) {
+                return false;
+            }
+        }
+        true
+    }
 }
 pub struct SimpleDirectedNode {
     pub node_id: NodeId,
@@ -210,6 +222,12 @@ impl DirectedNodeBase for SimpleDirectedNode {
     }
     fn has_out_neighbor(&self, nid: NodeId) -> bool {
         self.out_neighbors.contains(&nid)
+    }
+    fn get_in_degree(&self) -> usize {
+        self.in_neighbors.len()
+    }
+    fn get_out_degree(&self) -> usize {
+        self.out_neighbors.len()
     }
 }
 impl Hash for SimpleDirectedNode {
