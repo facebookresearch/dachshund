@@ -15,7 +15,6 @@ use fxhash::FxHashMap;
 use rand::prelude::*;
 pub struct SimpleUndirectedGraphBuilder {}
 impl SimpleUndirectedGraphBuilder {
-
     // Build a graph with n vertices with every possible edge.
     pub fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
         let mut v = Vec::new();

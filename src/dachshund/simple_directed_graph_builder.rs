@@ -4,15 +4,15 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-extern crate nalgebra as na;
 extern crate fxhash;
+extern crate nalgebra as na;
 
 use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::SimpleDirectedNode;
 use crate::dachshund::simple_directed_graph::SimpleDirectedGraph;
-use std::collections::{BTreeMap, BTreeSet};
 use fxhash::FxHashMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub struct SimpleDirectedGraphBuilder {}
 

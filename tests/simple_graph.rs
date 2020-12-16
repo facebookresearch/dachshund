@@ -256,7 +256,6 @@ fn test_truss_graph() {
 #[cfg(test)]
 #[test]
 fn test_coreness() {
-
     // This graph is a pair of disjoint cycles, so every node has coreness 2.
     let (_cores, coreness) = get_graph(3).unwrap().get_coreness();
     let two_cores = get_graph(3).unwrap().get_k_cores(2);

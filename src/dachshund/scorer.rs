@@ -87,10 +87,7 @@ impl Scorer {
         candidate: &Candidate<TGraph>,
     ) -> CLQResult<f32> {
         let non_core_counts = candidate.get_non_core_counts();
-        // Starts with a base of ln(1) for each missing type
-        // (including core nodes to mimic a quirk of the previous implementation.)
-        let mut score: f32 = (1.0 as f32).ln();
-        score *= (self.num_non_core_types - non_core_counts.len() + 1) as f32;
+        let mut score: f32 = 0.0;
         for &non_core_count in non_core_counts.values() {
             score += (non_core_count as f32 + 1.0).ln();
         }
