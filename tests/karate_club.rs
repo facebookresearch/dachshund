@@ -32,8 +32,10 @@ use lib_dachshund::dachshund::node::DirectedNodeBase;
 use lib_dachshund::dachshund::simple_directed_graph::{DirectedGraph, SimpleDirectedGraph};
 use lib_dachshund::dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
-use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::{HashMap, HashSet};
+use lib_dachshund::dachshund::simple_undirected_graph_builder::{
+    SimpleUndirectedGraphBuilder, SimpleUndirectedGraphBuilderWithCliques,
+};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use test::Bencher;
 
 fn get_karate_club_edges() -> Vec<(usize, usize)> {
@@ -118,14 +120,14 @@ fn get_karate_club_edges() -> Vec<(usize, usize)> {
         (33, 34),
     ]
 }
-fn _get_karate_club_graph_with_one_extra_edge<T, R>() -> R
+fn _get_karate_club_graph_with_one_extra_edge<T, R>(builder: T) -> R
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R>,
 {
     let mut rows = get_karate_club_edges();
     rows.push((35, 36));
-    T::from_vector(
+    builder.from_vector(
         &rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
@@ -133,10 +135,12 @@ where
     )
 }
 fn get_karate_club_graph_with_one_extra_edge() -> SimpleUndirectedGraph {
-    _get_karate_club_graph_with_one_extra_edge::<SimpleUndirectedGraphBuilder, _>()
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_karate_club_graph_with_one_extra_edge::<SimpleUndirectedGraphBuilder, _>(builder)
 }
 fn get_directed_karate_club_graph_with_one_extra_edge() -> SimpleDirectedGraph {
-    _get_karate_club_graph_with_one_extra_edge::<SimpleDirectedGraphBuilder, _>()
+    let builder = SimpleDirectedGraphBuilder {};
+    _get_karate_club_graph_with_one_extra_edge::<SimpleDirectedGraphBuilder, _>(builder)
 }
 
 fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
@@ -147,13 +151,13 @@ fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
     rows
 }
 
-fn _get_two_karate_clubs<T, R>() -> R
+fn _get_two_karate_clubs<T, R>(builder: T) -> R
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R>,
 {
     let rows = get_two_karate_clubs_edges();
-    T::from_vector(
+    builder.from_vector(
         &rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
@@ -161,11 +165,13 @@ where
     )
 }
 fn get_two_karate_clubs() -> SimpleUndirectedGraph {
-    _get_two_karate_clubs::<SimpleUndirectedGraphBuilder, _>()
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_two_karate_clubs::<SimpleUndirectedGraphBuilder, _>(builder)
 }
 fn get_directed_karate_club_graph_both_ways() -> SimpleDirectedGraph {
     let rows = get_karate_club_edges();
-    let graph = SimpleDirectedGraphBuilder::from_vector(
+    let builder = SimpleDirectedGraphBuilder {};
+    let graph = builder.from_vector(
         &rows
             .iter()
             .cloned()
@@ -180,7 +186,8 @@ fn get_directed_karate_club_graph_both_ways() -> SimpleDirectedGraph {
 }
 fn get_directed_karate_club_graph_with_core(core: HashSet<usize>) -> SimpleDirectedGraph {
     let rows = get_karate_club_edges();
-    let graph = SimpleDirectedGraphBuilder::from_vector(
+    let builder = SimpleDirectedGraphBuilder {};
+    let graph = builder.from_vector(
         &rows
             .iter()
             .cloned()
@@ -196,14 +203,14 @@ fn get_directed_karate_club_graph_with_core(core: HashSet<usize>) -> SimpleDirec
     graph
 }
 
-fn _get_two_karate_clubs_with_bridge<T, R>() -> R
+fn _get_two_karate_clubs_with_bridge<T, R>(builder: T) -> R
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R>,
 {
     let mut rows = get_two_karate_clubs_edges();
     rows.push((34, 35));
-    T::from_vector(
+    builder.from_vector(
         &rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
@@ -211,16 +218,17 @@ where
     )
 }
 fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
-    _get_two_karate_clubs_with_bridge::<SimpleUndirectedGraphBuilder, _>()
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_two_karate_clubs_with_bridge::<SimpleUndirectedGraphBuilder, _>(builder)
 }
 
-fn _get_karate_club_graph<T, R>() -> R
+fn _get_karate_club_graph<T, R>(builder: T) -> R
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R>,
 {
     let rows = get_karate_club_edges();
-    T::from_vector(
+    builder.from_vector(
         &rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
@@ -228,10 +236,16 @@ where
     )
 }
 fn get_karate_club_graph() -> SimpleUndirectedGraph {
-    _get_karate_club_graph::<SimpleUndirectedGraphBuilder, _>()
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_karate_club_graph::<SimpleUndirectedGraphBuilder, _>(builder)
 }
 fn get_directed_karate_club_graph() -> SimpleDirectedGraph {
-    _get_karate_club_graph::<SimpleDirectedGraphBuilder, _>()
+    let builder = SimpleDirectedGraphBuilder {};
+    _get_karate_club_graph::<SimpleDirectedGraphBuilder, _>(builder)
+}
+fn get_karate_club_graph_with_cliques(cliques: Vec<BTreeSet<NodeId>>) -> SimpleUndirectedGraph {
+    let builder = SimpleUndirectedGraphBuilderWithCliques::new(cliques);
+    _get_karate_club_graph::<SimpleUndirectedGraphBuilderWithCliques, _>(builder)
 }
 
 #[cfg(test)]
@@ -672,4 +686,32 @@ fn test_acyclic_directed() {
     let graph_with_core =
         get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>());
     assert!(!graph_with_core.is_acyclic());
+}
+
+#[test]
+fn test_clique_seeding() {
+    let clique = vec![1, 2, 3, 4, 5];
+    let cliques = vec![clique
+        .into_iter()
+        .map(|x| NodeId::from(x))
+        .collect::<BTreeSet<_>>()];
+    let g = get_karate_club_graph_with_cliques(cliques);
+    // adding 3 edges, from 2 -> 5, 3, -> 5, 4 -> 5
+    assert_eq!(g.count_edges(), 81);
+
+    let clique1 = vec![1, 2, 3, 4, 5];
+    let clique2 = vec![5, 6, 7];
+    let cliques = vec![
+        clique1
+            .into_iter()
+            .map(|x| NodeId::from(x))
+            .collect::<BTreeSet<_>>(),
+        clique2
+            .into_iter()
+            .map(|x| NodeId::from(x))
+            .collect::<BTreeSet<_>>(),
+    ];
+    let g = get_karate_club_graph_with_cliques(cliques);
+    // adding 5 edges, from 2 -> 5, 3, -> 5, 4 -> 5, 5 -> 6
+    assert_eq!(g.count_edges(), 82);
 }

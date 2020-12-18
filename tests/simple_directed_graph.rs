@@ -126,7 +126,7 @@ fn get_rows(idx: usize) -> Result<Vec<(usize, usize)>, String> {
 }
 
 fn get_graph(idx: usize) -> Result<SimpleDirectedGraph, String> {
-    Ok(SimpleDirectedGraphBuilder::from_vector(
+    Ok(SimpleDirectedGraphBuilder {}.from_vector(
         &get_rows(idx)?
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
