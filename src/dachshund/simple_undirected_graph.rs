@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
 use crate::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
 use crate::dachshund::algorithms::betweenness::Betweenness;
@@ -21,8 +22,8 @@ use crate::dachshund::algorithms::transitivity::Transitivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, SimpleNode};
+use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
-use std::collections::HashMap;
 
 pub trait UndirectedGraph
 where
@@ -32,7 +33,7 @@ where
 
 /// Keeps track of a simple undirected graph, composed of nodes without any type information.
 pub struct SimpleUndirectedGraph {
-    pub nodes: HashMap<NodeId, SimpleNode>,
+    pub nodes: FxHashMap<NodeId, SimpleNode>,
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleUndirectedGraph {
@@ -52,7 +53,7 @@ impl GraphBase for SimpleUndirectedGraph {
     fn get_nodes_iter(&self) -> Values<NodeId, SimpleNode> {
         self.nodes.values()
     }
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, SimpleNode> {
+    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, SimpleNode> {
         &mut self.nodes
     }
     fn has_node(&self, node_id: NodeId) -> bool {
@@ -73,7 +74,7 @@ impl GraphBase for SimpleUndirectedGraph {
     }
     fn create_empty() -> Self {
         SimpleUndirectedGraph {
-            nodes: HashMap::new(),
+            nodes: FxHashMap::default(),
             ids: Vec::new(),
         }
     }

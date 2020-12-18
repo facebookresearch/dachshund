@@ -669,6 +669,7 @@ fn test_acyclic_directed() {
     assert!(!graph_both_ways.is_acyclic());
 
     let core = vec![1, 2, 3];
-    let graph_with_core = get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>());
+    let graph_with_core =
+        get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>());
     assert!(!graph_with_core.is_acyclic());
 }

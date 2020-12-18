@@ -73,6 +73,7 @@ pub struct Recipe {
 ///     one way to build this candidate from another candidate. This helps the beam
 ///     search find a candidate from the previous epoch that can be used as a hint
 ///     to build out the other convenience attributes.
+/// - non_core_counts: a counter of the number of noncore nodes by type.
 ///
 /// Note that in the current implementation, ``core'' ids must all be of the same type,
 /// whereas non-core ids can be of any type is desired.
@@ -91,6 +92,7 @@ where
     local_guarantee: LocalDensityGuarantee,
     neighborhood: Option<HashMap<NodeId, usize>>,
     recipe: Option<Recipe>,
+    non_core_counts: HashMap<NodeTypeId, usize>,
 }
 
 impl<'a, T: GraphBase> Hash for Candidate<'a, T> {
@@ -130,6 +132,7 @@ where
             },
             neighborhood: Some(HashMap::new()),
             recipe: None,
+            non_core_counts: HashMap::new(),
         }
     }
 
@@ -188,6 +191,11 @@ where
         } else {
             self.non_core_ids.insert(node_id);
             self.increment_max_core_node_edges(node_id)?;
+            let count = self
+                .non_core_counts
+                .entry(self.graph.get_node(node_id).non_core_type.unwrap())
+                .or_default();
+            *count += 1;
         }
         self.increment_ties_between_nodes(node_id);
         self.reset_score();
@@ -258,6 +266,12 @@ where
     /// number of edges.
     pub fn get_local_guarantee(&self) -> LocalDensityGuarantee {
         self.local_guarantee.clone()
+    }
+
+    /// Get a clone of non_core counts which records the number of noncore
+    /// nodes in the clique.
+    pub fn get_non_core_counts(&self) -> HashMap<NodeTypeId, usize> {
+        self.non_core_counts.clone()
     }
 
     /// encodes self as tab-separated "wide" format
@@ -381,6 +395,7 @@ where
             // until after the beam decides to keep the candidate.
             neighborhood: None,
             recipe: self.recipe,
+            non_core_counts: self.non_core_counts.clone(),
         }
     }
 
@@ -408,14 +423,10 @@ where
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let tie_counts: Vec<(NodeId, usize)> = self
-            .get_neighborhood()
-            .iter()
-            .map(|(&node_id, &edge_count)| (node_id, edge_count))
-            .collect();
+        let neighborhood = self.get_neighborhood();
 
         let mut h = BinaryHeap::with_capacity(num_to_search + 1);
-        for (node_id, num_ties) in &tie_counts {
+        for (node_id, num_ties) in neighborhood.iter() {
             h.push((Reverse(num_ties), node_id));
             if h.len() > num_to_search {
                 h.pop();
@@ -622,7 +633,8 @@ where
         }
     }
 
-    /// gets densities over each non-core type (useful to compute non-core diversity score)
+    /// TODO: Can this use the non_core_counts?
+    /// gets densities over each non-core type
     fn get_non_core_densities(&self, num_non_core_types: usize) -> CLQResult<Vec<f32>> {
         let mut non_core_max_counts: Vec<usize> = vec![0; num_non_core_types + 1];
         let mut non_core_out_counts: Vec<usize> = vec![0; num_non_core_types + 1];

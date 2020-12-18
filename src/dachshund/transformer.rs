@@ -215,6 +215,7 @@ impl Transformer {
         let min_degree: usize = arg_value("min_degree")?.parse::<usize>()?;
         let core_type: String = arg_value("core_type")?.parse::<String>()?;
         let long_format: bool = arg_value("long_format")?.parse::<bool>()?;
+
         let transformer = Transformer::new(
             typespec,
             beam_size,

@@ -70,7 +70,7 @@ pub trait ConnectivityDirected: GraphBase
 where
     Self: Connectivity,
     Self: DirectedGraph,
-    <Self as GraphBase>::NodeType: DirectedNodeBase
+    <Self as GraphBase>::NodeType: DirectedNodeBase,
 {
     fn get_is_weakly_connected(&self) -> Result<bool, &'static str> {
         self._get_is_connected(Self::NodeType::get_edges)

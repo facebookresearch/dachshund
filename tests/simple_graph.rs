@@ -253,6 +253,27 @@ fn test_truss_graph() {
     )));
 }
 
+#[cfg(test)]
+#[test]
+fn test_coreness() {
+    // This graph is a pair of disjoint cycles, so every node has coreness 2.
+    let (_cores, coreness) = get_graph(3).unwrap().get_coreness();
+    let two_cores = get_graph(3).unwrap().get_k_cores(2);
+    let three_cores = get_graph(3).unwrap().get_k_cores(3);
+
+    assert_eq!(*coreness.get(&NodeId::from(2 as i64)).unwrap(), 2);
+    assert_eq!(*coreness.get(&NodeId::from(5 as i64)).unwrap(), 2);
+
+    // There are 2 connected components in the 2-cores...
+    assert_eq!(two_cores.len(), 2);
+    // ... which each contain 3 nodes.
+    assert_eq!(two_cores[0].len(), 3);
+    assert_eq!(two_cores[1].len(), 3);
+
+    // The three core should be empty
+    assert_eq!(three_cores.len(), 0);
+}
+
 #[test]
 fn test_simple_transformer() {
     let mut transformer = SimpleTransformer::new();
