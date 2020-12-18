@@ -11,48 +11,44 @@ use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use std::collections::{BTreeMap, BTreeSet};
 extern crate fxhash;
 use fxhash::FxHashMap;
+use itertools::Itertools;
 
 use rand::prelude::*;
 pub struct SimpleUndirectedGraphBuilder {}
-impl SimpleUndirectedGraphBuilder {
+
+pub trait TSimpleUndirectedGraphBuilder: GraphBuilderBase {
     // Build a graph with n vertices with every possible edge.
-    pub fn get_complete_graph(n: u64) -> SimpleUndirectedGraph {
+    fn get_complete_graph(&self, n: u64) -> Self::GraphType {
         let mut v = Vec::new();
         for i in 1..n {
             for j in i + 1..=n {
                 v.push((i, j));
             }
         }
-        SimpleUndirectedGraphBuilder::from_vector(
-            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-        )
+        self.from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
     }
 
     // Build a graph with a sequence of n vertices with an edge between
     // each pair of successive vertices.
-    pub fn get_path_graph(n: u64) -> SimpleUndirectedGraph {
+    fn get_path_graph(&self, n: u64) -> Self::GraphType {
         let mut v = Vec::new();
         for i in 0..n {
             v.push((i, (i + 1)));
         }
 
-        SimpleUndirectedGraphBuilder::from_vector(
-            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-        )
+        self.from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
     }
 
     // Build a graph with a sequence of n vertices with an edge between
     // each pair of successive vertices, plus an edge between the first and
     // last vertices.
-    pub fn get_cycle_graph(n: u64) -> SimpleUndirectedGraph {
+    fn get_cycle_graph(&self, n: u64) -> Self::GraphType {
         let mut v = Vec::new();
         for i in 0..n {
             v.push((i, (i + 1) % n));
         }
 
-        SimpleUndirectedGraphBuilder::from_vector(
-            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-        )
+        self.from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
     }
 
     // Builds an Erdos-Renyi graph on n edges with p vertices.
@@ -60,7 +56,7 @@ impl SimpleUndirectedGraphBuilder {
     //  probability p.)
     // [TODO] Switch to the faster implementation using geometric distributions
     // for sparse graphs.
-    pub fn get_er_graph(n: u64, p: f64) -> SimpleUndirectedGraph {
+    fn get_er_graph(&self, n: u64, p: f64) -> Self::GraphType {
         let mut v = Vec::new();
         let mut rng = rand::thread_rng();
 
@@ -72,18 +68,10 @@ impl SimpleUndirectedGraphBuilder {
             }
         }
 
-        SimpleUndirectedGraphBuilder::from_vector(
-            &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-        )
+        self.from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
     }
-}
-impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
-    type GraphType = SimpleUndirectedGraph;
 
-    // builds a graph from a vector of IDs. Repeated edges are ignored.
-    // Edges only need to be provided once (this being an undirected graph)
-    #[allow(clippy::ptr_arg)]
-    fn from_vector(data: &Vec<(i64, i64)>) -> SimpleUndirectedGraph {
+    fn get_node_ids(data: &Vec<(i64, i64)>) -> BTreeMap<NodeId, BTreeSet<NodeId>> {
         let mut ids: BTreeMap<NodeId, BTreeSet<NodeId>> = BTreeMap::new();
         for (id1, id2) in data {
             ids.entry(NodeId::from(*id1))
@@ -93,6 +81,9 @@ impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
                 .or_insert_with(BTreeSet::new)
                 .insert(NodeId::from(*id1));
         }
+        ids
+    }
+    fn get_nodes(ids: BTreeMap<NodeId, BTreeSet<NodeId>>) -> FxHashMap<NodeId, SimpleNode> {
         let mut nodes: FxHashMap<NodeId, SimpleNode> = FxHashMap::default();
         for (id, neighbors) in ids.into_iter() {
             nodes.insert(
@@ -102,6 +93,54 @@ impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
                     neighbors: neighbors,
                 },
             );
+        }
+        nodes
+    }
+}
+
+impl GraphBuilderBase for SimpleUndirectedGraphBuilder {
+    type GraphType = SimpleUndirectedGraph;
+
+    // builds a graph from a vector of IDs. Repeated edges are ignored.
+    // Edges only need to be provided once (this being an undirected graph)
+    fn from_vector(&self, data: &Vec<(i64, i64)>) -> SimpleUndirectedGraph {
+        let ids = Self::get_node_ids(data);
+        let nodes = Self::get_nodes(ids);
+        SimpleUndirectedGraph {
+            ids: nodes.keys().cloned().collect(),
+            nodes,
+        }
+    }
+}
+impl TSimpleUndirectedGraphBuilder for SimpleUndirectedGraphBuilder {}
+
+pub struct SimpleUndirectedGraphBuilderWithCliques {
+    cliques: Vec<BTreeSet<NodeId>>,
+}
+
+impl SimpleUndirectedGraphBuilderWithCliques {
+    pub fn new(cliques: Vec<BTreeSet<NodeId>>) -> Self {
+        Self { cliques }
+    }
+}
+impl TSimpleUndirectedGraphBuilder for SimpleUndirectedGraphBuilderWithCliques {}
+impl GraphBuilderBase for SimpleUndirectedGraphBuilderWithCliques {
+    type GraphType = SimpleUndirectedGraph;
+
+    // builds a graph from a vector of IDs. Repeated edges are ignored.
+    // Edges only need to be provided once (this being an undirected graph)
+    fn from_vector(&self, data: &Vec<(i64, i64)>) -> SimpleUndirectedGraph {
+        let ids = Self::get_node_ids(data);
+        let mut nodes = Self::get_nodes(ids);
+        for clique in &self.cliques {
+            for comb in clique.iter().combinations(2) {
+                let id1 = comb.get(0).unwrap().clone();
+                let id2 = comb.get(1).unwrap().clone();
+                let node = nodes.get_mut(id1).unwrap();
+                node.neighbors.insert(*id2);
+                let node = nodes.get_mut(id2).unwrap();
+                node.neighbors.insert(*id1);
+            }
         }
         SimpleUndirectedGraph {
             ids: nodes.keys().cloned().collect(),
