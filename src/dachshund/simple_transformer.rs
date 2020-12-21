@@ -129,7 +129,7 @@ impl TransformerBase for SimpleTransformer {
     ) -> CLQResult<()> {
         let tuples: Vec<(i64, i64)> = self.batch.iter().map(|x| x.as_tuple()).collect();
         let builder = SimpleUndirectedGraphBuilder {};
-        let graph = builder.from_vector(&tuples);
+        let graph = builder.from_vector(&tuples)?;
         let stats = Self::compute_graph_stats_json(&graph);
         let original_id = self
             .line_processor
@@ -161,7 +161,7 @@ impl TransformerBase for SimpleParallelTransformer {
         let line_processor = self.line_processor.clone();
         self.pool.spawn(move || {
             let builder = SimpleUndirectedGraphBuilder {};
-            let graph = builder.from_vector(&tuples);
+            let graph = builder.from_vector(&tuples).unwrap();
             let stats = Self::compute_graph_stats_json(&graph);
             let original_id = line_processor.get_original_id(graph_id.value() as usize);
             let line: String = format!("{}\t{}", original_id, stats);

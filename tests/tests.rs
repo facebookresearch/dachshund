@@ -17,7 +17,6 @@ use lib_dachshund::dachshund::test_utils::{
 };
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
-use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
 use std::sync::mpsc::channel;
 
 #[cfg(test)]
@@ -120,19 +119,11 @@ where
     let graph_id: GraphId = 0.into();
 
     let rows = process_raw_vector(&transformer, raw).unwrap();
-    let graph: TypedGraph = transformer
-        .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)
-        .unwrap();
+    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows).unwrap();
     let clique_rows = Vec::new();
     let (sender, _receiver) = channel();
     let res: Candidate<TypedGraph> = transformer
-        .process_clique_rows::<TypedGraphBuilder, TypedGraph>(
-            &graph,
-            &clique_rows,
-            graph_id,
-            true,
-            &sender,
-        )
+        .process_clique_rows(&graph, &clique_rows, graph_id, true, &sender)
         .unwrap()
         .ok_or_else(CLQError::err_none)
         .unwrap()

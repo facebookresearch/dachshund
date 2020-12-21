@@ -12,10 +12,9 @@ use clap::ArgMatches;
 use crate::dachshund::beam::{Beam, BeamSearchResult};
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
-use crate::dachshund::graph_builder::GraphBuilder;
+use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::{GraphId, NodeTypeId};
 use crate::dachshund::line_processor::LineProcessorBase;
-use crate::dachshund::node::Node;
 use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
 use crate::dachshund::search_problem::SearchProblem;
@@ -65,9 +64,8 @@ impl TransformerBase for Transformer {
         graph_id: GraphId,
         output: &Sender<(Option<String>, bool)>,
     ) -> CLQResult<()> {
-        let graph: TypedGraph =
-            self.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &self.edge_rows)?;
-        self.process_clique_rows::<TypedGraphBuilder, TypedGraph>(
+        let graph: TypedGraph = self.build_pruned_graph(graph_id, &self.edge_rows)?;
+        self.process_clique_rows(
             &graph,
             &self.clique_rows,
             graph_id,
@@ -237,26 +235,27 @@ impl Transformer {
     /// with other nodes in the graph. This is done via a greedy algorithm which removes
     /// low-degree nodes iteratively.
     #[allow(clippy::ptr_arg)]
-    pub fn build_pruned_graph<
-        TGraphBuilder: GraphBuilder<TGraph>,
-        TGraph: GraphBase<NodeType = Node>,
-    >(
+    pub fn build_pruned_graph(
         &self,
         graph_id: GraphId,
         rows: &Vec<EdgeRow>,
-    ) -> CLQResult<TGraph> {
-        TGraphBuilder::new(graph_id, rows, Some(self.search_problem.min_degree))
+    ) -> CLQResult<TypedGraph> {
+        TypedGraphBuilder {
+            graph_id,
+            min_degree: Some(self.search_problem.min_degree),
+        }
+        .from_vector(rows)
     }
 
     /// Given a properly-built graph, runs the quasi-clique detection beam search on it.
-    pub fn process_graph<'a, TGraph: GraphBase<NodeType = Node>>(
+    pub fn process_graph<'a>(
         &'a self,
-        graph: &'a TGraph,
+        graph: &'a TypedGraph,
         clique_rows: &'a Vec<CliqueRow>,
         graph_id: GraphId,
         verbose: bool,
-    ) -> CLQResult<BeamSearchResult<'a, TGraph>> {
-        let mut beam: Beam<TGraph> = Beam::new(
+    ) -> CLQResult<BeamSearchResult<'a, TypedGraph>> {
+        let mut beam: Beam<TypedGraph> = Beam::new(
             graph,
             clique_rows,
             verbose,
@@ -269,18 +268,14 @@ impl Transformer {
     }
     /// Used to "seed" the beam search with an existing best (quasi-)clique (if any provided),
     /// and then run the search under the parameters specified in the constructor.
-    pub fn process_clique_rows<
-        'a,
-        TGraphBuilder: GraphBuilder<TGraph>,
-        TGraph: GraphBase<NodeType = Node>,
-    >(
+    pub fn process_clique_rows<'a>(
         &'a self,
-        graph: &'a TGraph,
+        graph: &'a TypedGraph,
         clique_rows: &'a Vec<CliqueRow>,
         graph_id: GraphId,
         verbose: bool,
         output: &Sender<(Option<String>, bool)>,
-    ) -> CLQResult<Option<BeamSearchResult<'a, TGraph>>> {
+    ) -> CLQResult<Option<BeamSearchResult<'a, TypedGraph>>> {
         if graph.get_core_ids().is_empty() || graph.get_non_core_ids().unwrap().is_empty() {
             // still have to send an acknowledgement to the output channel
             // that we have actually processed this graph, otherwise
@@ -289,7 +284,7 @@ impl Transformer {
             output.send((None, false)).unwrap();
             return Ok(None);
         }
-        let result: BeamSearchResult<TGraph> =
+        let result: BeamSearchResult<TypedGraph> =
             self.process_graph(graph, clique_rows, graph_id, verbose)?;
         // only print if this is a conforming clique
         if result.top_candidate.get_score()? > 0.0 {
