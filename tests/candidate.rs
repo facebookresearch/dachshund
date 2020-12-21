@@ -57,8 +57,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
 
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
-    let graph: TypedGraph =
-        transformer.build_pruned_graph(graph_id, &rows)?;
+    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     let core_node_id: NodeId = *graph.core_ids.first().unwrap();
     assert_eq!(graph.non_core_ids.len(), 1);
@@ -109,9 +108,7 @@ fn build_sample_graph() -> (TypedGraph, Transformer) {
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string()).unwrap();
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw).unwrap();
     (
-        transformer
-            .build_pruned_graph(graph_id, &rows)
-            .unwrap(),
+        transformer.build_pruned_graph(graph_id, &rows).unwrap(),
         transformer,
     )
 }

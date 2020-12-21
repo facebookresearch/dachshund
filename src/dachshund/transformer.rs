@@ -42,7 +42,6 @@ pub struct Transformer {
     clique_rows: Vec<CliqueRow>,
 }
 impl TransformerBase for Transformer {
-
     fn get_line_processor(&self) -> Arc<dyn LineProcessorBase> {
         self.line_processor.clone()
     }
@@ -241,10 +240,11 @@ impl Transformer {
         graph_id: GraphId,
         rows: &Vec<EdgeRow>,
     ) -> CLQResult<TypedGraph> {
-        TypedGraphBuilder{
+        TypedGraphBuilder {
             graph_id,
             min_degree: Some(self.search_problem.min_degree),
-        }.from_vector(rows)
+        }
+        .from_vector(rows)
     }
 
     /// Given a properly-built graph, runs the quasi-clique detection beam search on it.

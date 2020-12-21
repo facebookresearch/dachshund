@@ -37,8 +37,7 @@ fn simple_test(raw: Vec<String>, min_degree: usize, expected_len: usize) -> CLQR
     let transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows = process_raw_vector(&transformer, raw)?;
 
-    let mut graph: TypedGraph =
-        transformer.build_pruned_graph(graph_id, &rows)?;
+    let mut graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows)?;
     let exclude_nodes: HashSet<NodeId> =
         TypedGraphBuilder::trim_edges(&mut graph.nodes, &min_degree);
     assert_eq!(exclude_nodes.len(), expected_len);
@@ -97,8 +96,7 @@ fn test_prune_small_clique() -> CLQResult<()> {
 
     let transformer = gen_test_transformer(ts, "author".to_string())?;
     let rows = process_raw_vector(&transformer, raw)?;
-    let mut graph: TypedGraph =
-        transformer.build_pruned_graph(graph_id, &rows)?;
+    let mut graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows)?;
     assert_eq!(graph.nodes.len(), 5);
     graph = TypedGraphBuilder::prune(graph, &rows, 2)?;
     assert_eq!(graph.nodes.len(), 4);
@@ -152,17 +150,10 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
     )?;
     let rows_prune = process_raw_vector(&transformer_prune, raw.clone())?;
 
-    let graph: TypedGraph = transformer_prune
-        .build_pruned_graph(graph_id, &rows_prune)?;
+    let graph: TypedGraph = transformer_prune.build_pruned_graph(graph_id, &rows_prune)?;
     let v_prune = Vec::new();
     let result_prune = transformer_prune
-        .process_clique_rows(
-            &graph,
-            &v_prune,
-            graph_id,
-            false,
-            &sender_prune,
-        )?
+        .process_clique_rows(&graph, &v_prune, graph_id, false, &sender_prune)?
         .ok_or_else(CLQError::err_none)?;
     sender_prune.send((None, true)).unwrap();
     let candidate_prune = result_prune.top_candidate;
@@ -187,8 +178,7 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
     )?;
     let rows = process_raw_vector(&transformer, raw)?;
 
-    let graph: TypedGraph =
-        transformer.build_pruned_graph(graph_id, &rows)?;
+    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows)?;
     let v = Vec::new();
     let result = transformer
         .process_clique_rows(&graph, &v, graph_id, false, &sender)?

@@ -9,7 +9,7 @@ extern crate fxhash;
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::graph_builder_base::GraphBuilderBase;
-use crate::dachshund::id_types::{GraphId, NodeTypeId, NodeId};
+use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
 use crate::dachshund::node::{Node, NodeBase, NodeEdge};
 use crate::dachshund::row::EdgeRow;
 use crate::dachshund::typed_graph::TypedGraph;
@@ -21,7 +21,6 @@ pub struct TypedGraphBuilder {
     pub graph_id: GraphId,
 }
 impl GraphBuilderBase for TypedGraphBuilder {
-
     type GraphType = TypedGraph;
     type RowType = EdgeRow;
 
@@ -65,7 +64,7 @@ impl TypedGraphBuilder {
             non_core_ids,
         })
     }
-    
+
     /// given a set of initialized Nodes, populates the respective neighbors fields
     /// appropriately.
     fn populate_edges(rows: &[EdgeRow], node_map: &mut FxHashMap<NodeId, Node>) -> CLQResult<()> {
@@ -148,11 +147,13 @@ impl TypedGraphBuilder {
         node_map
     }
 
-
     /// Trims edges greedily, until all edges in the graph have degree at least min_degree.
     /// Note that this function does not delete any nodes -- just finds nodes to delete. It is
     /// called by `prune`, which actually does the deletion.
-    pub fn trim_edges(node_map: &mut FxHashMap<NodeId, Node>, min_degree: &usize) -> HashSet<NodeId> {
+    pub fn trim_edges(
+        node_map: &mut FxHashMap<NodeId, Node>,
+        min_degree: &usize,
+    ) -> HashSet<NodeId> {
         let mut degree_map: HashMap<NodeId, usize> = HashMap::new();
         for (node_id, node) in node_map.iter() {
             let node_degree: usize = node.degree();
@@ -181,12 +182,16 @@ impl TypedGraphBuilder {
         }
         nodes_to_delete
     }
-    
+
     /// Takes an already-built graph and the edge rows used to create it, returning a
     /// new graph, where all nodes are assured to have degree at least min_degree.
     /// The provision of a <Self as GraphBuilderBase>::GraphType is necessary, since the notion of "degree" does
     /// not make sense outside of a graph.
-    pub fn prune(graph: <Self as GraphBuilderBase>::GraphType, rows: &[EdgeRow], min_degree: usize) -> CLQResult<<Self as GraphBuilderBase>::GraphType> {
+    pub fn prune(
+        graph: <Self as GraphBuilderBase>::GraphType,
+        rows: &[EdgeRow],
+        min_degree: usize,
+    ) -> CLQResult<<Self as GraphBuilderBase>::GraphType> {
         let mut target_type_ids: HashMap<NodeId, NodeTypeId> = HashMap::new();
         for r in rows.iter() {
             target_type_ids.insert(r.target_id, r.target_type_id);
