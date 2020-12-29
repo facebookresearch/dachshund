@@ -121,7 +121,7 @@ fn get_karate_club_edges() -> Vec<(usize, usize)> {
         (33, 34),
     ]
 }
-fn _get_karate_club_graph_with_one_extra_edge<T, R>(builder: T) -> CLQResult<R>
+fn _get_karate_club_graph_with_one_extra_edge<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
@@ -129,7 +129,7 @@ where
     let mut rows = get_karate_club_edges();
     rows.push((35, 36));
     builder.from_vector(
-        &rows
+        rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
@@ -152,14 +152,14 @@ fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
     rows
 }
 
-fn _get_two_karate_clubs<T, R>(builder: T) -> CLQResult<R>
+fn _get_two_karate_clubs<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
 {
     let rows = get_two_karate_clubs_edges();
     builder.from_vector(
-        &rows
+        rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
@@ -171,9 +171,9 @@ fn get_two_karate_clubs() -> CLQResult<SimpleUndirectedGraph> {
 }
 fn get_directed_karate_club_graph_both_ways() -> CLQResult<SimpleDirectedGraph> {
     let rows = get_karate_club_edges();
-    let builder = SimpleDirectedGraphBuilder {};
+    let mut builder = SimpleDirectedGraphBuilder {};
     let graph = builder.from_vector(
-        &rows
+        rows
             .iter()
             .cloned()
             .map(|(x, y)| (x as i64, y as i64))
@@ -189,9 +189,9 @@ fn get_directed_karate_club_graph_with_core(
     core: HashSet<usize>,
 ) -> CLQResult<SimpleDirectedGraph> {
     let rows = get_karate_club_edges();
-    let builder = SimpleDirectedGraphBuilder {};
+    let mut builder = SimpleDirectedGraphBuilder {};
     let graph = builder.from_vector(
-        &rows
+        rows
             .iter()
             .cloned()
             .map(|(x, y)| (x as i64, y as i64))
@@ -206,7 +206,7 @@ fn get_directed_karate_club_graph_with_core(
     graph
 }
 
-fn _get_two_karate_clubs_with_bridge<T, R>(builder: T) -> CLQResult<R>
+fn _get_two_karate_clubs_with_bridge<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
@@ -214,7 +214,7 @@ where
     let mut rows = get_two_karate_clubs_edges();
     rows.push((34, 35));
     builder.from_vector(
-        &rows
+        rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
@@ -225,14 +225,14 @@ fn get_two_karate_clubs_with_bridge() -> CLQResult<SimpleUndirectedGraph> {
     _get_two_karate_clubs_with_bridge::<SimpleUndirectedGraphBuilder, _>(builder)
 }
 
-fn _get_karate_club_graph<T, R>(builder: T) -> CLQResult<R>
+fn _get_karate_club_graph<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
     T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
 {
     let rows = get_karate_club_edges();
     builder.from_vector(
-        &rows
+        rows
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),

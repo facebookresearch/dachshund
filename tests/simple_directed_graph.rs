@@ -128,7 +128,7 @@ fn get_rows(idx: usize) -> CLQResult<Vec<(usize, usize)>> {
 
 fn get_graph(idx: usize) -> CLQResult<SimpleDirectedGraph> {
     SimpleDirectedGraphBuilder {}.from_vector(
-        &get_rows(idx)?
+        get_rows(idx)?
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),

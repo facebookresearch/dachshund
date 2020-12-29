@@ -26,7 +26,7 @@ pub trait TransformerBase {
     fn process_row(&mut self, row: Box<dyn Row>) -> CLQResult<()>;
     // logic for processing batch of rows, once all rows are ready
     fn process_batch(
-        &self,
+        &mut self,
         graph_id: GraphId,
         output: &Sender<(Option<String>, bool)>,
     ) -> CLQResult<()>;

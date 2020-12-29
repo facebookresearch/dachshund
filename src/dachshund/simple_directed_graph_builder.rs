@@ -23,17 +23,17 @@ impl GraphBuilderBase for SimpleDirectedGraphBuilder {
 
     // builds a graph from a vector of IDs. Repeated edges are ignored.
     #[allow(clippy::ptr_arg)]
-    fn from_vector(&self, data: &Vec<(i64, i64)>) -> CLQResult<SimpleDirectedGraph> {
+    fn from_vector(&mut self, data: Vec<(i64, i64)>) -> CLQResult<SimpleDirectedGraph> {
         let mut ids: BTreeMap<NodeId, (BTreeSet<NodeId>, BTreeSet<NodeId>)> = BTreeMap::new();
         for (id1, id2) in data {
-            ids.entry(NodeId::from(*id1))
+            ids.entry(NodeId::from(id1))
                 .or_insert_with(|| (BTreeSet::new(), BTreeSet::new()))
                 .1
-                .insert(NodeId::from(*id2));
-            ids.entry(NodeId::from(*id2))
+                .insert(NodeId::from(id2));
+            ids.entry(NodeId::from(id2))
                 .or_insert_with(|| (BTreeSet::new(), BTreeSet::new()))
                 .0
-                .insert(NodeId::from(*id1));
+                .insert(NodeId::from(id1));
         }
         let mut nodes: FxHashMap<NodeId, SimpleDirectedNode> = FxHashMap::default();
         for (id, (in_neighbors, out_neighbors)) in ids.into_iter() {

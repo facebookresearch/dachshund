@@ -34,7 +34,7 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     let raw: Vec<String> = vec!["0\t1\t2\tauthor\tpublished_at\tconference".to_string()];
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
-    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows)?;
+    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     assert_eq!(graph.non_core_ids.len(), 1);
 

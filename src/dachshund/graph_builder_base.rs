@@ -6,6 +6,17 @@
  */
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::id_types::NodeId;
+use std::hash::Hash;
+
+pub trait GraphBuilderBaseWithPreProcessing: GraphBuilderBase {
+    fn pre_process_rows(
+        &mut self,
+        data: Vec<<Self as GraphBuilderBase>::RowType>,
+    ) -> CLQResult<Vec<<Self as GraphBuilderBase>::RowType>> {
+        Ok(data)
+    }
+}
 
 pub trait GraphBuilderBase
 where
@@ -14,5 +25,20 @@ where
 {
     type GraphType;
     type RowType;
-    fn from_vector(&self, data: &Vec<Self::RowType>) -> CLQResult<Self::GraphType>;
+    fn from_vector(&mut self, data: Vec<Self::RowType>) -> CLQResult<Self::GraphType>;
+}
+
+pub trait GraphBuilderBaseWithCliques: GraphBuilderBaseWithPreProcessing
+where
+    <Self as GraphBuilderBase>::RowType: Eq,
+    <Self as GraphBuilderBase>::RowType: Hash,
+{
+    type CliquesType;
+
+    fn get_clique_edges(
+        &self,
+        id1: NodeId,
+        id2: NodeId,
+    ) -> CLQResult<Vec<<Self as GraphBuilderBase>::RowType>>;
+    fn get_cliques(&self) -> &Vec<Self::CliquesType>;
 }
