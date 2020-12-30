@@ -119,7 +119,7 @@ where
     let graph_id: GraphId = 0.into();
 
     let rows = process_raw_vector(&transformer, raw).unwrap();
-    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, &rows).unwrap();
+    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows).unwrap();
     let clique_rows = Vec::new();
     let (sender, _receiver) = channel();
     let res: Candidate<TypedGraph> = transformer

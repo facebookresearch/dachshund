@@ -60,11 +60,12 @@ impl TransformerBase for Transformer {
         Ok(())
     }
     fn process_batch(
-        &self,
+        &mut self,
         graph_id: GraphId,
         output: &Sender<(Option<String>, bool)>,
     ) -> CLQResult<()> {
-        let graph: TypedGraph = self.build_pruned_graph(graph_id, &self.edge_rows)?;
+        let drained_rows = self.edge_rows.drain(..).collect::<Vec<_>>();
+        let graph: TypedGraph = self.build_pruned_graph(graph_id, drained_rows)?;
         self.process_clique_rows(
             &graph,
             &self.clique_rows,
@@ -238,7 +239,7 @@ impl Transformer {
     pub fn build_pruned_graph(
         &self,
         graph_id: GraphId,
-        rows: &Vec<EdgeRow>,
+        rows: Vec<EdgeRow>,
     ) -> CLQResult<TypedGraph> {
         TypedGraphBuilder {
             graph_id,

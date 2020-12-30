@@ -138,7 +138,7 @@ fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
         _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
     SimpleUndirectedGraphBuilder {}
-        .from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
+        .from_vector(v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
 }
 fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
     match idx {

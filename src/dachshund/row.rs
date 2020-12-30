@@ -8,7 +8,7 @@ use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use std::fmt;
 
 ///  Used to keep track of edge row input.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub struct EdgeRow {
     pub graph_id: GraphId,
     pub source_id: NodeId,

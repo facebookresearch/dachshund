@@ -26,7 +26,7 @@ use test::Bencher;
 fn get_almost_k4_graph() -> CLQResult<SimpleUndirectedGraph> {
     let v = vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3)];
     SimpleUndirectedGraphBuilder {}
-        .from_vector(&v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
+        .from_vector(v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
 }
 
 #[test]
