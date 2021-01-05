@@ -7,6 +7,7 @@
 pub mod algorithms;
 pub mod beam;
 pub mod candidate;
+pub mod core_transformer;
 pub mod error;
 pub mod graph_base;
 pub mod graph_builder_base;

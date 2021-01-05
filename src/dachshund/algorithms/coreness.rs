@@ -8,6 +8,7 @@ use crate::dachshund::algorithms::connected_components::ConnectedComponents;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use core::cmp::Reverse;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
@@ -69,6 +70,45 @@ pub trait Coreness: GraphBase + ConnectedComponents {
             }
         }
         (core_assignments, coreness)
+    }
+
+    fn get_coreness_anomaly(&self, corenesses: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
+        // Calculate the coreness anomaly score of all nodes as the absolute
+        // value of the difference between the logs of the ranks by
+        // degree and coreness.
+
+        // See algorithm Core-A in https://www.cs.cmu.edu/~kijungs/papers/kcoreICDM2016.pdf
+        let mut anomaly_scores = HashMap::new();
+        let core_ranks = self._averaged_ties_ranking(&corenesses);
+        let deg_ranks = self._averaged_ties_ranking(
+            &self
+                .get_nodes_iter()
+                .map(|x| {
+                    (
+                        x.get_id(),
+                        HashSet::<NodeId>::from_iter(x.get_edges().map(|y| y.get_neighbor_id()))
+                            .len(),
+                    )
+                })
+                .collect(),
+        );
+        for node in self.get_ordered_node_ids() {
+            anomaly_scores.insert(node, (core_ranks[&node].ln() - deg_ranks[&node].ln()).abs());
+        }
+        anomaly_scores
+    }
+
+    fn _averaged_ties_ranking(&self, scores: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
+        // [TODO] Needs to handle ties correctly.
+        let mut ranking = HashMap::new();
+        let mut sorted_nodes: Vec<(&NodeId, &usize)> = scores.into_iter().collect();
+        sorted_nodes.sort_unstable_by_key(|(_node, value)| Reverse(*value));
+        let mut i = 1;
+        for (&node, _value) in sorted_nodes.into_iter() {
+            ranking.insert(node, i as f64);
+            i += 1;
+        }
+        ranking
     }
 
     fn _get_k_trusses(
