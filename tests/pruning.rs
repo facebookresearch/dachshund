@@ -97,8 +97,7 @@ fn test_prune_small_clique() -> CLQResult<()> {
 
     let transformer = gen_test_transformer(ts, "author".to_string())?;
     let rows = process_raw_vector(&transformer, raw)?;
-    let mut graph: TypedGraph = transformer.build_pruned_graph(graph_id,
-    rows.clone())?;
+    let mut graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows.clone())?;
     assert_eq!(graph.nodes.len(), 5);
     graph = TypedGraphBuilder::prune(graph, &rows, 2)?;
     assert_eq!(graph.nodes.len(), 4);

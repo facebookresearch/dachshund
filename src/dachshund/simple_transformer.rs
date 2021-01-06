@@ -6,6 +6,7 @@
  */
 extern crate clap;
 extern crate serde_json;
+extern crate fxhash;
 
 use crate::dachshund::algorithms::betweenness::Betweenness;
 use crate::dachshund::algorithms::clustering::Clustering;
@@ -27,6 +28,7 @@ use serde_json::json;
 use std::collections::HashSet;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use fxhash::FxHashSet;
 
 pub struct SimpleTransformer {
     batch: Vec<SimpleEdgeRow>,
@@ -51,7 +53,7 @@ pub trait GraphStatsTransformerBase: TransformerBase {
             .unwrap();
         let evcent = graph.get_eigenvector_centrality(0.001, 1000);
 
-        let mut removed: HashSet<NodeId> = HashSet::new();
+        let mut removed: FxHashSet<NodeId> = FxHashSet::default();
         let k_cores_2 = graph._get_k_cores(2, &mut removed);
         let k_trusses_3 = graph._get_k_trusses(3, &removed).1;
         let k_cores_4 = graph._get_k_cores(4, &mut removed);

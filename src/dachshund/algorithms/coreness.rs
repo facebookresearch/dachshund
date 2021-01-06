@@ -4,6 +4,8 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
+
 use crate::dachshund::algorithms::connected_components::ConnectedComponents;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
@@ -12,20 +14,17 @@ use core::cmp::Reverse;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
+use fxhash::{FxHashSet};
+
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
 pub trait Coreness: GraphBase + ConnectedComponents {
-    fn _get_k_cores(&self, k: usize, removed: &mut HashSet<NodeId>) -> Vec<Vec<NodeId>> {
+    fn _get_k_cores(&self, k: usize, removed: &mut FxHashSet<NodeId>) -> Vec<Vec<NodeId>> {
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
         let mut num_neighbors: HashMap<NodeId, usize> = self
             .get_nodes_iter()
-            .map(|x| {
-                (
-                    x.get_id(),
-                    HashSet::<NodeId>::from_iter(x.get_edges().map(|y| y.get_neighbor_id())).len(),
-                )
-            })
+            .map(|x| (x.get_id(), x.degree()))
             .collect();
         // iteratively delete all nodes w/ degree less than k
         while !queue.is_empty() {
@@ -47,13 +46,13 @@ pub trait Coreness: GraphBase + ConnectedComponents {
     }
 
     fn get_k_cores(&self, k: usize) -> Vec<Vec<NodeId>> {
-        let mut removed: HashSet<NodeId> = HashSet::new();
+        let mut removed: FxHashSet<NodeId> = FxHashSet::default();
         self._get_k_cores(k, &mut removed)
     }
 
     fn get_coreness(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
         let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
-        let mut removed: HashSet<NodeId> = HashSet::new();
+        let mut removed: FxHashSet<NodeId> = FxHashSet::default();
         let mut k: usize = 0;
         while removed.len() < self.count_nodes() {
             k += 1;
@@ -72,24 +71,18 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         (core_assignments, coreness)
     }
 
-    fn get_coreness_anomaly(&self, corenesses: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
+    fn get_coreness_anomaly(&self, coreness: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
         // Calculate the coreness anomaly score of all nodes as the absolute
         // value of the difference between the logs of the ranks by
         // degree and coreness.
 
         // See algorithm Core-A in https://www.cs.cmu.edu/~kijungs/papers/kcoreICDM2016.pdf
         let mut anomaly_scores = HashMap::new();
-        let core_ranks = self._averaged_ties_ranking(&corenesses);
+        let core_ranks = self._averaged_ties_ranking(&coreness);
         let deg_ranks = self._averaged_ties_ranking(
             &self
                 .get_nodes_iter()
-                .map(|x| {
-                    (
-                        x.get_id(),
-                        HashSet::<NodeId>::from_iter(x.get_edges().map(|y| y.get_neighbor_id()))
-                            .len(),
-                    )
-                })
+                .map(|x| (x.get_id(), x.degree()))
                 .collect(),
         );
         for node in self.get_ordered_node_ids() {
@@ -114,7 +107,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
     fn _get_k_trusses(
         &self,
         k: usize,
-        ignore_nodes: &HashSet<NodeId>,
+        ignore_nodes: &FxHashSet<NodeId>,
     ) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
         let mut neighbors: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
         let mut edges: OrderedEdgeSet = BTreeSet::new();
@@ -189,7 +182,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
 
         // ignore_nodes will contain all the irrelevant nodes after
         // calling self._get_k_cores();
-        let mut ignore_nodes: HashSet<NodeId> = HashSet::new();
+        let mut ignore_nodes: FxHashSet<NodeId> = FxHashSet::default();
         // this really only works for an undirected graph
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)

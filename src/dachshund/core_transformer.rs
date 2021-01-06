@@ -73,16 +73,16 @@ impl TransformerBase for CoreTransformer {
         let original_id = self
             .line_processor
             .get_original_id(graph_id.value() as usize);
-        let mut corenesses: Vec<(NodeId, usize)> = coreness_map.into_iter().collect();
-        corenesses.sort_by_key(|(_node_id, coreness)| *coreness);
-        for (node_id, coreness) in corenesses {
+        let mut coreness: Vec<(NodeId, usize)> = coreness_map.into_iter().collect();
+        coreness.sort_by_key(|(_node_id, coreness)| *coreness);
+        for (node_id, node_coreness) in coreness {
             let degree = graph.get_node_degree(node_id);
             let anomaly = anomaly_map.get(&node_id).unwrap();
             let line: String = format!(
                 "{}\t{}\t{}\t{}\t{}",
                 original_id,
                 node_id.value(),
-                coreness,
+                node_coreness,
                 degree,
                 anomaly
             );
