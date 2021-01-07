@@ -25,7 +25,6 @@ use crate::dachshund::transformer_base::TransformerBase;
 use rand::seq::SliceRandom;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use serde_json::json;
-use std::collections::HashSet;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use fxhash::FxHashSet;
