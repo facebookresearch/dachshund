@@ -274,6 +274,16 @@ fn test_coreness() {
     assert_eq!(three_cores.len(), 0);
 }
 
+#[cfg(test)]
+#[test]
+fn test_coreness_fast() {
+    // This graph is a pair of disjoint cycles, so every node has coreness 2.
+    let (_cores, coreness) = get_graph(3).unwrap().get_coreness_fast();
+
+    assert_eq!(*coreness.get(&NodeId::from(2 as i64)).unwrap(), 2);
+    assert_eq!(*coreness.get(&NodeId::from(5 as i64)).unwrap(), 2);
+}
+
 #[test]
 fn test_simple_transformer() {
     let mut transformer = SimpleTransformer::new();

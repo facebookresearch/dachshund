@@ -10,9 +10,9 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase, SimpleDirectedNode};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
+use fxhash::FxHashSet;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
-use fxhash::FxHashSet;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 

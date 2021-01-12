@@ -36,7 +36,7 @@ impl CoreTransformer {
     fn compute_coreness_and_anomalies(
         graph: &SimpleUndirectedGraph,
     ) -> (HashMap<NodeId, usize>, HashMap<NodeId, f64>) {
-        let (_, coreness) = graph.get_coreness();
+        let (_, coreness) = graph.get_coreness_fast();
         let coreness_anomalies = graph.get_coreness_anomaly(&coreness);
         (coreness, coreness_anomalies)
     }

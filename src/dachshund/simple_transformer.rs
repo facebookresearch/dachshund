@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate clap;
-extern crate serde_json;
 extern crate fxhash;
+extern crate serde_json;
 
 use crate::dachshund::algorithms::betweenness::Betweenness;
 use crate::dachshund::algorithms::clustering::Clustering;
@@ -22,12 +22,12 @@ use crate::dachshund::row::{Row, SimpleEdgeRow};
 use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use crate::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 use crate::dachshund::transformer_base::TransformerBase;
+use fxhash::FxHashSet;
 use rand::seq::SliceRandom;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use serde_json::json;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use fxhash::FxHashSet;
 
 pub struct SimpleTransformer {
     batch: Vec<SimpleEdgeRow>,
