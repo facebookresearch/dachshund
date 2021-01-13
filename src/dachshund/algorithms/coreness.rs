@@ -71,7 +71,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         (core_assignments, coreness)
     }
 
-    fn _init_bin_boundaries(
+    fn _init_bin_starts(
         &self,
         ordered_nodes: &Vec<NodeId>,
         degree: &HashMap<NodeId, usize>,
@@ -108,7 +108,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         let mut nodes: Vec<NodeId> = coreness.keys().cloned().collect();
         nodes.sort_unstable_by_key(|node_id| coreness[node_id]);
 
-        let mut bin_boundaries = self._init_bin_boundaries(&nodes, &coreness);
+        let mut bin_starts = self._init_bin_starts(&nodes, &coreness);
 
         let mut node_idx: HashMap<NodeId, usize> = HashMap::new();
         for (i, &node) in nodes.iter().enumerate() {
@@ -131,16 +131,16 @@ pub trait Coreness: GraphBase + ConnectedComponents {
                 if nbr_coreness > coreness[&node_id] {
                     neighbors.get_mut(&nbr_id).unwrap().remove(&node_id);
                     let nbr_idx = node_idx[&nbr_id];
-                    let nbr_bin_start = bin_boundaries[nbr_coreness];
+                    let nbr_bin_start = bin_starts[nbr_coreness];
 
                     let nbr_idx_ptr = node_idx.get_mut(&nbr_id).unwrap() as *mut usize;
-                    let bin_start_node_idx_ptr = node_idx.get_mut(&nbr_id).unwrap() as *mut usize;
+                    let bin_start_node_idx_ptr = node_idx.get_mut(&nodes[nbr_bin_start]).unwrap() as *mut usize;
                     unsafe {
                         std::ptr::swap(nbr_idx_ptr, bin_start_node_idx_ptr);
                     }
                     nodes.swap(nbr_idx, nbr_bin_start);
 
-                    bin_boundaries[nbr_coreness] += 1;
+                    bin_starts[nbr_coreness] += 1;
                     *coreness.entry(nbr_id).or_default() -= 1;
                 }
             }
