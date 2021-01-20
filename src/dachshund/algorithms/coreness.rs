@@ -21,6 +21,7 @@ type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
 pub trait Coreness: GraphBase + ConnectedComponents {
     fn _get_k_cores(&self, k: usize, removed: &mut FxHashSet<NodeId>) -> Vec<Vec<NodeId>> {
+        // [BUG] This algorithm has a bug. See simple_graph.rs tests.
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
         let mut num_neighbors: HashMap<NodeId, usize> = self
             .get_nodes_iter()
@@ -134,7 +135,8 @@ pub trait Coreness: GraphBase + ConnectedComponents {
                     let nbr_bin_start = bin_starts[nbr_coreness];
 
                     let nbr_idx_ptr = node_idx.get_mut(&nbr_id).unwrap() as *mut usize;
-                    let bin_start_node_idx_ptr = node_idx.get_mut(&nodes[nbr_bin_start]).unwrap() as *mut usize;
+                    let bin_start_node_idx_ptr =
+                        node_idx.get_mut(&nodes[nbr_bin_start]).unwrap() as *mut usize;
                     unsafe {
                         std::ptr::swap(nbr_idx_ptr, bin_start_node_idx_ptr);
                     }
