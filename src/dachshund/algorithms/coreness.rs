@@ -87,8 +87,8 @@ pub trait Coreness: GraphBase + ConnectedComponents {
                 // create one new bin for each possible degree value
                 for _ in current_degree + 1..=new_degree {
                     bin_boundaries.push(i);
-                    current_degree = new_degree;
                 }
+                current_degree = new_degree;
             }
         }
         bin_boundaries
