@@ -65,6 +65,10 @@ impl Scorer {
         Ok(score)
     }
 
+    pub fn get_num_non_core_types(&self) -> usize {
+        self.num_non_core_types
+    }
+
     pub fn get_global_thresh_score(&self, cliqueness: f32) -> f32 {
         match self.global_thresh {
             Some(n) => (cliqueness >= n) as i64 as f32,

@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate clap;
+extern crate fxhash;
 extern crate serde_json;
 
 use crate::dachshund::algorithms::betweenness::Betweenness;
@@ -21,10 +22,10 @@ use crate::dachshund::row::{Row, SimpleEdgeRow};
 use crate::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use crate::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 use crate::dachshund::transformer_base::TransformerBase;
+use fxhash::FxHashSet;
 use rand::seq::SliceRandom;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use serde_json::json;
-use std::collections::HashSet;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
@@ -51,7 +52,7 @@ pub trait GraphStatsTransformerBase: TransformerBase {
             .unwrap();
         let evcent = graph.get_eigenvector_centrality(0.001, 1000);
 
-        let mut removed: HashSet<NodeId> = HashSet::new();
+        let mut removed: FxHashSet<NodeId> = FxHashSet::default();
         let k_cores_2 = graph._get_k_cores(2, &mut removed);
         let k_trusses_3 = graph._get_k_trusses(3, &removed).1;
         let k_cores_4 = graph._get_k_cores(4, &mut removed);

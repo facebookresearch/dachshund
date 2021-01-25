@@ -4,11 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
 use crate::dachshund::algorithms::connectivity::Connectivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase, SimpleDirectedNode};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
+use fxhash::FxHashSet;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
@@ -19,7 +21,7 @@ pub trait ConnectedComponents: GraphBase {
     // in to a vector of node_ids inside _get_connected_components.
     fn _get_connected_components_membership(
         &self,
-        ignore_nodes: Option<&HashSet<NodeId>>,
+        ignore_nodes: Option<&FxHashSet<NodeId>>,
         ignore_edges: Option<&HashSet<(NodeId, NodeId)>>,
     ) -> (HashMap<NodeId, usize>, usize) {
         let mut components: HashMap<NodeId, usize> = HashMap::new();
@@ -70,7 +72,7 @@ pub trait ConnectedComponents: GraphBase {
     }
     fn _get_connected_components(
         &self,
-        ignore_nodes: Option<&HashSet<NodeId>>,
+        ignore_nodes: Option<&FxHashSet<NodeId>>,
         ignore_edges: Option<&HashSet<(NodeId, NodeId)>>,
     ) -> Vec<Vec<NodeId>> {
         let (components, n) = self._get_connected_components_membership(ignore_nodes, ignore_edges);

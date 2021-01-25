@@ -70,3 +70,7 @@ path = "src/clique_miner.rs"
 [[bin]]
 name = "simple_graph_featurizer"
 path = "src/simple_graph_featurizer.rs"
+
+[[bin]]
+name = "core_miner"
+path = "src/core_miner.rs"
