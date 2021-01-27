@@ -20,6 +20,7 @@ type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
 pub trait Coreness: GraphBase + ConnectedComponents {
+
     fn _get_k_cores(&self, k: usize, removed: &mut FxHashSet<NodeId>) -> Vec<Vec<NodeId>> {
         // [BUG] This algorithm has a bug. See simple_graph.rs tests.
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
@@ -51,27 +52,6 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         self._get_k_cores(k, &mut removed)
     }
 
-    fn get_coreness(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
-        let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
-        let mut removed: FxHashSet<NodeId> = FxHashSet::default();
-        let mut k: usize = 0;
-        while removed.len() < self.count_nodes() {
-            k += 1;
-            core_assignments.push(self._get_k_cores(k, &mut removed))
-        }
-        let mut coreness: HashMap<NodeId, usize> = HashMap::new();
-        for i in (0..k).rev() {
-            for ids in &core_assignments[i] {
-                for id in ids {
-                    if !coreness.contains_key(id) {
-                        coreness.insert(*id, i + 1);
-                    }
-                }
-            }
-        }
-        (core_assignments, coreness)
-    }
-
     fn _init_bin_starts(
         &self,
         ordered_nodes: &Vec<NodeId>,
@@ -94,7 +74,32 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         bin_boundaries
     }
 
-    fn get_coreness_fast(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
+    fn get_coreness(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
+        let coreness = self.get_coreness_values();
+        let core_assignments = self._get_core_assignments(&coreness);
+        (core_assignments, coreness)
+    }
+
+    fn _get_core_assignments(&self, coreness: &HashMap<NodeId, usize>) -> Vec<Vec<Vec<NodeId>>> {
+        // Use coreness mapping to compute connected components of each k-core.
+        let mut nodes: Vec<NodeId> = coreness.keys().cloned().collect();
+        nodes.sort_unstable_by_key(|node_id| coreness[node_id]);
+        // coreness_bin_starts[i] = j means i core consists of nodes[j..]
+        // so when computing connected components, we exclude
+        // initial segments of nodes up to the starts of these bins.
+        let coreness_bin_starts = self._init_bin_starts(&nodes, &coreness);
+
+        let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
+        let mut removed: FxHashSet<NodeId>;
+        for bin_start in &coreness_bin_starts[1..] {
+            removed = nodes[..*bin_start].iter().cloned().collect();
+            core_assignments.push(self._get_connected_components(Some(&removed), None));
+        }
+        core_assignments
+    }
+
+
+    fn get_coreness_values(&self) -> HashMap<NodeId, usize> {
         // Traverse the nodes in increasing order of degree to calculate coreness.
         // See: https://arxiv.org/abs/cs/0310049 for an explanation of the bookkeeping details.
 
@@ -148,8 +153,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
             }
         }
 
-        let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
-        (core_assignments, coreness)
+        coreness
     }
 
     fn get_coreness_anomaly(&self, coreness: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
