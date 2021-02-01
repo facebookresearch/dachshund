@@ -290,34 +290,8 @@ fn test_coreness() {
     // The three core should be empty
     assert_eq!(three_cores.len(), 0);
 
-    // This graph is a core of 3 nodes with a cycle plus 1 degree-1 node connected to each core node.
+    // This is a tricky case that the breaks the original algorithm.
     let (_cores, coreness) = get_graph(7).unwrap().get_coreness();
-    // For the 3 nodes in the cycle, coreness is 2. For the 3 periphery nodes, it's 1.
-    for i in 0..15 {
-        let expected_coreness = if i < 3 {2} else {1};
-        assert_eq!(*coreness.get(&NodeId::from(i as i64)).unwrap(), expected_coreness);
-    }
-
-    // This is a tricky case that the breaks the current algorithm.
-    let (_cores, coreness) = get_graph(7).unwrap().get_coreness();
-    for i in 1..15 {
-        let expected_coreness = if i > 10 {2} else {1};
-        assert_eq!(*coreness.get(&NodeId::from(i as i64)).unwrap(), expected_coreness);
-    }
-}
-
-#[cfg(test)]
-#[test]
-fn test_coreness_fast() {
-    // This graph is a pair of disjoint cycles, so every node has coreness 2.
-    let (_cores, coreness) = get_graph(3).unwrap().get_coreness_fast();
-
-    assert_eq!(*coreness.get(&NodeId::from(2 as i64)).unwrap(), 2);
-    assert_eq!(*coreness.get(&NodeId::from(5 as i64)).unwrap(), 2);
-
-    // This is a tricky case that highlights a bug with the current algorithm
-    // (that is fixed with test_coreness_fast).
-    let (_cores, coreness) = get_graph(7).unwrap().get_coreness_fast();
     for i in 1..15 {
         let expected_coreness = if i > 10 {2} else {1};
         assert_eq!(*coreness.get(&NodeId::from(i as i64)).unwrap(), expected_coreness);
