@@ -163,8 +163,8 @@ pub trait Coreness: GraphBase + ConnectedComponents {
 
         // See algorithm Core-A in https://www.cs.cmu.edu/~kijungs/papers/kcoreICDM2016.pdf
         let mut anomaly_scores = HashMap::new();
-        let core_ranks = self._averaged_ties_ranking(&coreness);
-        let deg_ranks = self._averaged_ties_ranking(
+        let core_ranks = averaged_ties_ranking(&coreness);
+        let deg_ranks = averaged_ties_ranking(
             &self
                 .get_nodes_iter()
                 .map(|x| (x.get_id(), x.degree()))
@@ -174,19 +174,6 @@ pub trait Coreness: GraphBase + ConnectedComponents {
             anomaly_scores.insert(node, (core_ranks[&node].ln() - deg_ranks[&node].ln()).abs());
         }
         anomaly_scores
-    }
-
-    fn _averaged_ties_ranking(&self, scores: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
-        // [TODO] Needs to handle ties correctly.
-        let mut ranking = HashMap::new();
-        let mut sorted_nodes: Vec<(&NodeId, &usize)> = scores.iter().collect();
-        sorted_nodes.sort_unstable_by_key(|(_node, value)| Reverse(*value));
-        let mut i = 1;
-        for (&node, _value) in sorted_nodes.into_iter() {
-            ranking.insert(node, i as f64);
-            i += 1;
-        }
-        ranking
     }
 
     fn _get_k_trusses(
@@ -272,4 +259,36 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)
     }
+}
+
+pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
+    // Given a map from NodeIds to values, create a new map from those NodeIds to their rank.
+    // In the case of ties, all tied keys get the same, averaged rank.
+    // e.g. {1: 10, 2: 20, 3: 15, 4: 20, 5: 25} -> {5: 1, 4: 2.5, 2: 2.5, 3: 4, 1: 5}
+
+    let mut ranking = HashMap::new();
+    let mut sorted_nodes: Vec<(&NodeId, &usize)> = scores.iter().collect();
+    sorted_nodes.sort_unstable_by_key(|(_node, value)| Reverse(*value));
+
+    let mut tied_nodes : Vec<&NodeId> = Vec::<&NodeId>::new();
+    let mut tied_rank : f64;
+    let mut last_value : Option<usize> = None;
+
+    for (i, (node, &value)) in sorted_nodes.into_iter().enumerate() {
+        if last_value == None || Some(value) == last_value {
+            tied_nodes.push(node);
+        } else {
+            tied_rank = (i as f64) - (tied_nodes.len() - 1) as f64 / 2.0;
+            for tied_node in tied_nodes {
+                ranking.insert(*tied_node, tied_rank as f64);
+            }
+            tied_nodes = vec![node];
+        }
+        last_value = Some(value);
+    }
+    tied_rank = (scores.len() as f64) - (tied_nodes.len() - 1) as f64 / 2.0;
+    for tied_node in tied_nodes {
+        ranking.insert(*tied_node, tied_rank as f64);
+    }
+    ranking
 }
