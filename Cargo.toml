@@ -6,7 +6,7 @@
 [package]
 name = "dachshund"
 description = "Dachshund is a graph mining library written in Rust. It provides high performance data structures for multiple kinds of graphs, from simple undirected graphs to typed hypergraphs. Dachshund also provides algorithms for common tasks for graph mining and analysis, ranging from shortest paths to graph spectral analysis."
-version = "0.1.2"
+version = "0.1.3"
 edition = "2018"
 repository = "https://github.com/facebookresearch/dachshund"
 license = "MIT"

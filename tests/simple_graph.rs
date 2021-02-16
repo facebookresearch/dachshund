@@ -10,8 +10,8 @@ use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
-use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::algorithms::coreness::averaged_ties_ranking;
+use lib_dachshund::dachshund::algorithms::coreness::Coreness;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::id_types::NodeId;
@@ -22,7 +22,7 @@ use lib_dachshund::dachshund::simple_transformer::{
 };
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::{BTreeSet, HashSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
 fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
@@ -151,7 +151,7 @@ fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
             (11, 14),
             (12, 13),
             (12, 14),
-            (13, 14)
+            (13, 14),
         ],
         _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
@@ -294,18 +294,21 @@ fn test_coreness() {
     // This is a tricky case that the breaks the original algorithm.
     let (_cores, coreness) = get_graph(7).unwrap().get_coreness();
     for i in 1..15 {
-        let expected_coreness = if i > 10 {2} else {1};
-        assert_eq!(*coreness.get(&NodeId::from(i as i64)).unwrap(), expected_coreness);
+        let expected_coreness = if i > 10 { 2 } else { 1 };
+        assert_eq!(
+            *coreness.get(&NodeId::from(i as i64)).unwrap(),
+            expected_coreness
+        );
     }
 }
 
 #[cfg(test)]
 #[test]
 fn test_averaged_ties_ranking() {
-    let values = vec![(1,10), (2, 20), (3, 15), (4, 20), (5, 25)];
-    let rankings = vec![(5,1.0), (4, 2.5), (2, 2.5), (3, 4.0), (1, 5.0)];
+    let values = vec![(1, 10), (2, 20), (3, 15), (4, 20), (5, 25)];
+    let rankings = vec![(5, 1.0), (4, 2.5), (2, 2.5), (3, 4.0), (1, 5.0)];
 
-    let mut value_map : HashMap<NodeId, usize> = HashMap::new();
+    let mut value_map: HashMap<NodeId, usize> = HashMap::new();
     for (node, val) in values {
         value_map.insert(NodeId::from(node), val);
     }
@@ -314,7 +317,6 @@ fn test_averaged_ties_ranking() {
     for (node, rank) in rankings {
         assert_eq!(*rankings_map.get(&NodeId::from(node as i64)).unwrap(), rank);
     }
-
 }
 
 #[test]
