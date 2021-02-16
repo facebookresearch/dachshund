@@ -20,7 +20,6 @@ type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
 pub trait Coreness: GraphBase + ConnectedComponents {
-
     fn _get_k_cores(&self, k: usize, removed: &mut FxHashSet<NodeId>) -> Vec<Vec<NodeId>> {
         // [BUG] This algorithm has a bug. See simple_graph.rs tests.
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
@@ -97,7 +96,6 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         }
         core_assignments
     }
-
 
     fn get_coreness_values(&self) -> HashMap<NodeId, usize> {
         // Traverse the nodes in increasing order of degree to calculate coreness.
@@ -270,9 +268,9 @@ pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId,
     let mut sorted_nodes: Vec<(&NodeId, &usize)> = scores.iter().collect();
     sorted_nodes.sort_unstable_by_key(|(_node, value)| Reverse(*value));
 
-    let mut tied_nodes : Vec<&NodeId> = Vec::<&NodeId>::new();
-    let mut tied_rank : f64;
-    let mut last_value : Option<usize> = None;
+    let mut tied_nodes: Vec<&NodeId> = Vec::<&NodeId>::new();
+    let mut tied_rank: f64;
+    let mut last_value: Option<usize> = None;
 
     for (i, (node, &value)) in sorted_nodes.into_iter().enumerate() {
         if last_value == None || Some(value) == last_value {
