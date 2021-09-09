@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate fxhash;
+extern crate ordered_float;
+extern crate priority_queue;
+
 use crate::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
 use crate::dachshund::algorithms::betweenness::Betweenness;
@@ -13,7 +16,7 @@ use crate::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
 use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityUndirected};
-use crate::dachshund::algorithms::coreness::Coreness;
+use crate::dachshund::algorithms::coreness::{Coreness, FractionalCoreness};
 use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::algorithms::laplacian::Laplacian;
 use crate::dachshund::algorithms::shortest_paths::ShortestPaths;
@@ -22,9 +25,13 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
+use std::cmp::Reverse;
 
 use fxhash::FxHashMap;
-use std::collections::hash_map::{Keys, Values};
+use std::collections::hash_map::{HashMap, Keys, Values};
+
+use ordered_float::NotNan;
+use priority_queue::PriorityQueue;
 
 /// Keeps track of a weighted undirected graph, composed of nodes that have weighed.
 pub struct WeightedUndirectedGraph {
@@ -104,6 +111,64 @@ impl UndirectedGraph for WeightedUndirectedGraph {}
 impl ConnectedComponents for WeightedUndirectedGraph {}
 impl ConnectedComponentsUndirected for WeightedUndirectedGraph {}
 impl Coreness for WeightedUndirectedGraph {}
+impl FractionalCoreness for WeightedUndirectedGraph {
+    fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64> {
+        // Start by making a priority queue of each node with its weight as a priority.
+        // Use PriorityQueue instead of BinaryHeap because the workload uses change priority.
+
+        // [TODO Fix trait bounds and move this to coreness.rs.]
+        // [TODO:Perf] Switch to hashbrown. Benchmark performance.
+        let mut pq = PriorityQueue::with_capacity(self.nodes.len());
+
+        for node in self.get_nodes_iter() {
+            pq.push(node.get_id(), Reverse(NotNan::new(node.weight()).unwrap()));
+        }
+        let mut coreness: HashMap<NodeId, f64> = HashMap::new();
+
+        while !pq.is_empty() {
+            let (first_node_id, Reverse(next_shell_coreness)) = pq.pop().unwrap();
+            let mut next_shell: Vec<NodeId> = vec![first_node_id];
+
+            while !next_shell.is_empty() {
+                let node_id = next_shell.pop().unwrap();
+
+                loop {
+                    match pq.peek() {
+                        Some((node_id, Reverse(nn))) => {
+                            if *nn == next_shell_coreness {
+                                next_shell.push(*node_id);
+                                pq.pop();
+                            } else {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+                }
+
+                coreness.insert(node_id, next_shell_coreness.into_inner());
+
+                // For each neighbor that hasn't been removed yet,
+                // decrement their priority by the weight of the edge.
+                for e in self.get_node(node_id).get_edges() {
+                    let neighbor_id = e.target_id;
+                    match pq.get_priority(&neighbor_id) {
+                        Some(Reverse(old_priority)) => {
+                            let new_priority: f64 = old_priority.into_inner() - e.weight;
+                            pq.change_priority(
+                                &neighbor_id,
+                                Reverse(NotNan::new(new_priority).unwrap()),
+                            );
+                            ();
+                        }
+                        None => (),
+                    };
+                }
+            }
+        }
+        coreness
+    }
+}
 
 impl AdjacencyMatrix for WeightedUndirectedGraph {}
 impl Clustering for WeightedUndirectedGraph {}
