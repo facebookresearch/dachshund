@@ -95,7 +95,7 @@ pub trait TSimpleUndirectedGraphBuilder:
                 id,
                 SimpleNode {
                     node_id: id,
-                    neighbors: neighbors,
+                    neighbors,
                 },
             );
         }

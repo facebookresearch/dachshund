@@ -127,7 +127,7 @@ where
         // While there are still nodes to proces...
         // Note that we will remove nodes from visited now and place them into upstream
         let mut upstream: OrderedNodeSet = BTreeSet::new();
-        while visited.len() > 0 {
+        while !visited.is_empty() {
             let mut newly_visited: Vec<NodeId> = Vec::new();
             let node_id = visited.pop_first().unwrap();
             let mut component: Vec<NodeId> = vec![node_id];

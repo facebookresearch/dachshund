@@ -67,10 +67,7 @@ impl WeightedNodeEdgeBase for WeightedNodeEdge {
 
 impl WeightedNodeEdge {
     pub fn new(target_id: NodeId, weight: f64) -> Self {
-        Self {
-            target_id,
-            weight
-        }
+        Self { target_id, weight }
     }
 }
 
@@ -212,10 +209,7 @@ impl NodeBase for SimpleNode {
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
-        ids.iter()
-            .filter(|x| self.neighbors.contains(x))
-            .collect::<Vec<&NodeId>>()
-            .len()
+        ids.iter().filter(|x| self.neighbors.contains(x)).count()
     }
 }
 
@@ -294,8 +288,7 @@ impl NodeBase for SimpleDirectedNode {
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
         ids.iter()
             .filter(|x| self.in_neighbors.contains(x) || self.out_neighbors.contains(x))
-            .collect::<Vec<&NodeId>>()
-            .len()
+            .count()
     }
 }
 
@@ -340,9 +333,6 @@ impl NodeBase for WeightedNode {
     }
 
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
-        ids.iter()
-            .filter(|x| self.neighbors.contains(x))
-            .collect::<Vec<&NodeId>>()
-            .len()
+        ids.iter().filter(|x| self.neighbors.contains(x)).count()
     }
 }

@@ -275,13 +275,12 @@ impl GraphBuilderBaseWithPreProcessing for TypedGraphBuilderWithCliques {
     ) -> CLQResult<Vec<<Self as GraphBuilderBase>::RowType>> {
         let mut row_set: HashSet<<Self as GraphBuilderBase>::RowType> = HashSet::new();
         for el in data.into_iter() {
-            let target_type = el.target_type_id.clone();
-            let edge_type = el.edge_type_id.clone();
-            self.non_core_type_map
-                .insert(el.source_id.clone(), target_type.clone());
+            let target_type = el.target_type_id;
+            let edge_type = el.edge_type_id;
+            self.non_core_type_map.insert(el.source_id, target_type);
             self.edge_type_map
                 .entry((self.core_type_id, target_type))
-                .or_insert(Vec::new())
+                .or_insert_with(Vec::new)
                 .push(edge_type);
             row_set.insert(el);
         }
@@ -309,12 +308,11 @@ impl GraphBuilderBaseWithCliques for TypedGraphBuilderWithCliques {
     type CliquesType = (BTreeSet<NodeId>, BTreeSet<NodeId>);
 
     fn get_clique_edges(&self, id1: NodeId, id2: NodeId) -> CLQResult<Vec<EdgeRow>> {
-        let source_type_id = self.core_type_id.clone();
-        let target_type_id = self
+        let source_type_id = self.core_type_id;
+        let target_type_id = *self
             .non_core_type_map
             .get(&id2)
-            .ok_or_else(CLQError::err_none)?
-            .clone();
+            .ok_or_else(CLQError::err_none)?;
         Ok(self
             .edge_type_map
             .get(&(source_type_id, target_type_id))
@@ -322,10 +320,10 @@ impl GraphBuilderBaseWithCliques for TypedGraphBuilderWithCliques {
             .iter()
             .cloned()
             .map(|edge_type_id| EdgeRow {
-                graph_id: self.graph_id.clone(),
+                graph_id: self.graph_id,
                 source_id: id1,
                 target_id: id2,
-                source_type_id: self.core_type_id.clone(),
+                source_type_id: self.core_type_id,
                 target_type_id,
                 edge_type_id,
             })

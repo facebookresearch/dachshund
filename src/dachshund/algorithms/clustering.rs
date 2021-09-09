@@ -49,7 +49,6 @@ pub trait Clustering: GraphBase {
         let ordered_nodes = self
             .get_nodes_iter()
             .filter(|node| node.degree() >= 2)
-            .map(|node| node)
             .collect::<Vec<_>>();
 
         let n = ordered_nodes.len();

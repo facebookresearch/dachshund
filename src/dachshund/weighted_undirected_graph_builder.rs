@@ -5,9 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 use crate::dachshund::error::CLQResult;
-use crate::dachshund::graph_builder_base::{
-    GraphBuilderBase, GraphBuilderBaseWithPreProcessing,
-};
+use crate::dachshund::graph_builder_base::{GraphBuilderBase, GraphBuilderBaseWithPreProcessing};
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{WeightedNode, WeightedNodeEdge};
 use crate::dachshund::weighted_undirected_graph::WeightedUndirectedGraph;
@@ -39,12 +37,13 @@ pub trait TWeightedUndirectedGraphBuilder:
                 id,
                 WeightedNode {
                     node_id: id,
-                    edges: neighbors.iter().map(|(target_id, weight)|
-                            WeightedNodeEdge {
-                                target_id: *target_id,
-                                weight: *weight
-                            }
-                        ).collect(),
+                    edges: neighbors
+                        .iter()
+                        .map(|(target_id, weight)| WeightedNodeEdge {
+                            target_id: *target_id,
+                            weight: *weight,
+                        })
+                        .collect(),
                     neighbors: neighbors.keys().cloned().collect(),
                 },
             );
