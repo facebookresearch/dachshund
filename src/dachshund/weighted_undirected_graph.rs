@@ -113,42 +113,40 @@ impl ConnectedComponentsUndirected for WeightedUndirectedGraph {}
 impl Coreness for WeightedUndirectedGraph {}
 impl FractionalCoreness for WeightedUndirectedGraph {
     fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64> {
-        // Start by making a priority queue of each node with its weight as a priority.
+        // The fractional coreness value is the analog of standard k-cores except that
+        // we care about the total edge weight for each vertex in the k-core, instead of the
+        // degree inside the subgraph.
+
+        // The fractional k-core (sometimes called the s-core) is a set of nodes
+        // where every node has edges with total weight at least k between it and the other
+        // nodes in the fractional k-core.
+
+        // Start by making a priority queue with each node. Priority will be equal to weight
+        // of that node from all edges where we haven't removed the other ends yet.
         // Use PriorityQueue instead of BinaryHeap because the workload uses change priority.
 
         // [TODO Fix trait bounds and move this to coreness.rs.]
         // [TODO:Perf] Switch to hashbrown. Benchmark performance.
         let mut pq = PriorityQueue::with_capacity(self.nodes.len());
 
+        // Initially the priority of the of each node is the node weight (the total edge weight
+        // of each incident edge.)
         for node in self.get_nodes_iter() {
             pq.push(node.get_id(), Reverse(NotNan::new(node.weight()).unwrap()));
         }
         let mut coreness: HashMap<NodeId, f64> = HashMap::new();
 
         while !pq.is_empty() {
+            // We process the graph down one shell at a time, where each shell
+            // consists of nodes with the same coreness value.
             let (first_node_id, Reverse(next_shell_coreness)) = pq.pop().unwrap();
             let mut next_shell: Vec<NodeId> = vec![first_node_id];
 
             while !next_shell.is_empty() {
                 let node_id = next_shell.pop().unwrap();
-
-                loop {
-                    match pq.peek() {
-                        Some((node_id, Reverse(nn))) => {
-                            if *nn == next_shell_coreness {
-                                next_shell.push(*node_id);
-                                pq.pop();
-                            } else {
-                                break;
-                            }
-                        }
-                        None => break,
-                    }
-                }
-
                 coreness.insert(node_id, next_shell_coreness.into_inner());
 
-                // For each neighbor that hasn't been removed yet,
+                // Process a removal: For each neighbor that hasn't been removed yet,
                 // decrement their priority by the weight of the edge.
                 for e in self.get_node(node_id).get_edges() {
                     let neighbor_id = e.target_id;
@@ -163,6 +161,22 @@ impl FractionalCoreness for WeightedUndirectedGraph {
                         }
                         None => (),
                     };
+                }
+
+                // Any other node whose priority is now at or below the current coreness
+                // value is part of the same shell we're currently building.
+                loop {
+                    match pq.peek() {
+                        Some((other_node_id, Reverse(nn))) => {
+                            if *nn <= next_shell_coreness {
+                                next_shell.push(*other_node_id);
+                                pq.pop();
+                            } else {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
                 }
             }
         }

@@ -36,6 +36,21 @@ fn get_graph(idx: usize) -> CLQResult<WeightedUndirectedGraph> {
         ],
         // A length-5 path with weight 2 on each edge.
         5 => vec![(0, 1, 2.0), (1, 2, 2.0), (2, 3, 2.0), (3, 4, 2.0)],
+        6 => vec![
+            (0, 1, 1.0),
+            (0, 2, 1.0),
+            (0, 3, 1.0),
+            (0, 4, 1.0),
+            (1, 2, 3.0),
+            (2, 3, 3.0),
+            (3, 1, 3.0),
+            (4, 5, 1.1),
+            (4, 6, 1.1),
+            (4, 7, 1.1),
+            (5, 6, 3.0),
+            (5, 7, 3.0),
+            (6, 7, 3.0),
+        ],
         _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
     WeightedUndirectedGraphBuilder {}.from_vector(
@@ -103,11 +118,18 @@ fn test_fractional_coreness() {
         );
     }
 
-    println!("Second example.");
     // A length-5 path with weight 2 on each edge.
     let coreness = get_graph(5).unwrap().get_fractional_coreness_values();
-    println!("{:?}", coreness);
     for i in 0..5 {
         assert_eq!(*coreness.get(&NodeId::from(i as i64)).unwrap(), 2.0);
+    }
+
+    let coreness = get_graph(6).unwrap().get_fractional_coreness_values();
+    for i in 0..8 {
+        let correct_coreness = if i == 0 || i == 4 { 4.0 } else { 6.0 };
+        assert_eq!(
+            *coreness.get(&NodeId::from(i as i64)).unwrap(),
+            correct_coreness
+        );
     }
 }
