@@ -259,6 +259,11 @@ pub trait Coreness: GraphBase + ConnectedComponents {
     }
 }
 
+pub trait FractionalCoreness {
+    // [TODO] With the right trait bounds, this can be implemented here instead of in weighted_undirected_graph.
+    fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64>;
+}
+
 pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
     // Given a map from NodeIds to values, create a new map from those NodeIds to their rank.
     // In the case of ties, all tied keys get the same, averaged rank.

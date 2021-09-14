@@ -42,6 +42,35 @@ impl NodeEdgeBase for NodeId {
     }
 }
 
+/// Used to indicate a weighted edge leading to the neighbor of a node.
+pub struct WeightedNodeEdge {
+    pub target_id: NodeId,
+    pub weight: f64,
+}
+impl NodeEdgeBase for WeightedNodeEdge {
+    fn get_neighbor_id(&self) -> NodeId {
+        self.target_id
+    }
+}
+pub trait WeightedNodeEdgeBase
+where
+    Self: Sized,
+{
+    fn get_weight(&self) -> f64;
+}
+
+impl WeightedNodeEdgeBase for WeightedNodeEdge {
+    fn get_weight(&self) -> f64 {
+        self.weight
+    }
+}
+
+impl WeightedNodeEdge {
+    pub fn new(target_id: NodeId, weight: f64) -> Self {
+        Self { target_id, weight }
+    }
+}
+
 pub trait NodeBase
 where
     Self: Sized,
@@ -180,10 +209,7 @@ impl NodeBase for SimpleNode {
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
-        ids.iter()
-            .filter(|x| self.neighbors.contains(x))
-            .collect::<Vec<&NodeId>>()
-            .len()
+        ids.iter().filter(|x| self.neighbors.contains(x)).count()
     }
 }
 
@@ -262,7 +288,51 @@ impl NodeBase for SimpleDirectedNode {
     fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
         ids.iter()
             .filter(|x| self.in_neighbors.contains(x) || self.out_neighbors.contains(x))
-            .collect::<Vec<&NodeId>>()
-            .len()
+            .count()
+    }
+}
+
+pub trait WeightedNodeBase: NodeBase {
+    fn weight(&self) -> f64;
+}
+pub struct WeightedNode {
+    pub node_id: NodeId,
+    pub edges: Vec<WeightedNodeEdge>,
+    pub neighbors: BTreeSet<NodeId>,
+}
+impl WeightedNodeBase for WeightedNode {
+    fn weight(&self) -> f64 {
+        self.edges.iter().map(|x| x.get_weight()).sum()
+    }
+}
+impl Hash for WeightedNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+    }
+}
+impl PartialEq for WeightedNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.node_id == other.node_id
+    }
+}
+impl Eq for WeightedNode {}
+impl NodeBase for WeightedNode {
+    type NodeEdgeType = WeightedNodeEdge;
+    fn get_id(&self) -> NodeId {
+        self.node_id
+    }
+    fn get_edges(&self) -> Box<dyn Iterator<Item = &WeightedNodeEdge> + '_> {
+        Box::new(self.edges.iter())
+    }
+    fn get_outgoing_edges(&self) -> Box<dyn Iterator<Item = &WeightedNodeEdge> + '_> {
+        self.get_edges()
+    }
+    /// degree is the edge count (in an unweighted graph)
+    fn degree(&self) -> usize {
+        self.edges.len()
+    }
+
+    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+        ids.iter().filter(|x| self.neighbors.contains(x)).count()
     }
 }

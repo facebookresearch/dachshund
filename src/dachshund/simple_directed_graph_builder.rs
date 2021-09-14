@@ -41,14 +41,14 @@ impl GraphBuilderBase for SimpleDirectedGraphBuilder {
                 id,
                 SimpleDirectedNode {
                     node_id: id,
-                    in_neighbors: in_neighbors,
-                    out_neighbors: out_neighbors,
+                    in_neighbors,
+                    out_neighbors,
                 },
             );
         }
         Ok(SimpleDirectedGraph {
             ids: nodes.keys().cloned().collect(),
-            nodes: nodes,
+            nodes,
         })
     }
 }
