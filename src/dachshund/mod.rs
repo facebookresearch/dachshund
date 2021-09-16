@@ -31,5 +31,6 @@ pub mod transformer_base;
 pub mod typed_graph;
 pub mod typed_graph_builder;
 pub mod typed_graph_line_processor;
+pub mod weighted_core_transformer;
 pub mod weighted_undirected_graph;
 pub mod weighted_undirected_graph_builder;
