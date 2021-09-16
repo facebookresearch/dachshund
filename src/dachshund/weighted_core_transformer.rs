@@ -12,7 +12,7 @@ use crate::dachshund::algorithms::coreness::FractionalCoreness;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
-use crate::dachshund::line_processor::{LineProcessor, LineProcessorBase};
+use crate::dachshund::line_processor::{WeightedLineProcessor, LineProcessorBase};
 use crate::dachshund::row::{Row, WeightedEdgeRow};
 use crate::dachshund::transformer_base::TransformerBase;
 use crate::dachshund::weighted_undirected_graph_builder::WeightedUndirectedGraphBuilder;
@@ -23,14 +23,14 @@ use ordered_float::NotNan;
 
 pub struct WeightedCoreTransformer {
     batch: Vec<WeightedEdgeRow>,
-    line_processor: Arc<LineProcessor>,
+    line_processor: Arc<WeightedLineProcessor>,
 }
 
 impl WeightedCoreTransformer {
     pub fn new() -> Self {
         Self {
             batch: Vec::new(),
-            line_processor: Arc::new(LineProcessor::new()),
+            line_processor: Arc::new(WeightedLineProcessor::new()),
         }
     }
 }
