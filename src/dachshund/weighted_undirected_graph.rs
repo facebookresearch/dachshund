@@ -25,13 +25,12 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
-use std::cmp::Reverse;
+
 
 use fxhash::FxHashMap;
-use std::collections::hash_map::{HashMap, Keys, Values};
+use std::collections::hash_map::{Keys, Values};
 
-use ordered_float::NotNan;
-use priority_queue::PriorityQueue;
+
 
 /// Keeps track of a weighted undirected graph, composed of nodes that have weighed.
 pub struct WeightedUndirectedGraph {
@@ -111,69 +110,7 @@ impl UndirectedGraph for WeightedUndirectedGraph {}
 impl ConnectedComponents for WeightedUndirectedGraph {}
 impl ConnectedComponentsUndirected for WeightedUndirectedGraph {}
 impl Coreness for WeightedUndirectedGraph {}
-impl FractionalCoreness for WeightedUndirectedGraph {
-    // [TODO Fix trait bounds and move this to coreness.rs.]
-    fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64> {
-        // The fractional coreness value is the same as standard k-cores except
-        // using total edge weight for each vertex in the k-core, instead of the
-        // degree inside the subgraph.
-
-        // The fractional k-core (sometimes called the s-core) is a set of nodes
-        // where every node has edges with total weight at least k between it and the other
-        // nodes in the fractional k-core.
-
-        // Start by making a priority queue with each node. Priority will be equal to weight
-        // of that node from all edges where we haven't removed the other ends yet.
-        // Use PriorityQueue instead of BinaryHeap because the workload uses change priority.
-        // [TODO:Perf] Switch to hashbrown. Benchmark performance.
-        let mut pq = PriorityQueue::with_capacity(self.nodes.len());
-
-        // Initially the priority of the of each node is the node weight (the total edge weight
-        // of each incident edge.)
-        for node in self.get_nodes_iter() {
-            pq.push(node.get_id(), Reverse(NotNan::new(node.weight()).unwrap()));
-        }
-        let mut coreness: HashMap<NodeId, f64> = HashMap::new();
-        let mut next_shell_coreness = NotNan::new(f64::NEG_INFINITY).unwrap();
-
-        loop {
-            // Take the minimum (remaining) weight node that hasn't yet been processed.
-            match pq.pop() {
-                Some((node_id, Reverse(nn))) => {
-                    // If the remaining weight for that node is larger than the value for the current
-                    // shell, we've progressed to the next shell (all remaining nodes comprise the k-core.)
-                    if nn > next_shell_coreness{
-                        next_shell_coreness = nn
-                    }
-
-                    // The coreness value is the node is the current shell value we're on
-                    // (Note: not its current priority; if removals from the current shell have
-                    // reduced its priority below the current shell's coreness value, the node
-                    // is still in this shell, not one we've already processed.)
-                    coreness.insert(node_id, next_shell_coreness.into_inner());
-
-                    // Process a removal: For each neighbor that hasn't been removed yet,
-                    // decrement their priority by the weight of the edge.
-                    for e in self.get_node(node_id).get_edges() {
-                        let neighbor_id = e.target_id;
-                        match pq.get_priority(&neighbor_id) {
-                            Some(Reverse(old_priority)) => {
-                                let new_priority: f64 = old_priority.into_inner() - e.weight;
-                                pq.change_priority(
-                                    &neighbor_id,
-                                    Reverse(NotNan::new(new_priority).unwrap()),
-                                );
-                            }
-                            None => (),
-                        };
-                    }
-                },
-                None => break
-            }
-        }
-        coreness
-    }
-}
+impl FractionalCoreness for WeightedUndirectedGraph {}
 
 impl AdjacencyMatrix for WeightedUndirectedGraph {}
 impl Clustering for WeightedUndirectedGraph {}
