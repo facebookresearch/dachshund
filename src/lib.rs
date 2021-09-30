@@ -50,5 +50,6 @@ pub use dachshund::transformer_base::TransformerBase;
 pub use dachshund::typed_graph::TypedGraph;
 pub use dachshund::typed_graph_builder::TypedGraphBuilder;
 pub use dachshund::typed_graph_line_processor::TypedGraphLineProcessor;
+pub use dachshund::weighted_core_transformer::WeightedCoreTransformer;
 pub use dachshund::weighted_undirected_graph::WeightedUndirectedGraph;
 pub use dachshund::weighted_undirected_graph_builder::WeightedUndirectedGraphBuilder;

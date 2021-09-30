@@ -7,14 +7,16 @@
 extern crate fxhash;
 
 use crate::dachshund::algorithms::connected_components::ConnectedComponents;
-use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::graph_base::{GraphBase};
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
 use core::cmp::Reverse;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
 use fxhash::FxHashSet;
+use ordered_float::NotNan;
+use priority_queue::PriorityQueue;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
@@ -259,9 +261,60 @@ pub trait Coreness: GraphBase + ConnectedComponents {
     }
 }
 
-pub trait FractionalCoreness {
-    // [TODO] With the right trait bounds, this can be implemented here instead of in weighted_undirected_graph.
-    fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64>;
+pub trait FractionalCoreness : GraphBase<NodeType=WeightedNode>
+{
+    fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64> {
+        // The fractional coreness value is the same as standard k-cores except
+        // using total edge weight for each vertex in the k-core, instead of the
+        // degree inside the subgraph.
+
+        // The fractional k-core (sometimes called the s-core) is a set of nodes
+        // where every node has edges with total weight at least k between it and the other
+        // nodes in the fractional k-core.
+
+        // Start by making a priority queue with each node. Priority will be equal to weight
+        // of that node from all edges where we haven't removed the other ends yet.
+        // Use PriorityQueue instead of BinaryHeap because the workload uses change priority.
+        // [TODO:Perf] Switch to hashbrown. Benchmark performance.
+        let mut pq = PriorityQueue::with_capacity(self.get_nodes_iter().len());
+
+        // Initially the priority of the of each node is the node weight (the total edge weight
+        // of each incident edge.)
+        for node in self.get_nodes_iter() {
+            pq.push(node.get_id(), Reverse(NotNan::new(node.weight()).unwrap()));
+        }
+        let mut coreness: HashMap<NodeId, f64> = HashMap::new();
+        let mut next_shell_coreness = NotNan::new(f64::NEG_INFINITY).unwrap();
+
+        // Take the minimum (remaining) weight node that hasn't yet been processed.
+        while let Some((node_id, Reverse(nn))) = pq.pop() {
+            // If the remaining weight for that node is larger than the value for the current
+            // shell, we've progressed to the next shell (all remaining nodes comprise the k-core.)
+            if nn > next_shell_coreness{
+                next_shell_coreness = nn
+            }
+
+            // The coreness value is the node is the current shell value we're on
+            // (Note: not its current priority; if removals from the current shell have
+            // reduced its priority below the current shell's coreness value, the node
+            // is still in this shell, not one we've already processed.)
+            coreness.insert(node_id, next_shell_coreness.into_inner());
+
+            // Process a removal: For each neighbor that hasn't been removed yet,
+            // decrement their priority by the weight of the edge.
+            for e in self.get_node(node_id).get_edges() {
+                let neighbor_id = e.target_id;
+                if let Some(Reverse(old_priority)) = pq.get_priority(&neighbor_id) {
+                    let new_priority: f64 = old_priority.into_inner() - e.weight;
+                    pq.change_priority(
+                        &neighbor_id,
+                        Reverse(NotNan::new(new_priority).unwrap()),
+                    );
+                }
+            }
+        }
+        coreness
+    }
 }
 
 pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
