@@ -52,7 +52,7 @@ pub trait TransformerBase {
                         }
                         num_processed_clone.fetch_add(1, Ordering::SeqCst);
                     }
-                    Err(error) => panic!(error),
+                    Err(error) => panic!("{}", error),
                 }
             });
             let mut current_graph_id: Option<GraphId> = None;
