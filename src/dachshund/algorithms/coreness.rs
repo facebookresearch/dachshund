@@ -4,27 +4,30 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
+
 use crate::dachshund::algorithms::connected_components::ConnectedComponents;
-use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::graph_base::{GraphBase};
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
+use core::cmp::Reverse;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
+
+use fxhash::FxHashSet;
+use ordered_float::NotNan;
+use priority_queue::PriorityQueue;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
 pub trait Coreness: GraphBase + ConnectedComponents {
-    fn _get_k_cores(&self, k: usize, removed: &mut HashSet<NodeId>) -> Vec<Vec<NodeId>> {
+    fn _get_k_cores(&self, k: usize, removed: &mut FxHashSet<NodeId>) -> Vec<Vec<NodeId>> {
+        // [BUG] This algorithm has a bug. See simple_graph.rs tests.
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
         let mut num_neighbors: HashMap<NodeId, usize> = self
             .get_nodes_iter()
-            .map(|x| {
-                (
-                    x.get_id(),
-                    HashSet::<NodeId>::from_iter(x.get_edges().map(|y| y.get_neighbor_id())).len(),
-                )
-            })
+            .map(|x| (x.get_id(), x.degree()))
             .collect();
         // iteratively delete all nodes w/ degree less than k
         while !queue.is_empty() {
@@ -46,35 +49,137 @@ pub trait Coreness: GraphBase + ConnectedComponents {
     }
 
     fn get_k_cores(&self, k: usize) -> Vec<Vec<NodeId>> {
-        let mut removed: HashSet<NodeId> = HashSet::new();
+        let mut removed: FxHashSet<NodeId> = FxHashSet::default();
         self._get_k_cores(k, &mut removed)
     }
 
-    fn get_coreness(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
-        let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
-        let mut removed: HashSet<NodeId> = HashSet::new();
-        let mut k: usize = 0;
-        while removed.len() < self.count_nodes() {
-            k += 1;
-            core_assignments.push(self._get_k_cores(k, &mut removed))
+    fn _init_bin_starts(
+        &self,
+        ordered_nodes: &Vec<NodeId>,
+        degree: &HashMap<NodeId, usize>,
+    ) -> Vec<usize> {
+        // bin_boundaries[i] tracks the leftmost index in ordered_nodes
+        // such that degree of the node at that index >= i
+        let mut bin_boundaries = vec![0];
+        let mut current_degree = 0;
+        for i in 0..ordered_nodes.len() {
+            let new_degree = degree[&ordered_nodes[i]];
+            if new_degree > current_degree {
+                // create one new bin for each possible degree value
+                for _ in current_degree + 1..=new_degree {
+                    bin_boundaries.push(i);
+                }
+                current_degree = new_degree;
+            }
         }
-        let mut coreness: HashMap<NodeId, usize> = HashMap::new();
-        for i in (0..k).rev() {
-            for ids in &core_assignments[i] {
-                for id in ids {
-                    if !coreness.contains_key(id) {
-                        coreness.insert(*id, i + 1);
+        bin_boundaries
+    }
+
+    fn get_coreness(&self) -> (Vec<Vec<Vec<NodeId>>>, HashMap<NodeId, usize>) {
+        let coreness = self.get_coreness_values();
+        let core_assignments = self._get_core_assignments(&coreness);
+        (core_assignments, coreness)
+    }
+
+    fn _get_core_assignments(&self, coreness: &HashMap<NodeId, usize>) -> Vec<Vec<Vec<NodeId>>> {
+        // Use coreness mapping to compute connected components of each k-core.
+        let mut nodes: Vec<NodeId> = coreness.keys().cloned().collect();
+        nodes.sort_unstable_by_key(|node_id| coreness[node_id]);
+        // coreness_bin_starts[i] = j means i core consists of nodes[j..]
+        // so when computing connected components, we exclude
+        // initial segments of nodes up to the starts of these bins.
+        let coreness_bin_starts = self._init_bin_starts(&nodes, &coreness);
+
+        let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
+        let mut removed: FxHashSet<NodeId>;
+        for bin_start in &coreness_bin_starts[1..] {
+            removed = nodes[..*bin_start].iter().cloned().collect();
+            core_assignments.push(self._get_connected_components(Some(&removed), None));
+        }
+        core_assignments
+    }
+
+    fn get_coreness_values(&self) -> HashMap<NodeId, usize> {
+        // Traverse the nodes in increasing order of degree to calculate coreness.
+        // See: https://arxiv.org/abs/cs/0310049 for an explanation of the bookkeeping details.
+
+        // The initial value for the coreness of each node is its degree.
+        let mut coreness: HashMap<NodeId, usize> = self
+            .get_nodes_iter()
+            .map(|x| (x.get_id(), x.degree()))
+            .collect();
+
+        // Nodes in increasing order of coreness. We process this in order
+        // and keep in order as we delete edges.
+        let mut nodes: Vec<NodeId> = coreness.keys().cloned().collect();
+        nodes.sort_unstable_by_key(|node_id| coreness[node_id]);
+
+        let mut bin_starts = self._init_bin_starts(&nodes, &coreness);
+
+        let mut node_idx: HashMap<NodeId, usize> = HashMap::new();
+        for (i, &node) in nodes.iter().enumerate() {
+            node_idx.insert(node, i);
+        }
+
+        let mut neighbors: HashMap<NodeId, FxHashSet<NodeId>> = HashMap::new();
+        for node in self.get_nodes_iter() {
+            neighbors.insert(
+                node.get_id(),
+                FxHashSet::<NodeId>::from_iter(node.get_edges().map(|edge| edge.get_neighbor_id())),
+            );
+        }
+
+        for i in 0..nodes.len() {
+            let node_id = nodes[i];
+            let node_nbrs: Vec<NodeId> = neighbors.get(&node_id).unwrap().iter().cloned().collect();
+            for nbr_id in node_nbrs {
+                let nbr_coreness = coreness[&nbr_id];
+                if nbr_coreness > coreness[&node_id] {
+                    neighbors.get_mut(&nbr_id).unwrap().remove(&node_id);
+                    let nbr_idx = node_idx[&nbr_id];
+                    let nbr_bin_start = bin_starts[nbr_coreness];
+
+                    let nbr_idx_ptr = node_idx.get_mut(&nbr_id).unwrap() as *mut usize;
+                    let bin_start_node_idx_ptr =
+                        node_idx.get_mut(&nodes[nbr_bin_start]).unwrap() as *mut usize;
+                    unsafe {
+                        std::ptr::swap(nbr_idx_ptr, bin_start_node_idx_ptr);
                     }
+                    nodes.swap(nbr_idx, nbr_bin_start);
+
+                    bin_starts[nbr_coreness] += 1;
+                    *coreness.entry(nbr_id).or_default() -= 1;
                 }
             }
         }
-        (core_assignments, coreness)
+
+        coreness
+    }
+
+    fn get_coreness_anomaly(&self, coreness: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
+        // Calculate the coreness anomaly score of all nodes as the absolute
+        // value of the difference between the logs of the ranks by
+        // degree and coreness.
+
+        // See algorithm Core-A in https://www.cs.cmu.edu/~kijungs/papers/kcoreICDM2016.pdf
+        let mut anomaly_scores = HashMap::new();
+        let core_ranks = averaged_ties_ranking(&coreness);
+        let deg_ranks = averaged_ties_ranking(
+            &self
+                .get_nodes_iter()
+                .map(|x| (x.get_id(), x.degree()))
+                .collect(),
+        );
+        for node in self.get_ordered_node_ids() {
+            anomaly_scores.insert(node, (core_ranks[&node].ln() - deg_ranks[&node].ln()).abs());
+        }
+        anomaly_scores
     }
 
     fn _get_k_trusses(
         &self,
         k: usize,
-        ignore_nodes: &HashSet<NodeId>,
+        ignore_nodes: &FxHashSet<NodeId>,
     ) -> (Vec<OrderedEdgeSet>, HashSet<OrderedNodeSet>) {
         let mut neighbors: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
         let mut edges: OrderedEdgeSet = BTreeSet::new();
@@ -149,9 +254,97 @@ pub trait Coreness: GraphBase + ConnectedComponents {
 
         // ignore_nodes will contain all the irrelevant nodes after
         // calling self._get_k_cores();
-        let mut ignore_nodes: HashSet<NodeId> = HashSet::new();
+        let mut ignore_nodes: FxHashSet<NodeId> = FxHashSet::default();
         // this really only works for an undirected graph
         self._get_k_cores(k - 1, &mut ignore_nodes);
         self._get_k_trusses(k, &ignore_nodes)
     }
+}
+
+pub trait FractionalCoreness : GraphBase<NodeType=WeightedNode>
+{
+    fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64> {
+        // The fractional coreness value is the same as standard k-cores except
+        // using total edge weight for each vertex in the k-core, instead of the
+        // degree inside the subgraph.
+
+        // The fractional k-core (sometimes called the s-core) is a set of nodes
+        // where every node has edges with total weight at least k between it and the other
+        // nodes in the fractional k-core.
+
+        // Start by making a priority queue with each node. Priority will be equal to weight
+        // of that node from all edges where we haven't removed the other ends yet.
+        // Use PriorityQueue instead of BinaryHeap because the workload uses change priority.
+        // [TODO:Perf] Switch to hashbrown. Benchmark performance.
+        let mut pq = PriorityQueue::with_capacity(self.get_nodes_iter().len());
+
+        // Initially the priority of the of each node is the node weight (the total edge weight
+        // of each incident edge.)
+        for node in self.get_nodes_iter() {
+            pq.push(node.get_id(), Reverse(NotNan::new(node.weight()).unwrap()));
+        }
+        let mut coreness: HashMap<NodeId, f64> = HashMap::new();
+        let mut next_shell_coreness = NotNan::new(f64::NEG_INFINITY).unwrap();
+
+        // Take the minimum (remaining) weight node that hasn't yet been processed.
+        while let Some((node_id, Reverse(nn))) = pq.pop() {
+            // If the remaining weight for that node is larger than the value for the current
+            // shell, we've progressed to the next shell (all remaining nodes comprise the k-core.)
+            if nn > next_shell_coreness{
+                next_shell_coreness = nn
+            }
+
+            // The coreness value is the node is the current shell value we're on
+            // (Note: not its current priority; if removals from the current shell have
+            // reduced its priority below the current shell's coreness value, the node
+            // is still in this shell, not one we've already processed.)
+            coreness.insert(node_id, next_shell_coreness.into_inner());
+
+            // Process a removal: For each neighbor that hasn't been removed yet,
+            // decrement their priority by the weight of the edge.
+            for e in self.get_node(node_id).get_edges() {
+                let neighbor_id = e.target_id;
+                if let Some(Reverse(old_priority)) = pq.get_priority(&neighbor_id) {
+                    let new_priority: f64 = old_priority.into_inner() - e.weight;
+                    pq.change_priority(
+                        &neighbor_id,
+                        Reverse(NotNan::new(new_priority).unwrap()),
+                    );
+                }
+            }
+        }
+        coreness
+    }
+}
+
+pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId, f64> {
+    // Given a map from NodeIds to values, create a new map from those NodeIds to their rank.
+    // In the case of ties, all tied keys get the same, averaged rank.
+    // e.g. {1: 10, 2: 20, 3: 15, 4: 20, 5: 25} -> {5: 1, 4: 2.5, 2: 2.5, 3: 4, 1: 5}
+
+    let mut ranking = HashMap::new();
+    let mut sorted_nodes: Vec<(&NodeId, &usize)> = scores.iter().collect();
+    sorted_nodes.sort_unstable_by_key(|(_node, value)| Reverse(*value));
+
+    let mut tied_nodes: Vec<&NodeId> = Vec::<&NodeId>::new();
+    let mut tied_rank: f64;
+    let mut last_value: Option<usize> = None;
+
+    for (i, (node, &value)) in sorted_nodes.into_iter().enumerate() {
+        if last_value == None || Some(value) == last_value {
+            tied_nodes.push(node);
+        } else {
+            tied_rank = (i as f64) - (tied_nodes.len() - 1) as f64 / 2.0;
+            for tied_node in tied_nodes {
+                ranking.insert(*tied_node, tied_rank as f64);
+            }
+            tied_nodes = vec![node];
+        }
+        last_value = Some(value);
+    }
+    tied_rank = (scores.len() as f64) - (tied_nodes.len() - 1) as f64 / 2.0;
+    for tied_node in tied_nodes {
+        ranking.insert(*tied_node, tied_rank as f64);
+    }
+    ranking
 }

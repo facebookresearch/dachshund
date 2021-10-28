@@ -6,8 +6,10 @@
  */
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::NodeBase;
+
+extern crate fxhash;
+use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
-use std::collections::HashMap;
 
 /// General-purpose trait which indicates the minimum amount of shared context
 /// required between all graph objects. Currently built to accommodate a graph
@@ -23,7 +25,7 @@ where
     fn get_non_core_ids(&self) -> Option<&Vec<NodeId>>;
     fn get_ids_iter(&self) -> Keys<NodeId, Self::NodeType>;
     fn get_nodes_iter(&self) -> Values<NodeId, Self::NodeType>;
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Self::NodeType>;
+    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, Self::NodeType>;
     fn has_node(&self, node_id: NodeId) -> bool;
     fn get_node(&self, node_id: NodeId) -> &Self::NodeType;
     fn count_edges(&self) -> usize;

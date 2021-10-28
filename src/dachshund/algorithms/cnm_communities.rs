@@ -269,7 +269,7 @@ pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
         let mut modularity_change = state.maxh.peek().unwrap().delta_ij.into_inner();
         let mut modularity_changes: Vec<f64> = vec![modularity_change];
 
-        while state.maxh.len() > 0 && modularity_change > 0. {
+        while !state.maxh.is_empty() && modularity_change > 0. {
             state = self.iterate_cnm_communities(state);
             if state.maxh.peek().is_some() {
                 modularity_change = state.maxh.peek().unwrap().delta_ij.into_inner();

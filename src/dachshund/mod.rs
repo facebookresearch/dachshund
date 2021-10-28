@@ -7,9 +7,9 @@
 pub mod algorithms;
 pub mod beam;
 pub mod candidate;
+pub mod core_transformer;
 pub mod error;
 pub mod graph_base;
-pub mod graph_builder;
 pub mod graph_builder_base;
 pub mod id_types;
 pub mod input;
@@ -31,3 +31,6 @@ pub mod transformer_base;
 pub mod typed_graph;
 pub mod typed_graph_builder;
 pub mod typed_graph_line_processor;
+pub mod weighted_core_transformer;
+pub mod weighted_undirected_graph;
+pub mod weighted_undirected_graph_builder;

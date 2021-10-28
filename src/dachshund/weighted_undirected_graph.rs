@@ -5,39 +5,40 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate fxhash;
+extern crate ordered_float;
+extern crate priority_queue;
+
 use crate::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::algorithms::algebraic_connectivity::AlgebraicConnectivity;
 use crate::dachshund::algorithms::betweenness::Betweenness;
 use crate::dachshund::algorithms::clustering::Clustering;
-use crate::dachshund::algorithms::cnm_communities::CNMCommunities;
 use crate::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
 use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityUndirected};
-use crate::dachshund::algorithms::coreness::Coreness;
+use crate::dachshund::algorithms::coreness::{Coreness, FractionalCoreness};
 use crate::dachshund::algorithms::eigenvector_centrality::EigenvectorCentrality;
 use crate::dachshund::algorithms::laplacian::Laplacian;
 use crate::dachshund::algorithms::shortest_paths::ShortestPaths;
 use crate::dachshund::algorithms::transitivity::Transitivity;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase, SimpleNode};
+use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
+use crate::dachshund::simple_undirected_graph::UndirectedGraph;
+
+
 use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
 
-pub trait UndirectedGraph
-where
-    Self: GraphBase,
-{
-}
 
-/// Keeps track of a simple undirected graph, composed of nodes without any type information.
-pub struct SimpleUndirectedGraph {
-    pub nodes: FxHashMap<NodeId, SimpleNode>,
+
+/// Keeps track of a weighted undirected graph, composed of nodes that have weighed.
+pub struct WeightedUndirectedGraph {
+    pub nodes: FxHashMap<NodeId, WeightedNode>,
     pub ids: Vec<NodeId>,
 }
-impl GraphBase for SimpleUndirectedGraph {
-    type NodeType = SimpleNode;
+impl GraphBase for WeightedUndirectedGraph {
+    type NodeType = WeightedNode;
 
     /// core and non-core IDs are the same for a `SimpleUndirectedGraph`.
     fn get_core_ids(&self) -> &Vec<NodeId> {
@@ -47,19 +48,19 @@ impl GraphBase for SimpleUndirectedGraph {
     fn get_non_core_ids(&self) -> Option<&Vec<NodeId>> {
         Some(&self.ids)
     }
-    fn get_ids_iter(&self) -> Keys<NodeId, SimpleNode> {
+    fn get_ids_iter(&self) -> Keys<NodeId, WeightedNode> {
         self.nodes.keys()
     }
-    fn get_nodes_iter(&self) -> Values<NodeId, SimpleNode> {
+    fn get_nodes_iter(&self) -> Values<NodeId, WeightedNode> {
         self.nodes.values()
     }
-    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, SimpleNode> {
+    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, WeightedNode> {
         &mut self.nodes
     }
     fn has_node(&self, node_id: NodeId) -> bool {
         self.nodes.contains_key(&node_id)
     }
-    fn get_node(&self, node_id: NodeId) -> &SimpleNode {
+    fn get_node(&self, node_id: NodeId) -> &WeightedNode {
         &self.nodes[&node_id]
     }
     fn count_edges(&self) -> usize {
@@ -73,23 +74,24 @@ impl GraphBase for SimpleUndirectedGraph {
         self.nodes.len()
     }
     fn create_empty() -> Self {
-        SimpleUndirectedGraph {
+        WeightedUndirectedGraph {
             nodes: FxHashMap::default(),
             ids: Vec::new(),
         }
     }
 }
-impl SimpleUndirectedGraph {
+impl WeightedUndirectedGraph {
     pub fn as_input_rows(&self, graph_id: usize) -> String {
         let mut rows: Vec<String> = Vec::new();
         for (id, node) in &self.nodes {
             for e in node.get_edges() {
                 if *id < e.get_neighbor_id() {
                     rows.push(format!(
-                        "{}\t{}\t{}",
+                        "{}\t{}\t{}\t{}",
                         graph_id,
                         id.value(),
-                        e.get_neighbor_id().value()
+                        e.get_neighbor_id().value(),
+                        e.weight
                     ));
                 }
             }
@@ -99,21 +101,24 @@ impl SimpleUndirectedGraph {
     pub fn get_node_degree(&self, id: NodeId) -> usize {
         self.nodes[&id].degree()
     }
+    pub fn get_node_weight(&self, id: NodeId) -> f64 {
+        self.nodes[&id].weight()
+    }
 }
-impl UndirectedGraph for SimpleUndirectedGraph {}
+impl UndirectedGraph for WeightedUndirectedGraph {}
 
-impl CNMCommunities for SimpleUndirectedGraph {}
-impl ConnectedComponents for SimpleUndirectedGraph {}
-impl ConnectedComponentsUndirected for SimpleUndirectedGraph {}
-impl Coreness for SimpleUndirectedGraph {}
+impl ConnectedComponents for WeightedUndirectedGraph {}
+impl ConnectedComponentsUndirected for WeightedUndirectedGraph {}
+impl Coreness for WeightedUndirectedGraph {}
+impl FractionalCoreness for WeightedUndirectedGraph {}
 
-impl AdjacencyMatrix for SimpleUndirectedGraph {}
-impl Clustering for SimpleUndirectedGraph {}
-impl Connectivity for SimpleUndirectedGraph {}
-impl ConnectivityUndirected for SimpleUndirectedGraph {}
-impl Betweenness for SimpleUndirectedGraph {}
-impl Laplacian for SimpleUndirectedGraph {}
-impl Transitivity for SimpleUndirectedGraph {}
-impl ShortestPaths for SimpleUndirectedGraph {}
-impl AlgebraicConnectivity for SimpleUndirectedGraph {}
-impl EigenvectorCentrality for SimpleUndirectedGraph {}
+impl AdjacencyMatrix for WeightedUndirectedGraph {}
+impl Clustering for WeightedUndirectedGraph {}
+impl Connectivity for WeightedUndirectedGraph {}
+impl ConnectivityUndirected for WeightedUndirectedGraph {}
+impl Betweenness for WeightedUndirectedGraph {}
+impl Laplacian for WeightedUndirectedGraph {}
+impl Transitivity for WeightedUndirectedGraph {}
+impl ShortestPaths for WeightedUndirectedGraph {}
+impl AlgebraicConnectivity for WeightedUndirectedGraph {}
+impl EigenvectorCentrality for WeightedUndirectedGraph {}

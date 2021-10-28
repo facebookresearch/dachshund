@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase};
 use crate::dachshund::simple_directed_graph::DirectedGraph;
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::BTreeSet;
@@ -18,6 +18,7 @@ pub trait Connectivity: GraphBase {
         &'a self,
         root: &NodeId,
         visited: &mut OrderedNodeSet,
+        newly_visited: &mut Vec<NodeId>,
         edge_fn: fn(
             &'a Self::NodeType,
         ) -> Box<
@@ -35,6 +36,7 @@ pub trait Connectivity: GraphBase {
                     to_visit.push(neighbor_id);
                 }
             }
+            newly_visited.push(node_id);
             visited.insert(node_id);
         }
     }
@@ -51,7 +53,7 @@ pub trait Connectivity: GraphBase {
             return Err("Graph is empty");
         }
         let root = self.get_ids_iter().next().unwrap();
-        self.visit_nodes_from_root(&root, &mut visited, edge_fn);
+        self.visit_nodes_from_root(&root, &mut visited, &mut Vec::new(), edge_fn);
         Ok(visited.len() == self.count_nodes())
     }
 }
@@ -68,6 +70,7 @@ pub trait ConnectivityDirected: GraphBase
 where
     Self: Connectivity,
     Self: DirectedGraph,
+    <Self as GraphBase>::NodeType: DirectedNodeBase,
 {
     fn get_is_weakly_connected(&self) -> Result<bool, &'static str> {
         self._get_is_connected(Self::NodeType::get_edges)

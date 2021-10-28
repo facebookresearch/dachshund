@@ -10,7 +10,9 @@ use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsUndirected,
 };
+use lib_dachshund::dachshund::algorithms::coreness::averaged_ties_ranking;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
+use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::id_types::NodeId;
 use lib_dachshund::dachshund::input::Input;
@@ -20,10 +22,10 @@ use lib_dachshund::dachshund::simple_transformer::{
 };
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
 
-fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
+fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
     let v = match idx {
         0 => vec![
             (0, 1),
@@ -134,11 +136,27 @@ fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
             (20, 22),
             (20, 24),
         ],
-        _ => return Err("Invalid index".to_string()),
+        7 => vec![
+            (1, 3),
+            (2, 4),
+            (1, 5),
+            (2, 6),
+            (1, 7),
+            (2, 8),
+            (1, 9),
+            (2, 10),
+            (1, 11),
+            (2, 12),
+            (11, 13),
+            (11, 14),
+            (12, 13),
+            (12, 14),
+            (13, 14),
+        ],
+        _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
-    Ok(SimpleUndirectedGraphBuilder::from_vector(
-        &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-    ))
+    SimpleUndirectedGraphBuilder {}
+        .from_vector(v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
 }
 fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
     match idx {
@@ -251,6 +269,54 @@ fn test_truss_graph() {
             .into_iter()
             .map(|x| NodeId::from(x as i64))
     )));
+}
+
+#[cfg(test)]
+#[test]
+fn test_coreness() {
+    // This graph is a pair of disjoint cycles, so every node has coreness 2.
+    let (_cores, coreness) = get_graph(3).unwrap().get_coreness();
+    let two_cores = get_graph(3).unwrap().get_k_cores(2);
+    let three_cores = get_graph(3).unwrap().get_k_cores(3);
+
+    assert_eq!(*coreness.get(&NodeId::from(2 as i64)).unwrap(), 2);
+    assert_eq!(*coreness.get(&NodeId::from(5 as i64)).unwrap(), 2);
+
+    // There are 2 connected components in the 2-cores...
+    assert_eq!(two_cores.len(), 2);
+    // ... which each contain 3 nodes.
+    assert_eq!(two_cores[0].len(), 3);
+    assert_eq!(two_cores[1].len(), 3);
+
+    // The three core should be empty
+    assert_eq!(three_cores.len(), 0);
+
+    // This is a tricky case that the breaks the original algorithm.
+    let (_cores, coreness) = get_graph(7).unwrap().get_coreness();
+    for i in 1..15 {
+        let expected_coreness = if i > 10 { 2 } else { 1 };
+        assert_eq!(
+            *coreness.get(&NodeId::from(i as i64)).unwrap(),
+            expected_coreness
+        );
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn test_averaged_ties_ranking() {
+    let values = vec![(1, 10), (2, 20), (3, 15), (4, 20), (5, 25)];
+    let rankings = vec![(5, 1.0), (4, 2.5), (2, 2.5), (3, 4.0), (1, 5.0)];
+
+    let mut value_map: HashMap<NodeId, usize> = HashMap::new();
+    for (node, val) in values {
+        value_map.insert(NodeId::from(node), val);
+    }
+    let rankings_map = averaged_ties_ranking(&value_map);
+
+    for (node, rank) in rankings {
+        assert_eq!(*rankings_map.get(&NodeId::from(node as i64)).unwrap(), rank);
+    }
 }
 
 #[test]

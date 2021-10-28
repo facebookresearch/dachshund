@@ -25,14 +25,18 @@ use lib_dachshund::dachshund::algorithms::eigenvector_centrality::EigenvectorCen
 use lib_dachshund::dachshund::algorithms::laplacian::Laplacian;
 use lib_dachshund::dachshund::algorithms::shortest_paths::ShortestPaths;
 use lib_dachshund::dachshund::algorithms::transitivity::Transitivity;
+use lib_dachshund::dachshund::error::CLQResult;
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::id_types::NodeId;
-use lib_dachshund::dachshund::simple_directed_graph::SimpleDirectedGraph;
+use lib_dachshund::dachshund::node::DirectedNodeBase;
+use lib_dachshund::dachshund::simple_directed_graph::{DirectedGraph, SimpleDirectedGraph};
 use lib_dachshund::dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
-use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::{HashMap, HashSet};
+use lib_dachshund::dachshund::simple_undirected_graph_builder::{
+    SimpleUndirectedGraphBuilder, SimpleUndirectedGraphBuilderWithCliques,
+};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use test::Bencher;
 
 fn get_karate_club_edges() -> Vec<(usize, usize)> {
@@ -117,25 +121,26 @@ fn get_karate_club_edges() -> Vec<(usize, usize)> {
         (33, 34),
     ]
 }
-fn _get_karate_club_graph_with_one_extra_edge<T, R>() -> R
+fn _get_karate_club_graph_with_one_extra_edge<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
-    T: GraphBuilderBase<GraphType = R>,
+    T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
 {
     let mut rows = get_karate_club_edges();
     rows.push((35, 36));
-    T::from_vector(
-        &rows
-            .into_iter()
+    builder.from_vector(
+        rows.into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
     )
 }
-fn get_karate_club_graph_with_one_extra_edge() -> SimpleUndirectedGraph {
-    _get_karate_club_graph_with_one_extra_edge::<SimpleUndirectedGraphBuilder, _>()
+fn get_karate_club_graph_with_one_extra_edge() -> CLQResult<SimpleUndirectedGraph> {
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_karate_club_graph_with_one_extra_edge::<SimpleUndirectedGraphBuilder, _>(builder)
 }
-fn get_directed_karate_club_graph_with_one_extra_edge() -> SimpleDirectedGraph {
-    _get_karate_club_graph_with_one_extra_edge::<SimpleDirectedGraphBuilder, _>()
+fn get_directed_karate_club_graph_with_one_extra_edge() -> CLQResult<SimpleDirectedGraph> {
+    let builder = SimpleDirectedGraphBuilder {};
+    _get_karate_club_graph_with_one_extra_edge::<SimpleDirectedGraphBuilder, _>(builder)
 }
 
 fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
@@ -146,65 +151,106 @@ fn get_two_karate_clubs_edges() -> Vec<(usize, usize)> {
     rows
 }
 
-fn _get_two_karate_clubs<T, R>() -> R
+fn _get_two_karate_clubs<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
-    T: GraphBuilderBase<GraphType = R>,
+    T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
 {
     let rows = get_two_karate_clubs_edges();
-    T::from_vector(
-        &rows
-            .into_iter()
+    builder.from_vector(
+        rows.into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
     )
 }
-fn get_two_karate_clubs() -> SimpleUndirectedGraph {
-    _get_two_karate_clubs::<SimpleUndirectedGraphBuilder, _>()
+fn get_two_karate_clubs() -> CLQResult<SimpleUndirectedGraph> {
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_two_karate_clubs::<SimpleUndirectedGraphBuilder, _>(builder)
+}
+fn get_directed_karate_club_graph_both_ways() -> CLQResult<SimpleDirectedGraph> {
+    let rows = get_karate_club_edges();
+    let mut builder = SimpleDirectedGraphBuilder {};
+    let graph = builder.from_vector(
+        rows.iter()
+            .cloned()
+            .map(|(x, y)| (x as i64, y as i64))
+            .chain(rows.iter().cloned().map(|(x, y)| (y as i64, x as i64)))
+            .collect(),
+    )?;
+    for node in graph.get_nodes_iter() {
+        assert_eq!(node.get_in_degree(), node.get_out_degree());
+    }
+    Ok(graph)
+}
+fn get_directed_karate_club_graph_with_core(
+    core: HashSet<usize>,
+) -> CLQResult<SimpleDirectedGraph> {
+    let rows = get_karate_club_edges();
+    let mut builder = SimpleDirectedGraphBuilder {};
+    let graph = builder.from_vector(
+        rows.iter()
+            .cloned()
+            .map(|(x, y)| (x as i64, y as i64))
+            .chain(
+                rows.iter()
+                    .cloned()
+                    .filter(|(x, y)| core.contains(x) && core.contains(y))
+                    .map(|(x, y)| (y as i64, x as i64)),
+            )
+            .collect(),
+    );
+    graph
 }
 
-fn _get_two_karate_clubs_with_bridge<T, R>() -> R
+fn _get_two_karate_clubs_with_bridge<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
-    T: GraphBuilderBase<GraphType = R>,
+    T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
 {
     let mut rows = get_two_karate_clubs_edges();
     rows.push((34, 35));
-    T::from_vector(
-        &rows
-            .into_iter()
+    builder.from_vector(
+        rows.into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
     )
 }
-fn get_two_karate_clubs_with_bridge() -> SimpleUndirectedGraph {
-    _get_two_karate_clubs_with_bridge::<SimpleUndirectedGraphBuilder, _>()
+fn get_two_karate_clubs_with_bridge() -> CLQResult<SimpleUndirectedGraph> {
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_two_karate_clubs_with_bridge::<SimpleUndirectedGraphBuilder, _>(builder)
 }
 
-fn _get_karate_club_graph<T, R>() -> R
+fn _get_karate_club_graph<T, R>(mut builder: T) -> CLQResult<R>
 where
     R: GraphBase,
-    T: GraphBuilderBase<GraphType = R>,
+    T: GraphBuilderBase<GraphType = R, RowType = (i64, i64)>,
 {
     let rows = get_karate_club_edges();
-    T::from_vector(
-        &rows
-            .into_iter()
+    builder.from_vector(
+        rows.into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
     )
 }
-fn get_karate_club_graph() -> SimpleUndirectedGraph {
-    _get_karate_club_graph::<SimpleUndirectedGraphBuilder, _>()
+fn get_karate_club_graph() -> CLQResult<SimpleUndirectedGraph> {
+    let builder = SimpleUndirectedGraphBuilder {};
+    _get_karate_club_graph::<SimpleUndirectedGraphBuilder, _>(builder)
 }
-fn get_directed_karate_club_graph() -> SimpleDirectedGraph {
-    _get_karate_club_graph::<SimpleDirectedGraphBuilder, _>()
+fn get_directed_karate_club_graph() -> CLQResult<SimpleDirectedGraph> {
+    let builder = SimpleDirectedGraphBuilder {};
+    _get_karate_club_graph::<SimpleDirectedGraphBuilder, _>(builder)
+}
+fn get_karate_club_graph_with_cliques(
+    cliques: Vec<BTreeSet<NodeId>>,
+) -> CLQResult<SimpleUndirectedGraph> {
+    let builder = SimpleUndirectedGraphBuilderWithCliques::new(cliques);
+    _get_karate_club_graph::<SimpleUndirectedGraphBuilderWithCliques, _>(builder)
 }
 
 #[cfg(test)]
 #[test]
-fn test_karate_club() {
-    let graph = get_karate_club_graph();
+fn test_karate_club() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     assert_eq!(graph.nodes.len(), 34);
     assert_eq!(graph.count_edges(), 78);
     assert_eq!(graph.get_node_degree(NodeId::from(1 as i64)), 16);
@@ -242,11 +288,12 @@ fn test_karate_club() {
             .unwrap(),
         0.0
     );
+    Ok(())
 }
 
 #[test]
-fn test_shortest_paths() {
-    let graph = get_karate_club_graph();
+fn test_shortest_paths() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let source = NodeId::from(1 as i64);
     let (dist, parents) = graph.get_shortest_paths(source, &None);
     assert_eq!(dist[&NodeId::from(1 as i64)], Some(0));
@@ -291,32 +338,35 @@ fn test_shortest_paths() {
     assert!(unrolled_paths.contains("1-3-33-16"));
     assert!(unrolled_paths.contains("1-9-33-16"));
     assert!(unrolled_paths.contains("1-32-33-16"));
+    Ok(())
 }
 
 #[bench]
-fn bench_shortest_paths(b: &mut Bencher) {
+fn bench_shortest_paths(b: &mut Bencher) -> CLQResult<()> {
     b.iter(|| {
-        let graph = get_karate_club_graph();
+        let graph = get_karate_club_graph().unwrap();
         let source = NodeId::from(1 as i64);
         let (_dist, _parents) = graph.get_shortest_paths(source, &None);
     });
+    Ok(())
 }
 
 #[bench]
-fn bench_shortest_paths_bfs(b: &mut Bencher) {
+fn bench_shortest_paths_bfs(b: &mut Bencher) -> CLQResult<()> {
     b.iter(|| {
-        let graph = get_karate_club_graph();
+        let graph = get_karate_club_graph().unwrap();
         let source = NodeId::from(1 as i64);
         let (_ordered_students, _dist, _preds) = graph.get_shortest_paths_bfs(source);
     });
+    Ok(())
 }
 
 #[test]
-fn test_connectivity() {
-    let graph = get_karate_club_graph();
+fn test_connectivity() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     assert!(graph.get_is_connected().unwrap());
-    let graph_unconnected = get_karate_club_graph_with_one_extra_edge();
-    assert!(!graph_unconnected.get_is_connected().unwrap());
+    let graph_unconnected = get_karate_club_graph_with_one_extra_edge()?;
+    assert!(!graph_unconnected.get_is_connected()?);
     let graph_empty = SimpleUndirectedGraph::create_empty();
     assert!(graph_empty.get_is_connected().is_err(), "Graph is empty");
     let cc = graph.get_connected_components();
@@ -328,50 +378,55 @@ fn test_connectivity() {
     assert_eq!(cc_unconnected[0].len(), 34);
     assert_eq!(cc_unconnected[1].len(), 2);
     assert_eq!(cc_unconnected.len(), 2);
-    assert!(!graph_unconnected.get_is_connected().unwrap());
+    assert!(!graph_unconnected.get_is_connected()?);
     assert_eq!(graph_empty.get_connected_components().len(), 0);
     assert!(graph_empty.get_is_connected().is_err(), "Graph is empty");
+    Ok(())
 }
 
 #[test]
-fn test_betweenness() {
-    let graph = get_karate_club_graph();
-    let bet = graph.get_node_betweenness().unwrap();
+fn test_betweenness() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
+    let bet = graph.get_node_betweenness()?;
     assert_eq!(bet[&NodeId::from(8 as i64)], 0.0);
     assert!((bet[&NodeId::from(34 as i64)] - 160.5515873).abs() <= 0.000001);
     assert!((bet[&NodeId::from(33 as i64)] - 76.6904762).abs() <= 0.000001);
     assert!((bet[&NodeId::from(32 as i64)] - 73.0095238).abs() <= 0.000001);
+    Ok(())
 }
 
 #[test]
-fn test_betweenness_brandes() {
-    let graph = get_karate_club_graph();
+fn test_betweenness_brandes() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let bet = graph.get_node_betweenness_brandes().unwrap();
     assert_eq!(bet[&NodeId::from(8 as i64)], 0.0);
     assert!((bet[&NodeId::from(34 as i64)] - 160.5515873).abs() <= 0.000001);
     assert!((bet[&NodeId::from(33 as i64)] - 76.6904762).abs() <= 0.000001);
     assert!((bet[&NodeId::from(32 as i64)] - 73.0095238).abs() <= 0.000001);
+    Ok(())
 }
 
 #[bench]
-fn bench_betweenness(b: &mut Bencher) {
+fn bench_betweenness(b: &mut Bencher) -> CLQResult<()> {
     b.iter(|| {
-        let graph = get_karate_club_graph();
+        let graph = get_karate_club_graph().unwrap();
         let _bet = graph.get_node_betweenness();
     });
+    Ok(())
 }
 
 #[bench]
-fn bench_betweenness_brandes(b: &mut Bencher) {
+fn bench_betweenness_brandes(b: &mut Bencher) -> CLQResult<()> {
     b.iter(|| {
-        let graph = get_karate_club_graph();
+        let graph = get_karate_club_graph().unwrap();
         let _bet = graph.get_node_betweenness_brandes();
     });
+    Ok(())
 }
 
 #[test]
-fn test_matrices() {
-    let graph = get_karate_club_graph();
+fn test_matrices() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let (deg_mat, _ids) = graph.get_degree_matrix();
     assert_eq!(deg_mat.shape(), (34, 34));
     assert_eq!(deg_mat.row(0)[0], 16.0);
@@ -388,11 +443,12 @@ fn test_matrices() {
     assert_eq!(laplacian.shape(), (34, 34));
     assert_eq!(laplacian.sum(), 0.0);
     assert_eq!(laplacian + adj_mat, deg_mat);
+    Ok(())
 }
 
 #[test]
-fn test_eigen() {
-    let graph = get_karate_club_graph();
+fn test_eigen() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let fiedler = graph.get_algebraic_connectivity();
     assert!((fiedler - 0.469).abs() <= 0.001);
 
@@ -401,11 +457,12 @@ fn test_eigen() {
     assert!((ev[&NodeId::from(34 as i64)] - 1.0).abs() <= eps);
     assert!((ev[&NodeId::from(1 as i64)] - 0.95213237).abs() <= eps);
     assert!((ev[&NodeId::from(19 as i64)] - 0.27159396).abs() <= eps);
+    Ok(())
 }
 
 #[test]
-fn test_k_cores() {
-    let graph = get_karate_club_graph();
+fn test_k_cores() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let k_cores = graph.get_k_cores(1);
     assert_eq!(k_cores.len(), 1);
     assert_eq!(k_cores[0].len(), 34);
@@ -415,7 +472,7 @@ fn test_k_cores() {
     let k_cores_5 = graph.get_k_cores(5);
     assert_eq!(k_cores_5.len(), 0);
 
-    let double_karate = get_two_karate_clubs_with_bridge();
+    let double_karate = get_two_karate_clubs_with_bridge()?;
     let k_cores_4_2 = double_karate.get_k_cores(4);
     assert_eq!(k_cores_4_2.len(), 2);
     assert_eq!(k_cores_4_2[0].len(), 10);
@@ -428,25 +485,27 @@ fn test_k_cores() {
     assert_eq!(core_assignments[3][0].len(), 10);
 
     assert_eq!(coreness[&NodeId::from(34 as i64)], 4);
+    Ok(())
 }
 
 #[test]
-fn test_connected_components() {
-    let graph = get_karate_club_graph();
+fn test_connected_components() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let conn_comp = graph.get_connected_components();
     assert_eq!(conn_comp.len(), 1);
     assert_eq!(conn_comp[0].len(), 34);
 
-    let double_karate = get_two_karate_clubs();
+    let double_karate = get_two_karate_clubs()?;
     let conn_comp_2 = double_karate.get_connected_components();
     assert_eq!(conn_comp_2.len(), 2);
     assert_eq!(conn_comp_2[0].len(), 34);
     assert_eq!(conn_comp_2[1].len(), 34);
+    Ok(())
 }
 
 #[test]
-fn test_transitivity() {
-    let graph = get_karate_club_graph();
+fn test_transitivity() -> CLQResult<()> {
+    let graph = get_karate_club_graph()?;
     let trans = graph.get_transitivity();
     println!("{}", trans);
     assert!((trans - 0.2556818181818182).abs() <= f64::EPSILON);
@@ -454,10 +513,11 @@ fn test_transitivity() {
     let approx_trans = graph.get_approx_transitivity(1000);
     println!("{}", approx_trans);
     assert!((approx_trans - trans).abs() <= 0.05);
+    Ok(())
 }
 
 #[test]
-fn test_cnm_community() {
+fn test_cnm_community() -> CLQResult<()> {
     let expected: Vec<f64> = vec![
         0.012163050624589085,
         0.023668639053254437,
@@ -492,7 +552,7 @@ fn test_cnm_community() {
         0.004684418145956606,
     ];
 
-    let g = get_karate_club_graph();
+    let g = get_karate_club_graph()?;
     let (_, modularity_changes) = g.get_cnm_communities();
     for i in 0..expected.len() {
         println!(
@@ -501,10 +561,11 @@ fn test_cnm_community() {
         );
         assert!((modularity_changes[i] - expected[i]).abs() <= 0.001);
     }
+    Ok(())
 }
 
 #[test]
-fn test_brokerage() {
+fn test_brokerage() -> CLQResult<()> {
     let expected_counts = vec![
         (0, 0, 0, 0, 0, 0),
         (0, 0, 0, 0, 0, 0),
@@ -542,7 +603,7 @@ fn test_brokerage() {
         (0, 0, 0, 1, 0, 1),
         (0, 0, 0, 0, 0, 0),
     ];
-    let g = get_directed_karate_club_graph();
+    let g = get_directed_karate_club_graph()?;
     let mut c: HashMap<NodeId, usize> = HashMap::new();
     for node_id in g.get_ids_iter() {
         c.insert(*node_id, 1 + ((node_id.value() <= 17) as usize));
@@ -574,20 +635,22 @@ fn test_brokerage() {
             expected_counts[node_id.value() as usize].4
         );
     }
+    Ok(())
 }
 #[test]
-fn test_weakly_connected_components() {
-    let gd = get_directed_karate_club_graph();
+fn test_weakly_connected_components() -> CLQResult<()> {
+    let gd = get_directed_karate_club_graph()?;
     let cc = gd.get_weakly_connected_components();
     assert_eq!(cc[0].len(), 34);
     assert_eq!(cc.len(), 1);
+    Ok(())
 }
 #[test]
-fn test_connectivity_directed() {
-    let graph = get_directed_karate_club_graph();
-    assert!(graph.get_is_weakly_connected().unwrap());
-    let graph_unconnected = get_directed_karate_club_graph_with_one_extra_edge();
-    assert!(!graph_unconnected.get_is_weakly_connected().unwrap());
+fn test_connectivity_directed() -> CLQResult<()> {
+    let graph = get_directed_karate_club_graph()?;
+    assert!(graph.get_is_weakly_connected()?);
+    let graph_unconnected = get_directed_karate_club_graph_with_one_extra_edge()?;
+    assert!(!graph_unconnected.get_is_weakly_connected()?);
 
     let graph_empty = SimpleDirectedGraph::create_empty();
     assert!(
@@ -595,5 +658,79 @@ fn test_connectivity_directed() {
         "Graph is empty"
     );
 
-    assert!(graph.get_is_weakly_connected().unwrap());
+    assert_eq!(
+        graph.get_strongly_connected_components().len(),
+        graph.count_nodes()
+    );
+
+    let graph_both_ways = get_directed_karate_club_graph_both_ways()?;
+    assert_eq!(graph_both_ways.get_strongly_connected_components().len(), 1);
+
+    let core = vec![1, 2, 3];
+    let graph_with_core =
+        get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>())?;
+    let scc = graph_with_core.get_strongly_connected_components();
+    assert_eq!(scc.len(), 32);
+    assert_eq!(scc[0].len(), 3);
+    assert!(scc[0]
+        .iter()
+        .collect::<HashSet<&NodeId>>()
+        .contains(&NodeId::from(1)));
+    assert!(scc[0]
+        .iter()
+        .collect::<HashSet<&NodeId>>()
+        .contains(&NodeId::from(2)));
+    assert!(scc[0]
+        .iter()
+        .collect::<HashSet<&NodeId>>()
+        .contains(&NodeId::from(3)));
+    Ok(())
+}
+#[test]
+fn test_acyclic_directed() -> CLQResult<()> {
+    let graph = get_directed_karate_club_graph()?;
+    assert!(graph.is_acyclic());
+    let graph_unconnected = get_directed_karate_club_graph_with_one_extra_edge()?;
+    assert!(graph_unconnected.is_acyclic());
+
+    let graph_empty = SimpleDirectedGraph::create_empty();
+    assert!(graph_empty.is_acyclic());
+
+    let graph_both_ways = get_directed_karate_club_graph_both_ways()?;
+    assert!(!graph_both_ways.is_acyclic());
+
+    let core = vec![1, 2, 3];
+    let graph_with_core =
+        get_directed_karate_club_graph_with_core(core.into_iter().collect::<HashSet<usize>>())?;
+    assert!(!graph_with_core.is_acyclic());
+    Ok(())
+}
+
+#[test]
+fn test_clique_seeding() -> CLQResult<()> {
+    let clique = vec![1, 2, 3, 4, 5];
+    let cliques = vec![clique
+        .into_iter()
+        .map(|x| NodeId::from(x))
+        .collect::<BTreeSet<_>>()];
+    let g = get_karate_club_graph_with_cliques(cliques)?;
+    // adding 3 edges, from 2 -> 5, 3, -> 5, 4 -> 5
+    assert_eq!(g.count_edges(), 81);
+
+    let clique1 = vec![1, 2, 3, 4, 5];
+    let clique2 = vec![5, 6, 7];
+    let cliques = vec![
+        clique1
+            .into_iter()
+            .map(|x| NodeId::from(x))
+            .collect::<BTreeSet<_>>(),
+        clique2
+            .into_iter()
+            .map(|x| NodeId::from(x))
+            .collect::<BTreeSet<_>>(),
+    ];
+    let g = get_karate_club_graph_with_cliques(cliques)?;
+    // adding 5 edges, from 2 -> 5, 3, -> 5, 4 -> 5, 5 -> 6
+    assert_eq!(g.count_edges(), 82);
+    Ok(())
 }

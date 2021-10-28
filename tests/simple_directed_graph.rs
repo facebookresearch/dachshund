@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate lib_dachshund;
+use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_base::GraphBase;
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::simple_directed_graph::SimpleDirectedGraph;
 use lib_dachshund::dachshund::simple_directed_graph_builder::SimpleDirectedGraphBuilder;
 use std::collections::HashSet;
-fn get_rows(idx: usize) -> Result<Vec<(usize, usize)>, String> {
+fn get_rows(idx: usize) -> CLQResult<Vec<(usize, usize)>> {
     match idx {
         0 => Ok(vec![
             (0, 1),
@@ -121,25 +122,25 @@ fn get_rows(idx: usize) -> Result<Vec<(usize, usize)>, String> {
             (20, 22),
             (20, 24),
         ]),
-        _ => return Err("Invalid index".to_string()),
+        _ => return Err(CLQError::Generic("Invalid index".to_string())),
     }
 }
 
-fn get_graph(idx: usize) -> Result<SimpleDirectedGraph, String> {
-    Ok(SimpleDirectedGraphBuilder::from_vector(
-        &get_rows(idx)?
+fn get_graph(idx: usize) -> CLQResult<SimpleDirectedGraph> {
+    SimpleDirectedGraphBuilder {}.from_vector(
+        get_rows(idx)?
             .into_iter()
             .map(|(x, y)| (x as i64, y as i64))
             .collect(),
-    ))
+    )
 }
 
 #[cfg(test)]
 #[test]
-fn test_build_graph() {
+fn test_build_graph() -> CLQResult<()> {
     for i in 0..7 {
-        let rows = get_rows(i).unwrap();
-        let graph = get_graph(i).unwrap();
+        let rows = get_rows(i)?;
+        let graph = get_graph(i)?;
         assert_eq!(rows.len(), graph.count_edges());
         assert_eq!(
             rows.iter()
@@ -150,4 +151,5 @@ fn test_build_graph() {
             graph.count_nodes()
         );
     }
+    Ok(())
 }

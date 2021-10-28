@@ -6,11 +6,12 @@
  */
 extern crate lib_dachshund;
 use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
+use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::simple_undirected_graph::SimpleUndirectedGraph;
 use lib_dachshund::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
 
-fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
+fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
     let v = match idx {
         0 => vec![(0, 1), (1, 2), (2, 0)],
         1 => vec![(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3)],
@@ -25,11 +26,10 @@ fn get_graph(idx: usize) -> Result<SimpleUndirectedGraph, String> {
             (4, 5),
             (1, 6),
         ],
-        _ => return Err("Invalid index".to_string()),
+        _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
-    Ok(SimpleUndirectedGraphBuilder::from_vector(
-        &v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect(),
-    ))
+    SimpleUndirectedGraphBuilder {}
+        .from_vector(v.into_iter().map(|(x, y)| (x as i64, y as i64)).collect())
 }
 fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
     match idx {
@@ -40,8 +40,8 @@ fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
 
 #[cfg(test)]
 #[test]
-fn test_triad_cnm_iter() {
-    let g = get_graph(0).unwrap();
+fn test_triad_cnm_iter() -> CLQResult<()> {
+    let g = get_graph(0)?;
     let x = g.init_cnm_communities();
     assert_eq!(x.communities.len(), 3);
     assert_eq!(x.degree_map.len(), 3);
@@ -84,11 +84,12 @@ fn test_triad_cnm_iter() {
     assert_eq!(x.num_edges, 3);
 
     assert_eq!(x.degree_map[&2], 6);
+    Ok(())
 }
 
 #[test]
-fn test_triad_cnm_whole() {
-    let g = get_graph(0).unwrap();
+fn test_triad_cnm_whole() -> CLQResult<()> {
+    let g = get_graph(0)?;
     let (communities, _) = g.get_cnm_communities();
     assert_eq!(communities.len(), 1);
     assert_eq!(
@@ -98,11 +99,12 @@ fn test_triad_cnm_whole() {
             .collect::<Vec<usize>>()[0],
         3
     );
+    Ok(())
 }
 
 #[test]
-fn test_two_triads_cnm() {
-    let g = get_graph(1).unwrap();
+fn test_two_triads_cnm() -> CLQResult<()> {
+    let g = get_graph(1)?;
     let (communities, _) = g.get_cnm_communities();
     assert_eq!(communities.len(), 2);
     assert_eq!(
@@ -115,11 +117,12 @@ fn test_two_triads_cnm() {
     for k in communities.keys() {
         println!("Key: {}", k);
     }
+    Ok(())
 }
 
 #[test]
-fn test_tendril_cnm() {
-    let g = get_graph(2).unwrap();
+fn test_tendril_cnm() -> CLQResult<()> {
+    let g = get_graph(2)?;
     let x = g.init_cnm_communities();
     assert_eq!(x.communities.len(), 4);
     assert_eq!(x.degree_map.len(), 4);
@@ -130,14 +133,16 @@ fn test_tendril_cnm() {
 
     let (delta_ij, _i, _j) = x.maxh.peek().unwrap().tuple();
     assert_eq!(delta_ij, 2.0 / 8.0 - 2.0 * (1.0 * 3.0) / 64.0);
+    Ok(())
 }
 
 #[test]
-fn test_modularity_changes() {
-    let g = get_graph(3).unwrap();
+fn test_modularity_changes() -> CLQResult<()> {
+    let g = get_graph(3)?;
     let (_, modularity_changes) = g.get_cnm_communities();
     let expected = get_expected_modularity_changes(3).unwrap();
     for i in 0..expected.len() {
         assert_eq!(modularity_changes[i], expected[i]);
     }
+    Ok(())
 }

@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
 use crate::dachshund::algorithms::brokerage::Brokerage;
 use crate::dachshund::algorithms::connected_components::{
     ConnectedComponents, ConnectedComponentsDirected,
@@ -11,17 +12,38 @@ use crate::dachshund::algorithms::connected_components::{
 use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityDirected};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{NodeBase, SimpleDirectedNode};
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, SimpleDirectedNode};
+use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub trait DirectedGraph
 where
     Self: GraphBase,
+    <Self as GraphBase>::NodeType: DirectedNodeBase,
 {
+    fn is_acyclic(&self) -> bool {
+        // from https://www.cs.hmc.edu/~keller/courses/cs60/s98/examples/acyclic/
+        let mut leaves: HashSet<NodeId> = HashSet::new();
+        let num_nodes = self.count_nodes();
+        while leaves.len() < num_nodes {
+            let mut leaf_was_found: bool = false;
+            for node in self.get_nodes_iter() {
+                let node_id = node.get_id();
+                if !leaves.contains(&node_id) && node.has_no_out_neighbors_except_set(&leaves) {
+                    leaves.insert(node.get_id());
+                    leaf_was_found = true;
+                }
+            }
+            if !leaf_was_found {
+                return false;
+            }
+        }
+        true
+    }
 }
 pub struct SimpleDirectedGraph {
-    pub nodes: HashMap<NodeId, SimpleDirectedNode>,
+    pub nodes: FxHashMap<NodeId, SimpleDirectedNode>,
     pub ids: Vec<NodeId>,
 }
 impl GraphBase for SimpleDirectedGraph {
@@ -41,7 +63,7 @@ impl GraphBase for SimpleDirectedGraph {
     fn get_nodes_iter(&self) -> Values<NodeId, SimpleDirectedNode> {
         self.nodes.values()
     }
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, SimpleDirectedNode> {
+    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, SimpleDirectedNode> {
         &mut self.nodes
     }
     fn has_node(&self, node_id: NodeId) -> bool {
@@ -63,7 +85,7 @@ impl GraphBase for SimpleDirectedGraph {
     }
     fn create_empty() -> Self {
         SimpleDirectedGraph {
-            nodes: HashMap::new(),
+            nodes: FxHashMap::default(),
             ids: Vec::new(),
         }
     }

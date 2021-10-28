@@ -4,12 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+extern crate fxhash;
 extern crate nalgebra as na;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::Node;
+use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
-use std::collections::HashMap;
 
 /// Keeps track of a bipartite graph composed of "core" and "non-core" nodes. Only core ->
 /// non-core connections may exist in the graph. The neighbors of core nodes are non-cores, the
@@ -18,7 +19,7 @@ use std::collections::HashMap;
 /// nodes HashMap. To iterate over core and non-core nodes, the struct also provides the
 /// core_ids and non_core_ids vectors.
 pub struct TypedGraph {
-    pub nodes: HashMap<NodeId, Node>,
+    pub nodes: FxHashMap<NodeId, Node>,
     pub core_ids: Vec<NodeId>,
     pub non_core_ids: Vec<NodeId>,
 }
@@ -34,7 +35,7 @@ impl GraphBase for TypedGraph {
     fn get_ids_iter(&self) -> Keys<NodeId, Node> {
         self.nodes.keys()
     }
-    fn get_mut_nodes(&mut self) -> &mut HashMap<NodeId, Node> {
+    fn get_mut_nodes(&mut self) -> &mut FxHashMap<NodeId, Node> {
         &mut self.nodes
     }
     fn get_nodes_iter(&self) -> Values<NodeId, Node> {
@@ -58,7 +59,7 @@ impl GraphBase for TypedGraph {
     }
     fn create_empty() -> Self {
         TypedGraph {
-            nodes: HashMap::new(),
+            nodes: FxHashMap::default(),
             core_ids: Vec::new(),
             non_core_ids: Vec::new(),
         }

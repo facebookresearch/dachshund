@@ -29,7 +29,7 @@ pub trait ShortestPaths: GraphBase {
         let mut parents: HashMap<NodeId, HashSet<NodeId>> = HashMap::new();
 
         let targets: Vec<NodeId> = match nodes_in_connected_component {
-            Some(x) => x.iter().cloned().collect(),
+            Some(x) => x.to_vec(),
             None => self.get_ids_iter().cloned().collect(),
         };
         for id in &targets {

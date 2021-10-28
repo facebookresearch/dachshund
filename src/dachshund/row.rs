@@ -8,7 +8,7 @@ use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
 use std::fmt;
 
 ///  Used to keep track of edge row input.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub struct EdgeRow {
     pub graph_id: GraphId,
     pub source_id: NodeId,
@@ -61,6 +61,21 @@ impl SimpleEdgeRow {
         (self.source_id.value(), self.target_id.value())
     }
 }
+
+/// used to keep track of row input for simple graphs.
+#[derive(Copy, Clone)]
+pub struct WeightedEdgeRow {
+    pub graph_id: GraphId,
+    pub source_id: NodeId,
+    pub target_id: NodeId,
+    pub weight: f64,
+}
+impl WeightedEdgeRow {
+    pub fn as_tuple(&self) -> (i64, i64, f64) {
+        (self.source_id.value(), self.target_id.value(), self.weight)
+    }
+}
+
 /// Used in lieu of a union type. All rows processed by a Transformer
 /// must implement this trait.
 pub trait Row {
@@ -69,6 +84,7 @@ pub trait Row {
     fn as_edge_row(&self) -> Option<EdgeRow>;
     fn as_clique_row(&self) -> Option<CliqueRow>;
     fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow>;
+    fn as_weighted_edge_row(&self) -> Option<WeightedEdgeRow>;
 }
 impl Row for EdgeRow {
     fn get_graph_id(&self) -> GraphId {
@@ -81,6 +97,9 @@ impl Row for EdgeRow {
         None
     }
     fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow> {
+        None
+    }
+    fn as_weighted_edge_row(&self) -> Option<WeightedEdgeRow> {
         None
     }
 }
@@ -97,6 +116,9 @@ impl Row for CliqueRow {
     fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow> {
         None
     }
+    fn as_weighted_edge_row(&self) -> Option<WeightedEdgeRow> {
+        None
+    }
 }
 impl Row for SimpleEdgeRow {
     fn get_graph_id(&self) -> GraphId {
@@ -109,6 +131,26 @@ impl Row for SimpleEdgeRow {
         None
     }
     fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow> {
+        Some(*self)
+    }
+    fn as_weighted_edge_row(&self) -> Option<WeightedEdgeRow> {
+        None
+    }
+}
+impl Row for WeightedEdgeRow {
+    fn get_graph_id(&self) -> GraphId {
+        self.graph_id
+    }
+    fn as_edge_row(&self) -> Option<EdgeRow> {
+        None
+    }
+    fn as_clique_row(&self) -> Option<CliqueRow> {
+        None
+    }
+    fn as_simple_edge_row(&self) -> Option<SimpleEdgeRow> {
+        None
+    }
+    fn as_weighted_edge_row(&self) -> Option<WeightedEdgeRow> {
         Some(*self)
     }
 }

@@ -18,7 +18,9 @@ use lib_dachshund::dachshund::scorer::Scorer;
 use lib_dachshund::dachshund::test_utils::{gen_test_transformer, process_raw_vector};
 use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::typed_graph::TypedGraph;
-use lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilder;
+
+extern crate fxhash;
+use fxhash::FxHashMap;
 
 #[cfg(test)]
 #[test]
@@ -26,7 +28,7 @@ fn test_output_simple_candidate() -> CLQResult<()> {
     let node_id = NodeId::from(0);
     let node: Node = Node::new(node_id, true, None, Vec::new(), HashMap::new());
     let mut graph: TypedGraph = TypedGraph {
-        nodes: HashMap::new(),
+        nodes: FxHashMap::default(),
         core_ids: vec![],
         non_core_ids: vec![],
     };
@@ -55,8 +57,7 @@ fn test_rebuild_candidate() -> CLQResult<()> {
 
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string())?;
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw)?;
-    let graph: TypedGraph =
-        transformer.build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)?;
+    let graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows)?;
     assert_eq!(graph.core_ids.len(), 1);
     let core_node_id: NodeId = *graph.core_ids.first().unwrap();
     assert_eq!(graph.non_core_ids.len(), 1);
@@ -107,9 +108,7 @@ fn build_sample_graph() -> (TypedGraph, Transformer) {
     let transformer: Transformer = gen_test_transformer(typespec, "author".to_string()).unwrap();
     let rows: Vec<EdgeRow> = process_raw_vector(&transformer, raw).unwrap();
     (
-        transformer
-            .build_pruned_graph::<TypedGraphBuilder, TypedGraph>(graph_id, &rows)
-            .unwrap(),
+        transformer.build_pruned_graph(graph_id, rows).unwrap(),
         transformer,
     )
 }
