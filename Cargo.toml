@@ -77,3 +77,7 @@ path = "src/simple_graph_featurizer.rs"
 [[bin]]
 name = "core_miner"
 path = "src/core_miner.rs"
+
+[[bin]]
+name = "connected_component_extractor"
+path = "src/connected_component_extractor.rs"
