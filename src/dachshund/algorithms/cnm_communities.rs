@@ -83,10 +83,8 @@ pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
     ) -> CNMCommunityMergeInstructionHeap {
         let mut maxh: CNMCommunityMergeInstructionHeap = BinaryHeap::new();
         for (_k, heap) in delta_q_maxheap.iter() {
-            let maybe_top_elem = heap.peek();
-            if maybe_top_elem.is_some() {
-                let top_elem = maybe_top_elem.unwrap();
-                maxh.push(top_elem.clone());
+            if let Some(top_elem) = heap.peek() {
+                maxh.push(*top_elem);
             }
         }
         maxh
