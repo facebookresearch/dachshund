@@ -6,7 +6,6 @@
  */
 extern crate lib_dachshund;
 
-use std::borrow::Borrow;
 use crate::lib_dachshund::TransformerBase;
 use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::algorithms::connected_components::{
@@ -195,7 +194,10 @@ fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
             (13,8),
         ],
         9 => vec![
-            (9,0),
+            (0,1),
+            (1,2),
+            (0,2),
+            (3,4),
         ],
         _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
@@ -448,13 +450,8 @@ fn test_modularity_changes() {
 
 #[test]
 fn test_k_peaks() {
-    let (peak_numbers, mut mountain_assignments) = get_graph(8).unwrap().get_k_peak_mountain_assignment();
-    let (_cores, coreness) = get_graph(8).unwrap().get_coreness();
-    let k_value = coreness.values().cloned().max().unwrap();
-    let curr = coreness.clone();
-    let degeneracy_nodes: Vec<_> =  curr.iter()
-        .filter_map(|(key, &val)| if val == k_value { Some(key) } else { None })
-        .collect();
+    let (peak_numbers, mountain_assignments) = get_graph(8).unwrap().get_k_peak_mountain_assignment();
+
     // Make sure all peak numbers are correct
     assert_eq!(*peak_numbers.get(&NodeId::from(0 as i64)).unwrap(), 5);
     assert_eq!(*peak_numbers.get(&NodeId::from(1 as i64)).unwrap(), 5);
@@ -489,7 +486,5 @@ fn test_k_peaks() {
     assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(12 as i64)), true);
     assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(13 as i64)), true);
     assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(14 as i64)), true);
-
-
 
 }

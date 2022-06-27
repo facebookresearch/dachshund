@@ -11,7 +11,7 @@ use crate::dachshund::graph_base::{GraphBase};
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use crate::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuilder;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use crate::{GraphBuilderBase};
 
 
