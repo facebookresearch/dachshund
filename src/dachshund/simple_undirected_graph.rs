@@ -24,10 +24,11 @@ use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, SimpleNode};
 use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
+use crate::dachshund::algorithms::k_peaks::KPeaks;
 
 pub trait UndirectedGraph
-where
-    Self: GraphBase,
+    where
+        Self: GraphBase,
 {
 }
 
@@ -106,6 +107,7 @@ impl CNMCommunities for SimpleUndirectedGraph {}
 impl ConnectedComponents for SimpleUndirectedGraph {}
 impl ConnectedComponentsUndirected for SimpleUndirectedGraph {}
 impl Coreness for SimpleUndirectedGraph {}
+impl KPeaks for SimpleUndirectedGraph {}
 
 impl AdjacencyMatrix for SimpleUndirectedGraph {}
 impl Clustering for SimpleUndirectedGraph {}

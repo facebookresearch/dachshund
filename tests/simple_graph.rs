@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate lib_dachshund;
+
+use std::borrow::Borrow;
 use crate::lib_dachshund::TransformerBase;
 use lib_dachshund::dachshund::algorithms::cnm_communities::CNMCommunities;
 use lib_dachshund::dachshund::algorithms::connected_components::{
@@ -12,6 +14,7 @@ use lib_dachshund::dachshund::algorithms::connected_components::{
 };
 use lib_dachshund::dachshund::algorithms::coreness::averaged_ties_ranking;
 use lib_dachshund::dachshund::algorithms::coreness::Coreness;
+use lib_dachshund::dachshund::algorithms::k_peaks::KPeaks;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
 use lib_dachshund::dachshund::graph_builder_base::GraphBuilderBase;
 use lib_dachshund::dachshund::id_types::NodeId;
@@ -152,6 +155,47 @@ fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
             (12, 13),
             (12, 14),
             (13, 14),
+        ],
+        8 => vec![
+            (0,1),
+            (0,2),
+            (0,3),
+            (0,4),
+            (0,5),
+            (1,2),
+            (1,3),
+            (1,4),
+            (1,5),
+            (2,3),
+            (2,4),
+            (2,5),
+            (3,4),
+            (3,5),
+            (4,5),
+            (6,1),
+            (6,2),
+            (6,3),
+            (6,4),
+            (7,6),
+            (7,4),
+            (8,7),
+            (8,5),
+            (9,0),
+            (10,8),
+            (10,6),
+            (11,4),
+            (12,8),
+            (12,14),
+            (10,11),
+            (10,12),
+            (10,13),
+            (11,12),
+            (11,13),
+            (12,13),
+            (13,8),
+        ],
+        9 => vec![
+            (9,0),
         ],
         _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
@@ -400,4 +444,52 @@ fn test_modularity_changes() {
             assert!((modularity_changes[i] - expected[i]).abs() <= 0.001);
         }
     }
+}
+
+#[test]
+fn test_k_peaks() {
+    let (peak_numbers, mut mountain_assignments) = get_graph(8).unwrap().get_k_peak_mountain_assignment();
+    let (_cores, coreness) = get_graph(8).unwrap().get_coreness();
+    let k_value = coreness.values().cloned().max().unwrap();
+    let curr = coreness.clone();
+    let degeneracy_nodes: Vec<_> =  curr.iter()
+        .filter_map(|(key, &val)| if val == k_value { Some(key) } else { None })
+        .collect();
+    // Make sure all peak numbers are correct
+    assert_eq!(*peak_numbers.get(&NodeId::from(0 as i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(1 as i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(2 as i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(3 as i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(4 as i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(5 as i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(13 as i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(12 as i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(11 as i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(10 as i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(8 as i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(6 as i64)).unwrap(), 1);
+    assert_eq!(*peak_numbers.get(&NodeId::from(7 as i64)).unwrap(), 1);
+    assert_eq!(*peak_numbers.get(&NodeId::from(14 as i64)).unwrap(), 0);
+    assert_eq!(*peak_numbers.get(&NodeId::from(9 as i64)).unwrap(), 0);
+
+    // Test mountain configurations
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(0 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(1 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(2 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(3 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(4 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(5 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(6 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(7 as i64)), true);
+    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(9 as i64)), true);
+
+    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(8 as i64)), true);
+    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(10 as i64)), true);
+    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(11 as i64)), true);
+    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(12 as i64)), true);
+    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(13 as i64)), true);
+    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(14 as i64)), true);
+
+
+
 }
