@@ -81,7 +81,3 @@ path = "src/core_miner.rs"
 [[bin]]
 name = "connected_component_extractor"
 path = "src/connected_component_extractor.rs"
-
-[[bin]]
-name = "kpeak_miner"
-path = "src/kpeak_miner.rs"
