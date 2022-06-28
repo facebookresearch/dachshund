@@ -18,6 +18,7 @@ use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::transformer_base::TransformerBase;
 use lib_dachshund::dachshund::weighted_core_transformer::WeightedCoreTransformer;
+use lib_dachshund::dachshund::kpeak_transformer::KPeakTransformer;
 
 fn get_command_line_args() -> ArgMatches<'static> {
     let matches: ArgMatches = App::new("Dachshund Core Miner")
@@ -37,6 +38,11 @@ fn get_command_line_args() -> ArgMatches<'static> {
                 .short("w")
                 .help("Calculate weighted version of k-cores (requires edge weights in input)."),
         )
+        .arg(
+            Arg::with_name("kpeaks")
+                .short("k")
+                .help("Calculates (weighted) k-peak values and mountain assignments in graphs from stdin."),
+        )
         .get_matches();
     matches
 }
@@ -47,8 +53,10 @@ fn main() -> CLQResult<()> {
     let input: Input = Input::console(&stdio);
     let mut dummy: Vec<u8> = Vec::new();
     let output: Output = Output::console(&mut dummy);
-    if matches.is_present("weighted") {
+    if matches.is_present("weighted") && !matches.is_present("kpeaks"){
         WeightedCoreTransformer::new().run(input, output)?;
+    } else if !matches.is_present("weighted") && matches.is_present("kpeaks") {
+        KPeakTransformer::new().run(input, output)?;
     } else {
         CoreTransformer::new().run(input, output)?;
     };
