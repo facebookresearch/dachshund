@@ -70,7 +70,7 @@ pub trait KPeaks: GraphBase + Coreness {
             let new_core_values = self.get_new_coreness_values(&h_nodes);
             for (n_id, coreness) in &new_core_values {
                 if let Some(x) = mountain_assignments.get_mut(n_id){
-                    if curr_core_values.get(n_id) != None && *curr_core_values.get(n_id).unwrap() - coreness > *x.first().unwrap() {
+                    if *curr_core_values.get(n_id).unwrap() - coreness > *x.first().unwrap() {
                         *x = vec![*curr_core_values.get(&n_id).unwrap() - coreness, current_plotmountain_id]
                     }
                 }
