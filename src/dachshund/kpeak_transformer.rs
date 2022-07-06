@@ -71,16 +71,16 @@ impl TransformerBase for KPeakTransformer {
         let original_id = self
             .line_processor
             .get_original_id(graph_id.value() as usize);
-        for (m_id, m_nodes) in mountain_assignments {
-            for (n_id, coreness) in m_nodes {
-                let k_peak = *peaks.get(&n_id).unwrap();
+        for (mountain_id, m_nodes) in mountain_assignments {
+            for (node_id, coreness) in m_nodes {
+                let peak_number = *peaks.get(&node_id).unwrap();
                 let line: String = format!(
                     "{}\t{}\t{}\t{}\t{}",
                     original_id,
-                    n_id.value(),
+                    node_id.value(),
                     coreness,
-                    k_peak,
-                    m_id
+                    peak_number,
+                    mountain_id
                 );
                 output.send((Some(line), false)).unwrap();
             }

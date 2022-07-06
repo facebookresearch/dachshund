@@ -30,7 +30,8 @@ fn get_command_line_args() -> ArgMatches<'static> {
                 Julian Mestre <julianmestre@fb.com>, \
                 Michael Chen <mvc@fb.com>,
                 Matthew Menard <mlmenard@fb.com>,
-                Pär Winzell <zell@fb.com>",
+                Pär Winzell <zell@fb.com>,
+                Anushka Mehta <anushkamehta@fb.com>"
         )
         .about("Calculates (weighted) coreness values in graphs from stdin.")
         .arg(
@@ -40,8 +41,8 @@ fn get_command_line_args() -> ArgMatches<'static> {
         )
         .arg(
             Arg::with_name("kpeaks")
-                .short("k")
-                .help("Calculates (weighted) k-peak values and mountain assignments in graphs from stdin."),
+                .long("kpeaks")
+                .help("Calculates k-peak values and mountain assignments in graphs from stdin."),
         )
         .get_matches();
     matches
@@ -53,9 +54,10 @@ fn main() -> CLQResult<()> {
     let input: Input = Input::console(&stdio);
     let mut dummy: Vec<u8> = Vec::new();
     let output: Output = Output::console(&mut dummy);
-    if matches.is_present("weighted") && !matches.is_present("kpeaks"){
+    assert!(!(matches.is_present("weighted") && matches.is_present("kpeaks")));
+    if matches.is_present("weighted") {
         WeightedCoreTransformer::new().run(input, output)?;
-    } else if !matches.is_present("weighted") && matches.is_present("kpeaks") {
+    } else if matches.is_present("kpeaks") {
         KPeakTransformer::new().run(input, output)?;
     } else {
         CoreTransformer::new().run(input, output)?;
