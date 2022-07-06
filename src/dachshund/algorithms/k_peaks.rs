@@ -18,13 +18,13 @@ use crate::{GraphBuilderBase};
 pub trait KPeaks: GraphBase + Coreness {
 
     // Function that computes new coreness values from the set of nodes provided
-    fn get_new_coreness_values(&self, h_nodes: &HashSet<NodeId>) -> HashMap<NodeId, usize> {
+    fn get_new_coreness_values(&self, nodes: &HashSet<NodeId>) -> HashMap<NodeId, usize> {
         let mut edges : Vec<(i64, i64)> = Vec::new();
 
         // Determine if the current edge is fully contained in the list of nodes and push it if it is
         for node in self.get_nodes_iter() {
             for e in node.get_edges() {
-                if h_nodes.contains(&node.get_id()) && h_nodes.contains(&e.get_neighbor_id()) {
+                if nodes.contains(&node.get_id()) && nodes.contains(&e.get_neighbor_id()) {
                     edges.push((node.get_id().value(), e.get_neighbor_id().value()));
                 }
             }
@@ -36,7 +36,7 @@ pub trait KPeaks: GraphBase + Coreness {
 
         // If a node is missing from the list of coreness values (not contained in an edge)
         // add a coreness value of 0 to hashmap for that node
-        h_nodes.into_iter().fold(graph.get_coreness_values(), |mut acc, n_id| {
+        nodes.into_iter().fold(graph.get_coreness_values(), |mut acc, n_id| {
             acc.entry(*n_id).or_insert(0);
             acc
         })
@@ -50,7 +50,7 @@ pub trait KPeaks: GraphBase + Coreness {
             .collect();
 
         // Remaining graph nodes that we have not yet processed
-        let mut h_nodes: HashSet<NodeId> = mountain_assignments.keys().cloned().collect::<HashSet<_>>()
+        let mut remaining_nodes: HashSet<NodeId> = mountain_assignments.keys().cloned().collect::<HashSet<_>>()
             .into_iter()
             .collect();
 
@@ -59,7 +59,7 @@ pub trait KPeaks: GraphBase + Coreness {
         let mut current_mountain_index = 0; // 'current_mountain_index' keeps track of numbering of the plot-mountains
         let mut peak_numbers: HashMap<NodeId, i32> = HashMap::new(); // Hashmap of nodeID -> peak_number
 
-        while !h_nodes.is_empty() { // While there are still nodes left in the list, repeat the decomposition
+        while !remaining_nodes.is_empty() { // While there are still nodes left in the list, repeat the decomposition
             let k_value = curr_core_values.values().cloned().max().unwrap(); // The k-value of the degeneracy core of G
             let curr = curr_core_values.clone();
             let degeneracy_nodes: Vec<_> =  curr.iter()// Nodes in the k-contour whose peak number will be their core number
@@ -70,7 +70,7 @@ pub trait KPeaks: GraphBase + Coreness {
                 // For nodes in the k_contour the removal causes its core number to drop to 0,
                 // We check to see if this drop is greater than the drop in core number observed for these
                 // nodes in previous iterations
-                h_nodes.remove(&d_id); // Remove the k-contour node and insert peak numbers
+                remaining_nodes.remove(&d_id); // Remove the k-contour node and insert peak numbers
                 let curr_core_value = *curr_core_values.get(d_id).unwrap();
                 peak_numbers.entry(*d_id).or_insert(curr_core_value as i32);
                 if let Some(x) = mountain_assignments.get_mut(d_id) {
@@ -80,7 +80,7 @@ pub trait KPeaks: GraphBase + Coreness {
                 }
             }
 
-            let new_core_values = self.get_new_coreness_values(&h_nodes); // Compute new coreness values
+            let new_core_values = self.get_new_coreness_values(&remaining_nodes); // Compute new coreness values
             for (n_id, coreness) in &new_core_values {
                 if let Some(x) = mountain_assignments.get_mut(n_id){
                     let current_drop = *curr_core_values.get(n_id).unwrap() - coreness; // Check to see if we should update the drop in core number
