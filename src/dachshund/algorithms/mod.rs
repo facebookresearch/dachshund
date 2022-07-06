@@ -17,3 +17,4 @@ pub mod eigenvector_centrality;
 pub mod laplacian;
 pub mod shortest_paths;
 pub mod transitivity;
+pub mod k_peaks;
