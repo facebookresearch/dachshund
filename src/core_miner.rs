@@ -54,7 +54,7 @@ fn main() -> CLQResult<()> {
     let input: Input = Input::console(&stdio);
     let mut dummy: Vec<u8> = Vec::new();
     let output: Output = Output::console(&mut dummy);
-    assert!(!(matches.is_present("weighted") && matches.is_present("kpeaks")));
+    assert!(!(matches.is_present("weighted") && matches.is_present("kpeaks")), "Input arguments include kpeaks and weighted. Cannot run kpeaks on weighted graph.");
     if matches.is_present("weighted") {
         WeightedCoreTransformer::new().run(input, output)?;
     } else if matches.is_present("kpeaks") {
