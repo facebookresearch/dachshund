@@ -4,15 +4,15 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeTypeId};
+use crate::dachshund::id_types::{EdgeTypeId, GraphId, NodeId, NodeLabel, NodeTypeId};
 use std::fmt;
 
 ///  Used to keep track of edge row input.
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub struct EdgeRow {
     pub graph_id: GraphId,
-    pub source_id: NodeId,
-    pub target_id: NodeId,
+    pub source_id: NodeLabel,
+    pub target_id: NodeLabel,
     pub source_type_id: NodeTypeId,
     pub target_type_id: NodeTypeId,
     pub edge_type_id: EdgeTypeId,
@@ -31,7 +31,7 @@ impl fmt::Display for EdgeRow {
 #[derive(Copy, Clone)]
 pub struct CliqueRow {
     pub graph_id: GraphId,
-    pub node_id: NodeId,
+    pub node_id: NodeLabel,
     // is None when node is source
     pub target_type: Option<NodeTypeId>,
 }

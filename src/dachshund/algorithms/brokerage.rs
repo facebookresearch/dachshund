@@ -18,7 +18,7 @@ pub struct BrokerageScores {
     pub total_open_twopaths: usize,
 }
 
-pub trait Brokerage: GraphBase
+pub trait Brokerage: GraphBase<NodeType: DirectedNodeBase>
 where
     Self: GraphBase,
     <Self as GraphBase>::NodeType: DirectedNodeBase,

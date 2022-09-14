@@ -8,12 +8,15 @@ use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase};
 use crate::dachshund::simple_directed_graph::DirectedGraph;
+
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::BTreeSet;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 
-pub trait Connectivity: GraphBase {
+pub trait Connectivity:
+    GraphBase<NodeType: NodeBase<NodeIdType = NodeId, NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>>>
+{
     fn visit_nodes_from_root<'a>(
         &'a self,
         root: &NodeId,

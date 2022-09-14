@@ -8,7 +8,7 @@ extern crate lib_dachshund;
 use crate::lib_dachshund::dachshund::typed_graph_builder::TypedGraphBuilderBase;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
+use lib_dachshund::dachshund::id_types::GraphId;
 use lib_dachshund::dachshund::test_utils::{
     assert_nodes_have_ids, gen_test_transformer, process_raw_vector,
 };
@@ -39,8 +39,7 @@ fn simple_test(raw: Vec<String>, min_degree: usize, expected_len: usize) -> CLQR
     let rows = process_raw_vector(&transformer, raw)?.clone();
 
     let mut graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows)?;
-    let exclude_nodes: HashSet<NodeId> =
-        TypedGraphBuilder::trim_edges(&mut graph.nodes, &min_degree);
+    let exclude_nodes: HashSet<u32> = TypedGraphBuilder::trim_edges(&mut graph.nodes, &min_degree);
     assert_eq!(exclude_nodes.len(), expected_len);
     Ok(())
 }
@@ -158,6 +157,7 @@ fn test_full_prune_small_clique() -> CLQResult<()> {
         .ok_or_else(CLQError::err_none)?;
     sender_prune.send((None, true)).unwrap();
     let candidate_prune = result_prune.top_candidate;
+
     assert_nodes_have_ids(&graph, &candidate_prune.core_ids, vec![1, 2], true);
     assert_nodes_have_ids(&graph, &candidate_prune.non_core_ids, vec![3], false);
 

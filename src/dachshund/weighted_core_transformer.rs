@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 extern crate clap;
-extern crate serde_json;
 extern crate ordered_float;
+extern crate serde_json;
 
 use crate::dachshund::algorithms::coreness::FractionalCoreness;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
-use crate::dachshund::line_processor::{WeightedLineProcessor, LineProcessorBase};
+use crate::dachshund::line_processor::{LineProcessorBase, WeightedLineProcessor};
 use crate::dachshund::row::{Row, WeightedEdgeRow};
 use crate::dachshund::transformer_base::TransformerBase;
 use crate::dachshund::weighted_undirected_graph_builder::WeightedUndirectedGraphBuilder;

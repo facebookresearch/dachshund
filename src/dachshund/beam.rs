@@ -14,19 +14,19 @@ use rand::prelude::*;
 
 use crate::dachshund::candidate::Candidate;
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph_base::GraphBase;
-use crate::dachshund::id_types::{GraphId, NodeId};
+use crate::dachshund::id_types::GraphId;
 use crate::dachshund::node::Node;
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
 use crate::dachshund::search_problem::SearchProblem;
+use crate::dachshund::typed_graph::LabeledGraph;
 
 use std::rc::Rc;
 
 /// The result of a beam search.
 pub struct BeamSearchResult<'a, TGraph>
 where
-    TGraph: GraphBase<NodeType = Node>,
+    TGraph: LabeledGraph<NodeType = Node>,
 {
     pub top_candidate: Candidate<'a, TGraph>,
     pub num_steps: usize,
@@ -37,7 +37,7 @@ where
 /// to avoid exponential blowup of the search space.
 pub struct Beam<'a, TGraph>
 where
-    TGraph: GraphBase<NodeType = Node>,
+    TGraph: LabeledGraph<NodeType = Node>,
 {
     pub candidates: Vec<Candidate<'a, TGraph>>,
     pub graph: &'a TGraph,
@@ -48,16 +48,11 @@ where
     scorer: Scorer,
 }
 
-impl<'a, TGraph: GraphBase<NodeType = Node>> Beam<'a, TGraph> {
+impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
     /// performs a random walk of length `length` along the graph,
     /// starting at a particular node.
-    fn random_walk(
-        rng: &mut impl Rng,
-        graph: &TGraph,
-        node: NodeId,
-        length: i16,
-    ) -> CLQResult<NodeId> {
-        let mut current: NodeId = node;
+    fn random_walk(rng: &mut impl Rng, graph: &TGraph, node: u32, length: i16) -> CLQResult<u32> {
+        let mut current: u32 = node;
         for _i in 0..length {
             let next = graph
                 .get_node(current)
@@ -97,8 +92,8 @@ impl<'a, TGraph: GraphBase<NodeType = Node>> Beam<'a, TGraph> {
         search_problem: Rc<SearchProblem>,
         graph_id: GraphId,
     ) -> CLQResult<Beam<'a, TGraph>> {
-        let core_ids: &Vec<NodeId> = &graph.get_core_ids();
-        let non_core_ids: &Vec<NodeId> = &graph.get_non_core_ids().unwrap();
+        let core_ids: &Vec<u32> = &graph.get_core_ids();
+        let non_core_ids: &Vec<u32> = &graph.get_non_core_ids().unwrap();
 
         let mut candidates: Vec<Candidate<TGraph>> = Vec::new();
         let scorer: Scorer = Scorer::new(num_non_core_types, &search_problem);
@@ -167,7 +162,10 @@ impl<'a, TGraph: GraphBase<NodeType = Node>> Beam<'a, TGraph> {
                         Err(_) => "No score".to_string(),
                     },
                     candidate,
-                    candidate.to_printable_row(self.non_core_types)?,
+                    candidate.to_printable_row(
+                        self.non_core_types,
+                        self.graph.get_reverse_labels_map()
+                    )?,
                 );
             }
             if !self
@@ -189,7 +187,10 @@ impl<'a, TGraph: GraphBase<NodeType = Node>> Beam<'a, TGraph> {
                         eprintln!(
                             "(score = {}): {}",
                             ell.get_score()?,
-                            ell.to_printable_row(self.non_core_types)?,
+                            ell.to_printable_row(
+                                self.non_core_types,
+                                self.graph.get_reverse_labels_map()
+                            )?,
                         );
                     }
                     scored_expansion_candidates.insert(ell);
@@ -259,7 +260,10 @@ impl<'a, TGraph: GraphBase<NodeType = Node>> Beam<'a, TGraph> {
                     eprintln!(
                         "Top candidate found: (score = {}): {}",
                         score,
-                        top.to_printable_row(self.non_core_types)?,
+                        top.to_printable_row(
+                            self.non_core_types,
+                            self.graph.get_reverse_labels_map()
+                        )?,
                     );
                 }
                 assert!(score >= prior_score);

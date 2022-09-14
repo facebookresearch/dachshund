@@ -84,7 +84,7 @@ impl LineProcessorBase for WeightedLineProcessor {
             graph_id,
             source_id,
             target_id,
-            weight
+            weight,
         }))
     }
 }
