@@ -26,11 +26,8 @@ use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 
-
 use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
-
-
 
 /// Keeps track of a weighted undirected graph, composed of nodes that have weighed.
 pub struct WeightedUndirectedGraph {

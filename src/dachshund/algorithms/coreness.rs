@@ -7,7 +7,7 @@
 extern crate fxhash;
 
 use crate::dachshund::algorithms::connected_components::ConnectedComponents;
-use crate::dachshund::graph_base::{GraphBase};
+use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase, WeightedNode, WeightedNodeBase};
 use core::cmp::Reverse;
@@ -261,8 +261,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
     }
 }
 
-pub trait FractionalCoreness : GraphBase<NodeType=WeightedNode>
-{
+pub trait FractionalCoreness: GraphBase<NodeType = WeightedNode> {
     fn get_fractional_coreness_values(&self) -> HashMap<NodeId, f64> {
         // The fractional coreness value is the same as standard k-cores except
         // using total edge weight for each vertex in the k-core, instead of the
@@ -290,7 +289,7 @@ pub trait FractionalCoreness : GraphBase<NodeType=WeightedNode>
         while let Some((node_id, Reverse(nn))) = pq.pop() {
             // If the remaining weight for that node is larger than the value for the current
             // shell, we've progressed to the next shell (all remaining nodes comprise the k-core.)
-            if nn > next_shell_coreness{
+            if nn > next_shell_coreness {
                 next_shell_coreness = nn
             }
 
@@ -306,10 +305,7 @@ pub trait FractionalCoreness : GraphBase<NodeType=WeightedNode>
                 let neighbor_id = e.target_id;
                 if let Some(Reverse(old_priority)) = pq.get_priority(&neighbor_id) {
                     let new_priority: f64 = old_priority.into_inner() - e.weight;
-                    pq.change_priority(
-                        &neighbor_id,
-                        Reverse(NotNan::new(new_priority).unwrap()),
-                    );
+                    pq.change_priority(&neighbor_id, Reverse(NotNan::new(new_priority).unwrap()));
                 }
             }
         }

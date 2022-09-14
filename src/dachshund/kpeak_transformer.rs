@@ -7,6 +7,7 @@
 extern crate clap;
 extern crate serde_json;
 
+use crate::dachshund::algorithms::k_peaks::KPeaks;
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::graph_builder_base::GraphBuilderBase;
 use crate::dachshund::id_types::{GraphId, NodeId};
@@ -19,7 +20,6 @@ use crate::dachshund::transformer_base::TransformerBase;
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use crate::dachshund::algorithms::k_peaks::KPeaks;
 
 pub struct KPeakTransformer {
     batch: Vec<SimpleEdgeRow>,
