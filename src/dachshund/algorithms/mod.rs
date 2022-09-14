@@ -14,7 +14,7 @@ pub mod connected_components;
 pub mod connectivity;
 pub mod coreness;
 pub mod eigenvector_centrality;
+pub mod k_peaks;
 pub mod laplacian;
 pub mod shortest_paths;
 pub mod transitivity;
-pub mod k_peaks;

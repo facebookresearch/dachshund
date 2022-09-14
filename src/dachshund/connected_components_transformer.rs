@@ -57,7 +57,7 @@ impl TransformerBase for ConnectedComponentsTransformer {
         let tuples: Vec<(i64, i64)> = self.batch.iter().map(|x| x.as_tuple()).collect();
         let mut builder = SimpleUndirectedGraphBuilder {};
         let graph = builder.from_vector(tuples)?;
-        
+
         let conn_comp = graph.get_connected_components();
         let original_id = self
             .line_processor

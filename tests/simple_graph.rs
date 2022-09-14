@@ -156,49 +156,44 @@ fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
             (13, 14),
         ],
         8 => vec![
-            (0,1),
-            (0,2),
-            (0,3),
-            (0,4),
-            (0,5),
-            (1,2),
-            (1,3),
-            (1,4),
-            (1,5),
-            (2,3),
-            (2,4),
-            (2,5),
-            (3,4),
-            (3,5),
-            (4,5),
-            (6,1),
-            (6,2),
-            (6,3),
-            (6,4),
-            (7,4),
-            (7,6),
-            (8,5),
-            (8,7),
-            (9,0),
-            (10,6),
-            (10,8),
-            (10,11),
-            (10,12),
-            (10,13),
-            (11,4),
-            (11,12),
-            (11,13),
-            (12,8),
-            (12,14),
-            (12,13),
-            (13,8),
+            (0, 1),
+            (0, 2),
+            (0, 3),
+            (0, 4),
+            (0, 5),
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (1, 5),
+            (2, 3),
+            (2, 4),
+            (2, 5),
+            (3, 4),
+            (3, 5),
+            (4, 5),
+            (6, 1),
+            (6, 2),
+            (6, 3),
+            (6, 4),
+            (7, 4),
+            (7, 6),
+            (8, 5),
+            (8, 7),
+            (9, 0),
+            (10, 6),
+            (10, 8),
+            (10, 11),
+            (10, 12),
+            (10, 13),
+            (11, 4),
+            (11, 12),
+            (11, 13),
+            (12, 8),
+            (12, 14),
+            (12, 13),
+            (13, 8),
         ],
-        9 => vec![
-            (0,1),
-            (1,2),
-            (0,2),
-            (3,4),
-        ],
+        9 => vec![(0, 1), (1, 2), (0, 2), (3, 4)],
         _ => return Err(CLQError::Generic("Invalid index".to_string())),
     };
     SimpleUndirectedGraphBuilder {}
@@ -450,7 +445,8 @@ fn test_modularity_changes() {
 
 #[test]
 fn test_k_peaks() {
-    let (peak_numbers, mountain_assignments) = get_graph(8).unwrap().get_k_peak_mountain_assignment();
+    let (peak_numbers, mountain_assignments) =
+        get_graph(8).unwrap().get_k_peak_mountain_assignment();
 
     // Make sure all peak numbers are correct
     assert_eq!(*peak_numbers.get(&NodeId::from(0 as i64)).unwrap(), 5);
@@ -470,21 +466,65 @@ fn test_k_peaks() {
     assert_eq!(*peak_numbers.get(&NodeId::from(9 as i64)).unwrap(), 0);
 
     // Test mountain configurations
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(0 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(1 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(2 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(3 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(4 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(5 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(6 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(7 as i64)), true);
-    assert_eq!(mountain_assignments[&0].contains_key(&NodeId::from(9 as i64)), true);
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(0 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(1 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(2 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(3 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(4 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(5 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(6 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(7 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&0].contains_key(&NodeId::from(9 as i64)),
+        true
+    );
 
-    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(8 as i64)), true);
-    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(10 as i64)), true);
-    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(11 as i64)), true);
-    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(12 as i64)), true);
-    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(13 as i64)), true);
-    assert_eq!(mountain_assignments[&1].contains_key(&NodeId::from(14 as i64)), true);
-
+    assert_eq!(
+        mountain_assignments[&1].contains_key(&NodeId::from(8 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&1].contains_key(&NodeId::from(10 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&1].contains_key(&NodeId::from(11 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&1].contains_key(&NodeId::from(12 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&1].contains_key(&NodeId::from(13 as i64)),
+        true
+    );
+    assert_eq!(
+        mountain_assignments[&1].contains_key(&NodeId::from(14 as i64)),
+        true
+    );
 }
