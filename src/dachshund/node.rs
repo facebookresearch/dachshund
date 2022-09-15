@@ -151,19 +151,8 @@ impl Node {
         is_core: bool,
         non_core_type: Option<NodeTypeId>,
         edges: Vec<NodeEdge>,
-        // neighbors: HashMap<u32, Vec<NodeEdge>>,
         neighbors_sets: HashMap<EdgeTypeId, RoaringBitmap>,
     ) -> Node {
-        // TODO: Retire this.
-        // let mut neighbors_sets: HashMap<EdgeTypeId, RoaringBitmap> = HashMap::new();
-        // for (node_id, edges) in &neighbors {
-        //     for edge in edges {
-        //         neighbors_sets
-        //             .entry(edge.edge_type)
-        //             .or_default()
-        //             .insert(*node_id);
-        //     }
-        // }
 
         Node {
             node_id,
