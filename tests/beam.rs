@@ -12,7 +12,7 @@ use rand::thread_rng;
 use lib_dachshund::dachshund::beam::Beam;
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::{CLQError, CLQResult};
-use lib_dachshund::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
+use lib_dachshund::dachshund::id_types::{GraphId, NodeTypeId};
 use lib_dachshund::dachshund::input::Input;
 use lib_dachshund::dachshund::output::Output;
 use lib_dachshund::dachshund::row::CliqueRow;
@@ -51,7 +51,7 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
         CliqueRow::new(graph_id, 4, Some(article_type)),
     ];
     let graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows)?;
-    let test_node_id: NodeId = NodeId::from(3 as i64);
+    let test_node_id: u32 = 3;
     graph.nodes[&test_node_id]
         .non_core_type
         .ok_or_else(CLQError::err_none)?;

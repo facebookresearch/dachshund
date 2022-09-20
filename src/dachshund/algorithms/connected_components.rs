@@ -16,7 +16,15 @@ use std::iter::FromIterator;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 
-pub trait ConnectedComponents: GraphBase {
+pub trait ConnectedComponents:
+    GraphBase<
+    NodeType: NodeBase<
+        NodeIdType = NodeId,
+        NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+        NodeSetType = FxHashSet<NodeId>,
+    >,
+>
+{
     // returns a hashmap of the form node_id => component_id -- can be turned
     // in to a vector of node_ids inside _get_connected_components.
     fn _get_connected_components_membership(

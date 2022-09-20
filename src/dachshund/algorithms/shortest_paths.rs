@@ -10,7 +10,9 @@ use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 type NodePredecessors = HashMap<NodeId, Vec<NodeId>>;
-pub trait ShortestPaths: GraphBase {
+pub trait ShortestPaths:
+    GraphBase<NodeType: NodeBase<NodeIdType = NodeId, NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>>>
+{
     // Dikstra's algorithm for shortest paths. Returns distance and parent mappings
     fn get_shortest_paths(
         &self,
@@ -20,8 +22,11 @@ pub trait ShortestPaths: GraphBase {
         // nodes anyway (but this optimization saves some compute)
         nodes_in_connected_component: &Option<Vec<NodeId>>,
     ) -> (
-        HashMap<NodeId, Option<usize>>,
-        HashMap<NodeId, HashSet<NodeId>>,
+        HashMap<<Self::NodeType as NodeBase>::NodeIdType, Option<usize>>,
+        HashMap<
+            <Self::NodeType as NodeBase>::NodeIdType,
+            HashSet<<Self::NodeType as NodeBase>::NodeIdType>,
+        >,
     ) {
         // TODO: this should be changed to a binary heap
         let mut queue: HashSet<&NodeId> = HashSet::new();

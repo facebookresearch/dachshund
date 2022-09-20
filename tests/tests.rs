@@ -202,13 +202,13 @@ fn test_process_medium_clique() -> CLQResult<()> {
             assert_nodes_have_ids(
                 graph,
                 &res.core_ids,
-                core_ids.iter().map(|x| x.value()).collect(),
+                core_ids.iter().map(|x| *x).collect(),
                 true,
             );
             assert_nodes_have_ids(
                 graph,
                 &res.non_core_ids,
-                non_cores.iter().map(|x| x.0.value()).collect(),
+                non_cores.iter().map(|x| x.0).collect(),
                 false,
             );
         },

@@ -19,7 +19,7 @@ use crate::dachshund::non_core_type_ids::NonCoreTypeIds;
 use crate::dachshund::row::{CliqueRow, EdgeRow, Row};
 use crate::dachshund::search_problem::SearchProblem;
 use crate::dachshund::transformer_base::TransformerBase;
-use crate::dachshund::typed_graph::TypedGraph;
+use crate::dachshund::typed_graph::{LabeledGraph, TypedGraph};
 use crate::dachshund::typed_graph_builder::TypedGraphBuilder;
 use crate::dachshund::typed_graph_line_processor::TypedGraphLineProcessor;
 use std::rc::Rc;
@@ -295,7 +295,7 @@ impl Transformer {
                     graph_id.value(),
                     result
                         .top_candidate
-                        .to_printable_row(&self.non_core_types)?,
+                        .to_printable_row(&self.non_core_types, graph.get_reverse_labels_map())?,
                 );
                 output.send((Some(line), false)).unwrap();
             } else {

@@ -156,6 +156,7 @@ impl GraphBuilderBaseWithPreProcessing for SimpleUndirectedGraphBuilderWithCliqu
 impl GraphBuilderBaseWithPreProcessing for SimpleUndirectedGraphBuilder {}
 impl GraphBuilderBaseWithCliques for SimpleUndirectedGraphBuilderWithCliques {
     type CliquesType = BTreeSet<NodeId>;
+    type NodeIdType = NodeId;
     fn get_clique_edges(&self, id1: NodeId, id2: NodeId) -> CLQResult<Vec<(i64, i64)>> {
         Ok(vec![(id1.value(), id2.value())])
     }

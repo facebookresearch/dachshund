@@ -6,9 +6,9 @@
  */
 use crate::dachshund::candidate::Candidate;
 use crate::dachshund::error::CLQResult;
-use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::node::Node;
 use crate::dachshund::search_problem::SearchProblem;
+use crate::dachshund::typed_graph::LabeledGraph;
 use std::rc::Rc;
 
 /// Used to compute the "cliqueness" score of a particular candidate.
@@ -38,7 +38,7 @@ impl Scorer {
         }
     }
     // computes "cliqueness" score, i.e. the objective the search algorithm is maximizing.
-    pub fn score<TGraph: GraphBase<NodeType = Node>>(
+    pub fn score<TGraph: LabeledGraph<NodeType = Node>>(
         &self,
         candidate: &mut Candidate<TGraph>,
     ) -> CLQResult<f32> {
@@ -76,7 +76,7 @@ impl Scorer {
         }
     }
     // used to ensure that each core node has at least % of ties with non-core nodes.
-    pub fn get_local_thresh_score<TGraph: GraphBase<NodeType = Node>>(
+    pub fn get_local_thresh_score<TGraph: LabeledGraph<NodeType = Node>>(
         &self,
         candidate: &mut Candidate<TGraph>,
     ) -> f32 {
@@ -86,7 +86,7 @@ impl Scorer {
         }
     }
     /// returns a non-core diversity score that is higher with more diverse non-core types.
-    pub fn get_non_core_diversity_score<TGraph: GraphBase<NodeType = Node>>(
+    pub fn get_non_core_diversity_score<TGraph: LabeledGraph<NodeType = Node>>(
         &self,
         candidate: &Candidate<TGraph>,
     ) -> CLQResult<f32> {

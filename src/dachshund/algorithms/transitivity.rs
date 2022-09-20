@@ -7,15 +7,23 @@
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use fxhash::FxHashSet;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use std::collections::HashSet;
 
-pub trait Transitivity: GraphBase {
+pub trait Transitivity:
+    GraphBase<
+    NodeType: NodeBase<
+        NodeIdType = NodeId,
+        NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+        NodeSetType = FxHashSet<NodeId>,
+    >,
+>
+{
     // Triangles : Number of triangles a node participates in.
     fn triangle_count(&self, node_id: NodeId) -> usize {
         let node = self.get_node(node_id);
-        let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
+        let mut neighbor_ids: FxHashSet<NodeId> = FxHashSet::default();
         for ne in node.get_edges() {
             neighbor_ids.insert(ne.get_neighbor_id());
         }

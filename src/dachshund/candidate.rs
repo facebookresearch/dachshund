@@ -12,14 +12,17 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
+use fxhash::FxHashMap;
+
+use roaring::RoaringBitmap;
 use rustc_serialize::json;
 
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::graph_base::GraphBase;
-use crate::dachshund::id_types::{GraphId, NodeId, NodeTypeId};
+use crate::dachshund::id_types::{GraphId, NodeLabel, NodeTypeId};
 use crate::dachshund::node::{Node, NodeBase};
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
+use crate::dachshund::typed_graph::LabeledGraph;
 
 use std::sync::mpsc::Sender;
 
@@ -35,7 +38,7 @@ use std::sync::mpsc::Sender;
 #[derive(Clone)]
 pub struct LocalDensityGuarantee {
     pub num_edges: usize,
-    pub exceptions: HashSet<NodeId>,
+    pub exceptions: RoaringBitmap,
 }
 
 /// A recipe for a candidate is a checksum of another and a node id.
@@ -44,7 +47,7 @@ pub struct LocalDensityGuarantee {
 #[derive(Clone, Copy)]
 pub struct Recipe {
     pub checksum: Option<u64>,
-    pub node_id: NodeId,
+    pub node_id: u32,
 }
 
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
@@ -80,55 +83,55 @@ pub struct Recipe {
 
 pub struct Candidate<'a, TGraph>
 where
-    TGraph: GraphBase,
+    TGraph: LabeledGraph,
 {
     pub graph: &'a TGraph,
-    pub core_ids: HashSet<NodeId>,
-    pub non_core_ids: HashSet<NodeId>,
+    pub core_ids: RoaringBitmap,
+    pub non_core_ids: RoaringBitmap,
     pub checksum: Option<u64>,
     score: Option<f32>,
     max_core_node_edges: usize,
     ties_between_nodes: usize,
     local_guarantee: LocalDensityGuarantee,
-    neighborhood: Option<HashMap<NodeId, usize>>,
+    neighborhood: Option<HashMap<u32, usize>>,
     recipe: Option<Recipe>,
     non_core_counts: HashMap<NodeTypeId, usize>,
 }
 
-impl<'a, T: GraphBase> Hash for Candidate<'a, T> {
+impl<'a, T: LabeledGraph> Hash for Candidate<'a, T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.checksum.unwrap().hash(state);
     }
 }
-impl<'a, T: GraphBase> PartialEq for Candidate<'a, T> {
+impl<'a, T: LabeledGraph> PartialEq for Candidate<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         self.checksum == other.checksum && self.score == other.score
     }
 }
-impl<'a, T: GraphBase> Eq for Candidate<'a, T> {}
-impl<'a, T: GraphBase> fmt::Display for Candidate<'a, T> {
+impl<'a, T: LabeledGraph> Eq for Candidate<'a, T> {}
+impl<'a, T: LabeledGraph> fmt::Display for Candidate<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.checksum.unwrap())
     }
 }
 
-impl<'a, TGraph: GraphBase> Candidate<'a, TGraph>
+impl<'a, TGraph: LabeledGraph> Candidate<'a, TGraph>
 where
-    TGraph: GraphBase<NodeType = Node>,
+    TGraph: LabeledGraph<NodeType = Node>,
 {
     /// creates an empty candidate object, refering to a graph.
     pub fn init_blank(graph: &'a TGraph) -> Self {
         Self {
             graph,
-            core_ids: HashSet::new(),
-            non_core_ids: HashSet::new(),
+            core_ids: RoaringBitmap::new(),
+            non_core_ids: RoaringBitmap::new(),
             checksum: None,
             score: None,
             max_core_node_edges: 0,
             ties_between_nodes: 0,
             local_guarantee: LocalDensityGuarantee {
                 num_edges: 0,
-                exceptions: HashSet::new(),
+                exceptions: RoaringBitmap::new(),
             },
             neighborhood: Some(HashMap::new()),
             recipe: None,
@@ -137,7 +140,7 @@ where
     }
 
     /// creates a Candidate object from a single node ID.
-    pub fn new(node_id: NodeId, graph: &'a TGraph, scorer: &Scorer) -> CLQResult<Self> {
+    pub fn new(node_id: u32, graph: &'a TGraph, scorer: &Scorer) -> CLQResult<Self> {
         let mut candidate: Self = Candidate::init_blank(graph);
         candidate.add_node(node_id)?;
         let score = scorer.score(&mut candidate)?;
@@ -154,8 +157,8 @@ where
         assert!(!rows.is_empty());
         let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph);
         for row in rows {
-            if graph.has_node(row.node_id) {
-                let node = graph.get_node(row.node_id);
+            if graph.has_node_by_label(row.node_id) {
+                let node = graph.get_node_by_label(row.node_id);
                 assert_eq!(node.non_core_type, row.target_type);
                 candidate.add_node(node.node_id)?;
             }
@@ -172,7 +175,7 @@ where
 
     /// add node to the clique -- this results in the score being reset, and the
     /// clique checksum being changed.
-    pub fn add_node(&mut self, node_id: NodeId) -> CLQResult<()> {
+    pub fn add_node(&mut self, node_id: u32) -> CLQResult<()> {
         let mut s = DefaultHasher::new();
         node_id.hash(&mut s);
         let node_hash: u64 = s.finish();
@@ -209,15 +212,26 @@ where
     }
 
     /// returns sorted vector of core IDs -- useful for printing
-    pub fn sorted_core_ids(&self) -> Vec<NodeId> {
-        let mut vec: Vec<NodeId> = self.core_ids.iter().cloned().collect();
+    pub fn sorted_core_labels(&self, reverse_labels_map: &FxHashMap<u32, NodeLabel>) -> Vec<i64> {
+        let mut vec: Vec<i64> = self
+            .core_ids
+            .iter()
+            .map(|x| reverse_labels_map[&x].value())
+            .collect();
         vec.sort();
         vec
     }
 
     /// returns sorted vector of non-core IDs -- useful for printing
-    pub fn sorted_non_core_ids(&self) -> Vec<NodeId> {
-        let mut vec: Vec<NodeId> = self.non_core_ids.iter().cloned().collect();
+    pub fn sorted_non_core_labels(
+        &self,
+        reverse_labels_map: &FxHashMap<u32, NodeLabel>,
+    ) -> Vec<i64> {
+        let mut vec: Vec<i64> = self
+            .non_core_ids
+            .iter()
+            .map(|x| reverse_labels_map[&x].value())
+            .collect();
         vec.sort();
         vec
     }
@@ -240,7 +254,7 @@ where
     }
 
     /// given a node ID, returns a reference to that node.
-    pub fn get_node(&self, node_id: NodeId) -> &Node {
+    pub fn get_node(&self, node_id: u32) -> &Node {
         self.graph.get_node(node_id)
     }
 
@@ -255,7 +269,7 @@ where
     /// Get a clone of the candidates neighborhood (which is a map from
     /// every node adjacent to the clique to the number of edges between
     /// that node and the members of the clique.)
-    pub fn get_neighborhood(&self) -> HashMap<NodeId, usize> {
+    pub fn get_neighborhood(&self) -> HashMap<u32, usize> {
         match &self.neighborhood {
             None => self.calculate_neighborhood(),
             Some(neighbors) => neighbors.clone(),
@@ -275,16 +289,16 @@ where
     }
 
     /// encodes self as tab-separated "wide" format
-    pub fn to_printable_row(&self, target_types: &[String]) -> CLQResult<String> {
+    pub fn to_printable_row(
+        &self,
+        target_types: &[String],
+        reverse_labels_map: FxHashMap<u32, NodeLabel>,
+    ) -> CLQResult<String> {
         let encode_err_handler = |e: json::EncoderError| Err(CLQError::from(e.to_string()));
 
         let cliqueness = self.get_cliqueness()?;
-        let core_ids: Vec<i64> = self.sorted_core_ids().iter().map(|x| x.value()).collect();
-        let non_core_ids: Vec<i64> = self
-            .sorted_non_core_ids()
-            .iter()
-            .map(|x| x.value())
-            .collect();
+        let core_ids: Vec<i64> = self.sorted_core_labels(&reverse_labels_map);
+        let non_core_ids: Vec<i64> = self.sorted_non_core_labels(&reverse_labels_map);
 
         let mut s = String::new();
         s.push_str(&core_ids.len().to_string());
@@ -318,23 +332,27 @@ where
     }
 
     /// used for interaction with Transformer classes.
-    pub fn get_output_rows(&self, graph_id: GraphId) -> CLQResult<Vec<CliqueRow>> {
+    pub fn get_output_rows(
+        &self,
+        graph_id: GraphId,
+        reverse_labels_map: FxHashMap<u32, NodeLabel>,
+    ) -> CLQResult<Vec<CliqueRow>> {
         let mut out: Vec<CliqueRow> = Vec::new();
 
-        for core_id in self.sorted_core_ids() {
+        for core_id in self.sorted_core_labels(&reverse_labels_map) {
             let row: CliqueRow = CliqueRow {
                 graph_id,
-                node_id: core_id,
+                node_id: core_id.into(),
                 target_type: None,
             };
             out.push(row);
         }
 
-        for non_core_id in self.sorted_non_core_ids() {
-            let non_core_node = self.get_node(non_core_id);
+        for non_core_id in self.sorted_non_core_labels(&reverse_labels_map) {
+            let non_core_node = self.graph.get_node_by_label(non_core_id.into());
             let row: CliqueRow = CliqueRow {
                 graph_id,
-                node_id: non_core_id,
+                node_id: non_core_id.into(),
                 target_type: non_core_node.non_core_type,
             };
             out.push(row);
@@ -350,7 +368,7 @@ where
         core_type: &str,
         output: &Sender<(Option<String>, bool)>,
     ) -> CLQResult<()> {
-        for output_row in &self.get_output_rows(graph_id)? {
+        for output_row in &self.get_output_rows(graph_id, self.graph.get_reverse_labels_map())? {
             let node_type: String = match output_row.target_type {
                 // this is hacky -- when t is 0 it's an indication of this being the
                 // core type, but not for TypedGraphBuilder
@@ -401,14 +419,14 @@ where
 
     /// creates a copy of itself and adds a node to said copy,
     /// checking that the node does not already belong to itself.
-    fn expand_with_node(&self, node_id: NodeId) -> CLQResult<Self> {
+    fn expand_with_node(&self, node_id: u32) -> CLQResult<Self> {
         let mut candidate = self.replicate(false);
         if self.get_node(node_id).is_core() {
-            assert!(!candidate.core_ids.contains(&node_id));
-            assert!(!self.core_ids.contains(&node_id));
+            assert!(!candidate.core_ids.contains(node_id));
+            assert!(!self.core_ids.contains(node_id));
         } else {
-            assert!(!candidate.non_core_ids.contains(&node_id));
-            assert!(!self.non_core_ids.contains(&node_id));
+            assert!(!candidate.non_core_ids.contains(node_id));
+            assert!(!self.non_core_ids.contains(node_id));
         }
         candidate.add_node(node_id)?;
         Ok(candidate)
@@ -468,12 +486,12 @@ where
     /// this is the sum of maximum weights for edges that could connect nodes currently
     /// in the candidates.
     pub fn get_size(&self) -> CLQResult<usize> {
-        Ok(self.core_ids.len() * self.max_core_node_edges)
+        Ok(self.core_ids.len() as usize * self.max_core_node_edges)
     }
 
     // Update the size to account for for adding node_id. Can be called immediately before
     // or after inserting the node into the set of ids. Only call this when adding a noncore node.
-    fn increment_max_core_node_edges(&mut self, node_id: NodeId) -> CLQResult<()> {
+    fn increment_max_core_node_edges(&mut self, node_id: u32) -> CLQResult<()> {
         let new_edge_count = self
             .get_node(node_id)
             .max_edge_count_with_core_node()?
@@ -513,7 +531,7 @@ where
         };
 
         let mut min_edges = None;
-        for &node_id in nodes_to_check {
+        for node_id in nodes_to_check {
             let edge_count = self
                 .get_node(node_id)
                 .count_ties_with_ids(&self.non_core_ids);
@@ -537,7 +555,7 @@ where
 
         self.local_guarantee = LocalDensityGuarantee {
             num_edges: new_num_edges,
-            exceptions: HashSet::new(),
+            exceptions: RoaringBitmap::new(),
         };
         true
     }
@@ -555,7 +573,7 @@ where
 
     // Update the count of ties between nodes to account for adding node_id. Can be called
     // immediately before or immediately after inserting node into the set of ids.
-    fn increment_ties_between_nodes(&mut self, node_id: NodeId) {
+    fn increment_ties_between_nodes(&mut self, node_id: u32) {
         let new_ties = if self.graph.get_node(node_id).is_core() {
             self.get_node(node_id)
                 .count_ties_with_ids(&self.non_core_ids)
@@ -566,14 +584,14 @@ where
     }
 
     // Recalculates the candidate's neighborhood from scratch.
-    fn calculate_neighborhood(&self) -> HashMap<NodeId, usize> {
+    fn calculate_neighborhood(&self) -> HashMap<u32, usize> {
         let mut neighborhood = HashMap::new();
         for node_id in &self.core_ids {
-            self.adjust_neighborhood(&mut neighborhood, *node_id);
+            self.adjust_neighborhood(&mut neighborhood, node_id);
         }
 
         for node_id in &self.non_core_ids {
-            self.adjust_neighborhood(&mut neighborhood, *node_id);
+            self.adjust_neighborhood(&mut neighborhood, node_id);
         }
         neighborhood
     }
@@ -582,14 +600,14 @@ where
     // Any neighbor that isn't already in our graph should have its
     // edges count in self.neighborhood increased by one, and the node we're
     // adding needs to be removed, since it is no longer adjacent to the clique.
-    fn adjust_neighborhood(&self, neighborhood: &mut HashMap<NodeId, usize>, node_id: NodeId) {
+    fn adjust_neighborhood(&self, neighborhood: &mut HashMap<u32, usize>, node_id: u32) {
         let opposite_shore = if self.graph.get_node(node_id).is_core() {
             &self.non_core_ids
         } else {
             &self.core_ids
         };
 
-        let neighbors: Vec<NodeId> = self
+        let neighbors: Vec<u32> = self
             .get_node(node_id)
             .edges
             .iter()
@@ -597,7 +615,7 @@ where
             .collect();
 
         for target_id in neighbors {
-            if !opposite_shore.contains(&target_id) {
+            if !opposite_shore.contains(target_id) {
                 let counter = neighborhood.entry(target_id).or_insert(0);
                 *counter += 1;
             }
@@ -638,7 +656,7 @@ where
     fn get_non_core_densities(&self, num_non_core_types: usize) -> CLQResult<Vec<f32>> {
         let mut non_core_max_counts: Vec<usize> = vec![0; num_non_core_types + 1];
         let mut non_core_out_counts: Vec<usize> = vec![0; num_non_core_types + 1];
-        for &non_core_id in &self.non_core_ids {
+        for non_core_id in &self.non_core_ids {
             let non_core = self.get_node(non_core_id);
             let non_core_type_id: NodeTypeId =
                 non_core.non_core_type.ok_or_else(CLQError::err_none)?;
@@ -646,7 +664,8 @@ where
             let max_density = non_core
                 .max_edge_count_with_core_node()?
                 .ok_or_else(CLQError::err_none)?;
-            non_core_max_counts[non_core_type_id.value()] += max_density * self.core_ids.len();
+            non_core_max_counts[non_core_type_id.value()] +=
+                max_density * (self.core_ids.len() as usize);
             non_core_out_counts[non_core_type_id.value()] += num_ties;
         }
         let mut non_core_density: Vec<f32> = Vec::new();
@@ -662,14 +681,14 @@ where
         let max_size: usize = self
             .non_core_ids
             .iter()
-            .map(|&id| {
+            .map(|id| {
                 self.get_node(id)
                     .max_edge_count_with_core_node()
                     .unwrap()
                     .unwrap()
             })
             .sum();
-        for &node_id in &self.core_ids {
+        for node_id in &self.core_ids {
             let node = self.get_node(node_id);
             let num_ties: usize = node.count_ties_with_ids(&self.non_core_ids);
             counts.push(num_ties as f32 / max_size as f32);

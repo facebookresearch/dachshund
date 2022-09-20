@@ -11,7 +11,9 @@ use nalgebra::DMatrix;
 use std::collections::HashMap;
 
 type GraphMatrix = DMatrix<f64>;
-pub trait AdjacencyMatrix: GraphBase {
+pub trait AdjacencyMatrix:
+    GraphBase<NodeType: NodeBase<NodeIdType = NodeId, NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>>>
+{
     fn get_adjacency_matrix_given_node_ids(&self, node_ids: &[NodeId]) -> GraphMatrix {
         let num_nodes = node_ids.len();
         let mut data: Vec<f64> = vec![0.0; num_nodes * num_nodes];
@@ -35,7 +37,7 @@ pub trait AdjacencyMatrix: GraphBase {
         let node_ids = self.get_ordered_node_ids();
         (
             self.get_adjacency_matrix_given_node_ids(&node_ids),
-            node_ids,
+            node_ids.to_vec(),
         )
     }
 }

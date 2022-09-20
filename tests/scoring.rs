@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
-use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
+use lib_dachshund::dachshund::id_types::GraphId;
 use lib_dachshund::dachshund::row::EdgeRow;
 use lib_dachshund::dachshund::scorer::Scorer;
 use lib_dachshund::dachshund::search_problem::SearchProblem;
@@ -51,11 +51,11 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     ));
 
     let scorer: Scorer = Scorer::new(2, &search_problem);
-    let core_node_id: NodeId = *graph.core_ids.first().unwrap();
+    let core_node_id: u32 = *graph.core_ids.first().unwrap();
     let mut candidate: Candidate<TypedGraph> = Candidate::new(core_node_id, &graph, &scorer)?;
     assert_eq!(candidate.get_score()?, -1.0);
 
-    let non_core_node_id: NodeId = *graph.non_core_ids.first().unwrap();
+    let non_core_node_id: u32 = *graph.non_core_ids.first().unwrap();
     candidate.add_node(non_core_node_id)?;
     assert!(
         candidate.get_score().is_err(),

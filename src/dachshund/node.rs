@@ -8,27 +8,33 @@ use std::cmp::{Eq, PartialEq};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
+use fxhash::FxHashSet;
+use roaring::RoaringBitmap;
+
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::id_types::{EdgeTypeId, NodeId, NodeTypeId};
 
 /// Used to indicate a typed edge leading to the neighbor of a node.
-pub struct NodeEdge {
-    pub edge_type: EdgeTypeId,
-    pub target_id: NodeId,
-}
 pub trait NodeEdgeBase
 where
     Self: Sized,
 {
-    fn get_neighbor_id(&self) -> NodeId;
+    type NodeIdType;
+    fn get_neighbor_id(&self) -> Self::NodeIdType;
+}
+
+pub struct NodeEdge {
+    pub edge_type: EdgeTypeId,
+    pub target_id: u32,
 }
 impl NodeEdgeBase for NodeEdge {
-    fn get_neighbor_id(&self) -> NodeId {
+    type NodeIdType = u32;
+    fn get_neighbor_id(&self) -> u32 {
         self.target_id
     }
 }
 impl NodeEdge {
-    pub fn new(edge_type: EdgeTypeId, target_id: NodeId) -> Self {
+    pub fn new(edge_type: EdgeTypeId, target_id: u32) -> Self {
         Self {
             edge_type,
             target_id,
@@ -37,6 +43,7 @@ impl NodeEdge {
 }
 
 impl NodeEdgeBase for NodeId {
+    type NodeIdType = NodeId;
     fn get_neighbor_id(&self) -> NodeId {
         *self
     }
@@ -48,6 +55,7 @@ pub struct WeightedNodeEdge {
     pub weight: f64,
 }
 impl NodeEdgeBase for WeightedNodeEdge {
+    type NodeIdType = NodeId;
     fn get_neighbor_id(&self) -> NodeId {
         self.target_id
     }
@@ -75,26 +83,29 @@ pub trait NodeBase
 where
     Self: Sized,
 {
+    type NodeIdType: Clone + Ord;
     type NodeEdgeType: NodeEdgeBase + Sized;
+    type NodeSetType;
 
-    fn get_id(&self) -> NodeId;
+    fn get_id(&self) -> Self::NodeIdType;
     // used to return *all* edges
     fn get_edges(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     // used to return *outgoing* edges only (to perform a traversal)
     fn get_outgoing_edges(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn degree(&self) -> usize;
-    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize;
+    fn count_ties_with_ids(&self, ids: &Self::NodeSetType) -> usize;
 }
+
 /// Core data structure used to represent a node in our graph. A node can be
 /// either a "core" node, or a non-core node. Non-core nodes also have a type (e.g.
 /// IP, URL, etc.) Each node also keeps track of its neighbors, via a vector of
 /// edges that specify edge type and target node.
 pub struct Node {
-    pub node_id: NodeId,
+    pub node_id: u32,
     pub is_core: bool,
     pub non_core_type: Option<NodeTypeId>,
     pub edges: Vec<NodeEdge>,
-    pub neighbors: HashMap<NodeId, Vec<NodeEdge>>,
+    pub neighbors_sets: HashMap<EdgeTypeId, RoaringBitmap>,
 }
 impl Hash for Node {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -109,7 +120,10 @@ impl PartialEq for Node {
 impl Eq for Node {}
 impl NodeBase for Node {
     type NodeEdgeType = NodeEdge;
-    fn get_id(&self) -> NodeId {
+    type NodeIdType = u32;
+    type NodeSetType = RoaringBitmap;
+
+    fn get_id(&self) -> u32 {
         self.node_id
     }
     fn get_edges(&self) -> Box<dyn Iterator<Item = &NodeEdge> + '_> {
@@ -122,43 +136,31 @@ impl NodeBase for Node {
     fn degree(&self) -> usize {
         self.edges.len()
     }
-    /// used to determine degree in a subgraph (i.e., the clique we're considering).
-    /// HashSet is supplied by Candidate struct.
-    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
-        let mut num_ties: usize = 0;
-        // If we have low degree and we're checking against a big set, iterate through our neighbors
-        if self.neighbors.len() <= ids.len() {
-            for (neighbor_id, edges) in &self.neighbors {
-                if ids.contains(&neighbor_id) {
-                    num_ties += edges.len();
-                }
-            }
-        // otherwise iterate through the hashset and check against our neighbors.
-        } else {
-            for node_id in ids {
-                if let Some(edges) = self.neighbors.get(node_id) {
-                    num_ties += edges.len()
-                }
-            }
-        };
-        num_ties
+
+    fn count_ties_with_ids(&self, ids: &RoaringBitmap) -> usize {
+        self.neighbors_sets
+            .values()
+            .map(|neighbors| neighbors.intersection_len(ids))
+            .sum::<u64>() as usize
     }
 }
 
 impl Node {
     pub fn new(
-        node_id: NodeId,
+        node_id: u32,
         is_core: bool,
         non_core_type: Option<NodeTypeId>,
         edges: Vec<NodeEdge>,
-        neighbors: HashMap<NodeId, Vec<NodeEdge>>,
+        neighbors_sets: HashMap<EdgeTypeId, RoaringBitmap>,
     ) -> Node {
+
         Node {
             node_id,
             is_core,
             non_core_type,
             edges,
-            neighbors,
+            // neighbors,
+            neighbors_sets,
         }
     }
     pub fn is_core(&self) -> bool {
@@ -168,7 +170,7 @@ impl Node {
         let non_core_type = self.non_core_type.ok_or_else(|| {
             CLQError::from(format!(
                 "Node {} is unexpextedly a core node.",
-                self.node_id.value()
+                self.node_id
             ))
         })?;
         Ok(non_core_type.max_edge_count_with_core_node())
@@ -192,6 +194,8 @@ impl PartialEq for SimpleNode {
 impl Eq for SimpleNode {}
 impl NodeBase for SimpleNode {
     type NodeEdgeType = NodeId;
+    type NodeIdType = NodeId;
+    type NodeSetType = FxHashSet<NodeId>;
 
     fn get_id(&self) -> NodeId {
         self.node_id
@@ -208,12 +212,14 @@ impl NodeBase for SimpleNode {
     }
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
-    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+    fn count_ties_with_ids(&self, ids: &FxHashSet<NodeId>) -> usize {
         ids.iter().filter(|x| self.neighbors.contains(x)).count()
     }
 }
 
-pub trait DirectedNodeBase: NodeBase {
+pub trait DirectedNodeBase:
+    NodeBase<NodeIdType = NodeId, NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>>
+{
     fn get_in_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn has_in_neighbor(&self, nid: NodeId) -> bool;
@@ -269,6 +275,8 @@ impl PartialEq for SimpleDirectedNode {
 impl Eq for SimpleDirectedNode {}
 impl NodeBase for SimpleDirectedNode {
     type NodeEdgeType = NodeId;
+    type NodeSetType = FxHashSet<NodeId>;
+    type NodeIdType = NodeId;
 
     fn get_id(&self) -> NodeId {
         self.node_id
@@ -285,7 +293,7 @@ impl NodeBase for SimpleDirectedNode {
     }
     /// used to determine degree in a subgraph (i.e., the clique we're considering).
     /// HashSet is supplied by Candidate struct.
-    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+    fn count_ties_with_ids(&self, ids: &FxHashSet<NodeId>) -> usize {
         ids.iter()
             .filter(|x| self.in_neighbors.contains(x) || self.out_neighbors.contains(x))
             .count()
@@ -317,7 +325,10 @@ impl PartialEq for WeightedNode {
 }
 impl Eq for WeightedNode {}
 impl NodeBase for WeightedNode {
+    type NodeIdType = NodeId;
     type NodeEdgeType = WeightedNodeEdge;
+    type NodeSetType = FxHashSet<NodeId>;
+
     fn get_id(&self) -> NodeId {
         self.node_id
     }
@@ -332,7 +343,7 @@ impl NodeBase for WeightedNode {
         self.edges.len()
     }
 
-    fn count_ties_with_ids(&self, ids: &HashSet<NodeId>) -> usize {
+    fn count_ties_with_ids(&self, ids: &FxHashSet<NodeId>) -> usize {
         ids.iter().filter(|x| self.neighbors.contains(x)).count()
     }
 }

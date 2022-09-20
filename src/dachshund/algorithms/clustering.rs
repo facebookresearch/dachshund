@@ -8,14 +8,22 @@ extern crate nalgebra as na;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
 use crate::dachshund::node::{NodeBase, NodeEdgeBase};
+use fxhash::FxHashSet;
 use rand::prelude::*;
 use rand::Rng;
-use std::collections::HashSet;
 
-pub trait Clustering: GraphBase {
+pub trait Clustering:
+    GraphBase<
+    NodeType: NodeBase<
+        NodeIdType = NodeId,
+        NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+        NodeSetType = FxHashSet<NodeId>,
+    >,
+>
+{
     fn get_clustering_coefficient(&self, id: NodeId) -> Option<f64> {
         let node = self.get_node(id);
-        let mut neighbor_ids: HashSet<NodeId> = HashSet::new();
+        let mut neighbor_ids: FxHashSet<NodeId> = FxHashSet::default();
         for ne in node.get_edges() {
             neighbor_ids.insert(ne.get_neighbor_id());
         }
