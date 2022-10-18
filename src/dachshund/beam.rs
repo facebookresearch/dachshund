@@ -95,7 +95,7 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
         let core_ids: &Vec<u32> = &graph.get_core_ids();
         let non_core_ids: &Vec<u32> = &graph.get_non_core_ids().unwrap();
 
-        let mut candidates: Vec<Candidate<TGraph>> = Vec::new();
+        let mut candidates: Vec<Candidate<TGraph>> = Vec::with_capacity(search_problem.beam_size);
         let scorer: Scorer = Scorer::new(num_non_core_types, &search_problem);
 
         // To ensure deterministic behaviour between two identically configured runs,
@@ -151,7 +151,7 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
         let mut can_continue: bool = false;
         // A map from a checksum to a reference to a candidate from the previous generation.
         // Used as a hint when materializing the neighborhood for the next generation of candidates.
-        let mut previous_candidates = HashMap::new();
+        let mut previous_candidates: HashMap<u64, &Candidate<TGraph>> = HashMap::new();
 
         for candidate in &self.candidates {
             if self.verbose {
