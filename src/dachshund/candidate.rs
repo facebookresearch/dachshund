@@ -443,15 +443,26 @@ where
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let mut h = BinaryHeap::with_capacity(num_to_search + 1);
+        let mut h = BinaryHeap::with_capacity(num_to_search);
 
         // We only ever need to expand a node with its neighbors calculated.
         assert!(self.neighborhood.is_some());
         let neighborhood = self.neighborhood.as_ref().unwrap();
-        for (node_id, num_ties) in  neighborhood.iter() {
-            h.push((Reverse(num_ties), node_id));
-            if h.len() > num_to_search {
-                h.pop();
+
+        // Use the heap to keep track of the nodes with the most ties to the
+        // current candidate: If the heap is already full, look at the max element
+        // (the one with fewest ties because of Reverse). If the element we're
+        // considering is smaller (more ties) we can remove the max element
+        // and push the new element onto the heap.
+        for (node_id, num_ties) in neighborhood.iter() {
+            let heap_element = (Reverse(num_ties), node_id);
+            if h.len() < num_to_search {
+                h.push(heap_element);
+            } else {
+                if heap_element < *h.peek().unwrap() {
+                    h.pop();
+                    h.push(heap_element);
+                }
             }
         }
 
