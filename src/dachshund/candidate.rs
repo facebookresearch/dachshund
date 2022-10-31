@@ -50,6 +50,8 @@ pub struct Recipe {
     pub node_id: u32,
 }
 
+type NeigbhorhoodMap = HashMap<u32, usize>;
+
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
 /// reiterate, a (fuzzy) clique is a subgraph of edges going from some set of "core" nodes
 /// to some set of "non_core" nodes. A "true" clique involves this subgraph being complete,
@@ -57,7 +59,7 @@ pub struct Recipe {
 /// data structure itself enforces no such consistency guarantees. It just provides a
 /// convenient bookkeeping abstraction with which the search algorithm can work.
 ///
-/// The struct keeps state in two `HashSets`, of core and non_core node ids. There's also a
+/// The struct keeps state in two `RoaringBitmap`s, of core and non_core node ids. There's also a
 /// convenience reference to `Graph`, a checksum summarising the full state, and a field
 /// in which to maintain the candidate's current score.
 ///
@@ -93,7 +95,7 @@ where
     max_core_node_edges: usize,
     ties_between_nodes: usize,
     local_guarantee: LocalDensityGuarantee,
-    neighborhood: Option<HashMap<u32, usize>>,
+    neighborhood: Option<NeigbhorhoodMap>,
     recipe: Option<Recipe>,
     non_core_counts: HashMap<NodeTypeId, usize>,
 }
@@ -269,7 +271,7 @@ where
     /// Get a clone of the candidates neighborhood (which is a map from
     /// every node adjacent to the clique to the number of edges between
     /// that node and the members of the clique.)
-    pub fn get_neighborhood(&self) -> HashMap<u32, usize> {
+    pub fn get_neighborhood(&self) -> NeigbhorhoodMap {
         match &self.neighborhood {
             None => self.calculate_neighborhood(),
             Some(neighbors) => neighbors.clone(),
@@ -282,10 +284,10 @@ where
         self.local_guarantee.clone()
     }
 
-    /// Get a clone of non_core counts which records the number of noncore
+    /// Get a reference to non_core counts which records the number of noncore
     /// nodes in the clique.
-    pub fn get_non_core_counts(&self) -> HashMap<NodeTypeId, usize> {
-        self.non_core_counts.clone()
+    pub fn get_non_core_counts(&self) -> &HashMap<NodeTypeId, usize> {
+        &self.non_core_counts
     }
 
     /// encodes self as tab-separated "wide" format
@@ -441,17 +443,30 @@ where
         visited_candidates: &mut HashSet<u64>,
     ) -> CLQResult<Vec<Self>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
-        let neighborhood = self.get_neighborhood();
+        let mut h = BinaryHeap::with_capacity(num_to_search);
 
-        let mut h = BinaryHeap::with_capacity(num_to_search + 1);
+        // We only ever need to expand a node with its neighbors calculated.
+        assert!(self.neighborhood.is_some());
+        let neighborhood = self.neighborhood.as_ref().unwrap();
+
+        // Use the heap to keep track of the nodes with the most ties to the
+        // current candidate: If the heap is already full, look at the max element
+        // (the one with fewest ties because of Reverse). If the element we're
+        // considering is smaller (more ties) we can remove the max element
+        // and push the new element onto the heap.
         for (node_id, num_ties) in neighborhood.iter() {
-            h.push((Reverse(num_ties), node_id));
-            if h.len() > num_to_search {
-                h.pop();
+            let heap_element = (Reverse(num_ties), node_id);
+            if h.len() < num_to_search {
+                h.push(heap_element);
+            } else {
+                if heap_element < *h.peek().unwrap() {
+                    h.pop();
+                    h.push(heap_element);
+                }
             }
         }
 
-        let mut expansion_candidates: Vec<Self> = Vec::new();
+        let mut expansion_candidates: Vec<Self> = Vec::with_capacity(num_to_search);
 
         for (_num_ties, &node_id) in h.into_sorted_vec().iter() {
             let candidate = self.expand_with_node(node_id)?;
@@ -584,7 +599,7 @@ where
     }
 
     // Recalculates the candidate's neighborhood from scratch.
-    fn calculate_neighborhood(&self) -> HashMap<u32, usize> {
+    fn calculate_neighborhood(&self) -> NeigbhorhoodMap {
         let mut neighborhood = HashMap::new();
         for node_id in &self.core_ids {
             self.adjust_neighborhood(&mut neighborhood, node_id);
@@ -600,7 +615,7 @@ where
     // Any neighbor that isn't already in our graph should have its
     // edges count in self.neighborhood increased by one, and the node we're
     // adding needs to be removed, since it is no longer adjacent to the clique.
-    fn adjust_neighborhood(&self, neighborhood: &mut HashMap<u32, usize>, node_id: u32) {
+    fn adjust_neighborhood(&self, neighborhood: &mut NeigbhorhoodMap, node_id: u32) {
         let opposite_shore = if self.graph.get_node(node_id).is_core() {
             &self.non_core_ids
         } else {
