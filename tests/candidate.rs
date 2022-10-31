@@ -6,7 +6,7 @@
  */
 extern crate lib_dachshund;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use lib_dachshund::dachshund::candidate::Candidate;
 use lib_dachshund::dachshund::error::CLQResult;
@@ -358,6 +358,55 @@ fn test_local_density_guarantees() -> CLQResult<()> {
     let guarantee = candidate.get_local_guarantee();
     assert_eq!(guarantee.num_edges, 1);
     assert!(guarantee.exceptions.is_empty());
+
+    Ok(())
+}
+
+/// Test that a candidate property performs a one-step search.
+///
+///  1 - 2
+///    \
+///  3 - 4
+///    \
+///  5 - 6
+///
+/// Start with {1, 3, 5}. Expansion candidates should rank 1,2,4 g
+#[test]
+fn test_one_step_search() -> CLQResult<()> {
+    let (graph, transformer) = build_sample_graph();
+    assert_eq!(graph.core_ids.len(), 3);
+    assert_eq!(graph.non_core_ids.len(), 3);
+
+    let initial_id: u32 = 1;
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
+
+    let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
+
+    let node_3: u32 = graph.get_node_by_label(3.into()).node_id;
+    let node_5: u32 = graph.get_node_by_label(5.into()).node_id;
+
+    // Adding 3 and 5 to the clique.
+    candidate.add_node(node_3)?;
+    candidate.add_node(node_5)?;
+    candidate.set_neighborhood();
+
+    let mut visited_candidates: HashSet<u64> = HashSet::new();
+    let new_candidates: Vec<Candidate<TypedGraph>> = candidate
+        .one_step_search(2, &mut visited_candidates, &scorer)
+        .unwrap();
+
+    // When we do a one step search, it should respect the num_to_search arugument...
+    assert_eq!(new_candidates.len(), 2);
+    // ... and we should only get new candidates with 4 and 6 added, not 2.
+    // (because of the num_ties with the original 3 nodes.)
+    let node_2: u32 = graph.get_node_by_label(2.into()).node_id;
+    let node_4: u32 = graph.get_node_by_label(4.into()).node_id;
+    let node_6: u32 = graph.get_node_by_label(6.into()).node_id;
+
+    for cand in new_candidates {
+        assert!(!cand.non_core_ids.contains(node_2));
+        assert!(!cand.non_core_ids.contains(node_4) || !cand.non_core_ids.contains(node_6));
+    }
 
     Ok(())
 }
