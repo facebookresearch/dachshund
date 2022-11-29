@@ -643,22 +643,33 @@ where
     // We use the recipe to make sure that we can safely clone its neighborhood as
     // starting point.
     pub fn set_neigbhorhood_with_hint(&mut self, hints: &HashMap<u64, &Self>) {
-        match self.recipe {
-            None => self.neighborhood = Some(self.calculate_neighborhood()),
-            Some(Recipe { checksum, node_id }) => {
-                if checksum.is_none() || !hints.contains_key(&checksum.unwrap()) {
-                    self.neighborhood = Some(self.calculate_neighborhood());
-                } else {
-                    let hint = hints.get(&checksum.unwrap()).unwrap();
-                    if checksum != hint.checksum || hint.neighborhood.is_none() {
-                        self.neighborhood = Some(self.calculate_neighborhood());
-                    } else {
-                        let mut new_neighborhood = hint.neighborhood.as_ref().unwrap().clone();
-                        self.adjust_neighborhood(&mut new_neighborhood, node_id);
-                        self.neighborhood = Some(new_neighborhood);
-                    }
-                }
-            }
+        let Some(recipe) = self.recipe else {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        };
+
+        let Some(checksum) = recipe.checksum else {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        };
+
+        let Some(hint) = hints.get(&checksum) else {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        };
+
+        if recipe.checksum != hint.checksum {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        }
+
+        // At this point we have a hint that matches the checksum of the recipe.
+        // Check if the hint has a neighborhood to use
+        if let Some(mut neighborhood) = hint.neighborhood.clone() {
+            self.adjust_neighborhood(&mut neighborhood, recipe.node_id);
+            self.neighborhood = Some(neighborhood);
+        } else {
+            self.neighborhood = Some(self.calculate_neighborhood());
         }
     }
 
