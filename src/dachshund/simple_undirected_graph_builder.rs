@@ -141,9 +141,9 @@ impl GraphBuilderBaseWithPreProcessing for SimpleUndirectedGraphBuilderWithCliqu
         let mut row_set: HashSet<<Self as GraphBuilderBase>::RowType> = data.into_iter().collect();
         for clique in self.get_cliques() {
             for comb in clique.iter().combinations(2) {
-                let id1 = comb.get(0).unwrap().clone();
-                let id2 = comb.get(1).unwrap().clone();
-                for clique_edge in self.get_clique_edges(*id1, *id2).unwrap().into_iter() {
+                let id1 = **comb.get(0).unwrap();
+                let id2 = **comb.get(1).unwrap();
+                for clique_edge in self.get_clique_edges(id1, id2).unwrap().into_iter() {
                     row_set.insert(clique_edge);
                 }
             }

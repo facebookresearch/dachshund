@@ -88,7 +88,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         // coreness_bin_starts[i] = j means i core consists of nodes[j..]
         // so when computing connected components, we exclude
         // initial segments of nodes up to the starts of these bins.
-        let coreness_bin_starts = self._init_bin_starts(&nodes, &coreness);
+        let coreness_bin_starts = self._init_bin_starts(&nodes, coreness);
 
         let mut core_assignments: Vec<Vec<Vec<NodeId>>> = Vec::new();
         let mut removed: FxHashSet<NodeId>;
@@ -163,7 +163,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
 
         // See algorithm Core-A in https://www.cs.cmu.edu/~kijungs/papers/kcoreICDM2016.pdf
         let mut anomaly_scores = HashMap::new();
-        let core_ranks = averaged_ties_ranking(&coreness);
+        let core_ranks = averaged_ties_ranking(coreness);
         let deg_ranks = averaged_ties_ranking(
             &self
                 .get_nodes_iter()
@@ -194,14 +194,13 @@ pub trait Coreness: GraphBase + ConnectedComponents {
                 ),
             );
             for e in node.get_edges() {
-                let id_pair: (NodeId, NodeId);
                 let node_id = node.get_id();
                 let neighbor_id = e.get_neighbor_id();
-                if node_id < neighbor_id {
-                    id_pair = (node_id, neighbor_id);
+                let id_pair = if node_id < neighbor_id {
+                    (node_id, neighbor_id)
                 } else {
-                    id_pair = (neighbor_id, node_id);
-                }
+                    (neighbor_id, node_id)
+                };
                 edges.insert(id_pair);
             }
         }
@@ -211,8 +210,8 @@ pub trait Coreness: GraphBase + ConnectedComponents {
             changes = false;
             let mut to_remove: Vec<(NodeId, NodeId)> = Vec::new();
             for (id1, id2) in &edges {
-                let n1 = &neighbors[&id1];
-                let n2 = &neighbors[&id2];
+                let n1 = &neighbors[id1];
+                let n2 = &neighbors[id2];
                 let intersection = n1.intersection(n2);
                 if intersection.count() < k - 2 {
                     to_remove.push((*id1, *id2));
@@ -222,7 +221,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
             }
             for e in &to_remove {
                 changes = true;
-                edges.remove(&e);
+                edges.remove(e);
                 ignore_edges.insert(*e);
             }
         }
@@ -231,7 +230,7 @@ pub trait Coreness: GraphBase + ConnectedComponents {
         let mut trusses: Vec<OrderedEdgeSet> = vec![BTreeSet::new(); num_components];
         for (id, idx) in &components {
             // reusing the neighbors sets from above
-            for nid in &neighbors[&id] {
+            for nid in &neighbors[id] {
                 // will only return (lesser_id, greater_id) for an UndirectedGraph
                 if components[nid] == *idx && id < nid {
                     let eid = (*id, *nid);
@@ -327,12 +326,12 @@ pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId,
     let mut last_value: Option<usize> = None;
 
     for (i, (node, &value)) in sorted_nodes.into_iter().enumerate() {
-        if last_value == None || Some(value) == last_value {
+        if last_value.is_none() || Some(value) == last_value {
             tied_nodes.push(node);
         } else {
             tied_rank = (i as f64) - (tied_nodes.len() - 1) as f64 / 2.0;
             for tied_node in tied_nodes {
-                ranking.insert(*tied_node, tied_rank as f64);
+                ranking.insert(*tied_node, tied_rank);
             }
             tied_nodes = vec![node];
         }
@@ -340,7 +339,7 @@ pub fn averaged_ties_ranking(scores: &HashMap<NodeId, usize>) -> HashMap<NodeId,
     }
     tied_rank = (scores.len() as f64) - (tied_nodes.len() - 1) as f64 / 2.0;
     for tied_node in tied_nodes {
-        ranking.insert(*tied_node, tied_rank as f64);
+        ranking.insert(*tied_node, tied_rank);
     }
     ranking
 }

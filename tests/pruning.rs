@@ -19,14 +19,14 @@ use std::collections::HashSet;
 use std::sync::mpsc::channel;
 
 pub fn gen_test_typespec() -> Vec<Vec<String>> {
-    return vec![
+    vec![
         vec!["author".into(), "published_at".into(), "conference".into()],
         vec!["author".into(), "published_at".into(), "journal".into()],
         vec!["author".into(), "reviewed_for".into(), "conference".into()],
         vec!["author".into(), "reviewed_for".into(), "journal".into()],
         vec!["author".into(), "administered".into(), "conference".into()],
         vec!["author".into(), "administered".into(), "journal".into()],
-    ];
+    ]
 }
 fn simple_test(raw: Vec<String>, min_degree: usize, expected_len: usize) -> CLQResult<()> {
     let typespec = vec![
@@ -36,7 +36,7 @@ fn simple_test(raw: Vec<String>, min_degree: usize, expected_len: usize) -> CLQR
     let graph_id: GraphId = 0.into();
 
     let transformer = gen_test_transformer(typespec, "author".to_string())?;
-    let rows = process_raw_vector(&transformer, raw)?.clone();
+    let rows = process_raw_vector(&transformer, raw)?;
 
     let mut graph: TypedGraph = transformer.build_pruned_graph(graph_id, rows)?;
     let exclude_nodes: HashSet<u32> = TypedGraphBuilder::trim_edges(&mut graph.nodes, &min_degree);

@@ -164,7 +164,7 @@ where
             }
         }
         // could be that no nodes overlapped
-        if candidate.checksum == None {
+        if candidate.checksum.is_none() {
             return Ok(None);
         }
         let score = scorer.score(&mut candidate)?;
@@ -183,7 +183,7 @@ where
             checksum: self.checksum,
             node_id,
         });
-        if self.checksum != None {
+        if self.checksum.is_some() {
             self.checksum = Some(self.checksum.unwrap().wrapping_add(node_hash));
         } else {
             self.checksum = Some(node_hash);
@@ -262,7 +262,7 @@ where
     pub fn get_score(&self) -> CLQResult<f32> {
         let score = self
             .score
-            .ok_or_else(|| "Tried to get score from an unscored candidate.")?;
+            .ok_or("Tried to get score from an unscored candidate.")?;
         Ok(score)
     }
 
@@ -302,15 +302,15 @@ where
 
         let mut s = String::new();
         s.push_str(&core_ids.len().to_string());
-        s.push_str("\t");
+        s.push('\t');
         s.push_str(&non_core_ids.len().to_string());
-        s.push_str("\t");
+        s.push('\t');
 
         s.push_str(&serde_json::to_string(&core_ids).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push('\t');
 
         s.push_str(&serde_json::to_string(&non_core_ids).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push('\t');
 
         let non_core_types_str: Vec<String> = self
             .non_core_ids
@@ -319,11 +319,11 @@ where
             .map(|id| target_types[self.get_node(id).non_core_type.unwrap().value() - 1].clone())
             .collect();
         s.push_str(&serde_json::to_string(&non_core_types_str).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push('\t');
         s.push_str(&cliqueness.to_string());
-        s.push_str("\t");
+        s.push('\t');
         s.push_str(&serde_json::to_string(&self.get_core_densities()).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push('\t');
         s.push_str(
             &serde_json::to_string(&self.get_non_core_densities(target_types.len())?)
                 .or_else(encode_err_handler)?,
@@ -456,11 +456,9 @@ where
             let heap_element = (Reverse(num_ties), node_id);
             if h.len() < num_to_search {
                 h.push(heap_element);
-            } else {
-                if heap_element < *h.peek().unwrap() {
-                    h.pop();
-                    h.push(heap_element);
-                }
+            } else if heap_element < *h.peek().unwrap() {
+                h.pop();
+                h.push(heap_element);
             }
         }
 
@@ -648,11 +646,11 @@ where
         match self.recipe {
             None => self.neighborhood = Some(self.calculate_neighborhood()),
             Some(Recipe { checksum, node_id }) => {
-                if checksum == None || !hints.contains_key(&checksum.unwrap()) {
+                if checksum.is_none() || !hints.contains_key(&checksum.unwrap()) {
                     self.neighborhood = Some(self.calculate_neighborhood());
                 } else {
                     let hint = hints.get(&checksum.unwrap()).unwrap();
-                    if checksum != hint.checksum || hint.neighborhood == None {
+                    if checksum != hint.checksum || hint.neighborhood.is_none() {
                         self.neighborhood = Some(self.calculate_neighborhood());
                     } else {
                         let mut new_neighborhood = hint.neighborhood.as_ref().unwrap().clone();

@@ -65,7 +65,7 @@ fn test_clustering_coefficient() -> CLQResult<()> {
 
     let almost_k4 = &get_almost_k4_graph()?;
 
-    assert!(((5 as f64 / 6 as f64) - almost_k4.get_avg_clustering()).abs() <= 0.00001);
+    assert!(((5_f64 / 6_f64) - almost_k4.get_avg_clustering()).abs() <= 0.00001);
     Ok(())
 }
 
@@ -86,7 +86,7 @@ fn test_approx_avg_clustering() -> CLQResult<()> {
 
     let almost_k4 = &get_almost_k4_graph()?;
     let approx_clustering = almost_k4.get_approx_avg_clustering(100000);
-    assert!(((5 as f64 / 6 as f64) - approx_clustering).abs() <= 0.01);
+    assert!(((5_f64 / 6_f64) - approx_clustering).abs() <= 0.01);
     Ok(())
 }
 
