@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-extern crate rustc_serialize;
 
 use std::cmp::{min, Eq, PartialEq, Reverse};
 use std::collections::hash_map::DefaultHasher;
@@ -15,7 +14,6 @@ use std::hash::{Hash, Hasher};
 use fxhash::FxHashMap;
 
 use roaring::RoaringBitmap;
-use rustc_serialize::json;
 
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::id_types::{GraphId, NodeLabel, NodeTypeId};
@@ -296,7 +294,7 @@ where
         target_types: &[String],
         reverse_labels_map: FxHashMap<u32, NodeLabel>,
     ) -> CLQResult<String> {
-        let encode_err_handler = |e: json::EncoderError| Err(CLQError::from(e.to_string()));
+        let encode_err_handler = |e: serde_json::Error| Err(CLQError::from(e.to_string()));
 
         let cliqueness = self.get_cliqueness()?;
         let core_ids: Vec<i64> = self.sorted_core_labels(&reverse_labels_map);
@@ -308,10 +306,10 @@ where
         s.push_str(&non_core_ids.len().to_string());
         s.push_str("\t");
 
-        s.push_str(&json::encode(&core_ids).or_else(encode_err_handler)?);
+        s.push_str(&serde_json::to_string(&core_ids).or_else(encode_err_handler)?);
         s.push_str("\t");
 
-        s.push_str(&json::encode(&non_core_ids).or_else(encode_err_handler)?);
+        s.push_str(&serde_json::to_string(&non_core_ids).or_else(encode_err_handler)?);
         s.push_str("\t");
 
         let non_core_types_str: Vec<String> = self
@@ -320,14 +318,14 @@ where
             .into_iter()
             .map(|id| target_types[self.get_node(id).non_core_type.unwrap().value() - 1].clone())
             .collect();
-        s.push_str(&json::encode(&non_core_types_str).or_else(encode_err_handler)?);
+        s.push_str(&serde_json::to_string(&non_core_types_str).or_else(encode_err_handler)?);
         s.push_str("\t");
         s.push_str(&cliqueness.to_string());
         s.push_str("\t");
-        s.push_str(&json::encode(&self.get_core_densities()).or_else(encode_err_handler)?);
+        s.push_str(&serde_json::to_string(&self.get_core_densities()).or_else(encode_err_handler)?);
         s.push_str("\t");
         s.push_str(
-            &json::encode(&self.get_non_core_densities(target_types.len())?)
+            &serde_json::to_string(&self.get_non_core_densities(target_types.len())?)
                 .or_else(encode_err_handler)?,
         );
         Ok(s)

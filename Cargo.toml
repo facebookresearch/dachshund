@@ -39,9 +39,6 @@ version = "^2.33"
 [dependencies.rand]
 version = "^0.8"
 
-[dependencies.rustc-serialize]
-version = "^0.3"
-
 [dependencies.serde_json]
 version = "^1.0"
 
