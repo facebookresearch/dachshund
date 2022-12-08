@@ -10,7 +10,6 @@
 #![feature(associated_type_bounds)]
 extern crate clap;
 extern crate rand;
-extern crate rustc_serialize;
 extern crate thiserror;
 
 pub mod dachshund;
