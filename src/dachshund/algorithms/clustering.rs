@@ -65,7 +65,7 @@ pub trait Clustering:
 
         for _i in 0..samples {
             // Pick a random node with degree at least 2.
-            let v = &ordered_nodes[rng.gen_range(0, n)];
+            let v = &ordered_nodes[rng.gen_range(0..n)];
 
             // Choose 2 random nodes that are neighbors of j
             let mut random_neighbors = v.get_edges().choose_multiple(&mut rng, 2).into_iter();
