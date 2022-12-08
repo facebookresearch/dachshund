@@ -63,11 +63,11 @@ fn test_score_trivial_graph() -> CLQResult<()> {
     );
 
     let non_core_diversity_score: f32 = scorer.get_non_core_diversity_score(&candidate)?;
-    let expected_non_core_diversity_score: f32 = (2.0 as f32).ln();
+    let expected_non_core_diversity_score: f32 = 2.0_f32.ln();
     assert_eq!(non_core_diversity_score, expected_non_core_diversity_score);
 
     let local_threshold_score: f32 = scorer.get_local_thresh_score(&mut candidate);
-    let expected_local_threshold_score: f32 = 1.0 as f32;
+    let expected_local_threshold_score: f32 = 1.0_f32;
     assert_eq!(local_threshold_score, expected_local_threshold_score);
 
     // size is 2 since each author could be connected to two types of non_cores
@@ -79,13 +79,13 @@ fn test_score_trivial_graph() -> CLQResult<()> {
 
     // cliqueness should be 0.5 because only half the connections are present.
     let cliqueness: f32 = candidate.get_cliqueness()?;
-    assert_eq!(cliqueness, 0.5 as f32);
+    assert_eq!(cliqueness, 0.5_f32);
 
     let global_threshold_score: f32 = scorer.get_global_thresh_score(cliqueness);
-    assert_eq!(global_threshold_score, 1.0 as f32);
+    assert_eq!(global_threshold_score, 1.0_f32);
 
     let score: f32 = scorer.score(&mut candidate)?;
-    let expected_score: f32 = (1.0 as f32 + graph.core_ids.len() as f32).ln()
+    let expected_score: f32 = (1.0_f32 + graph.core_ids.len() as f32).ln()
         + (non_core_diversity_score + cliqueness * alpha);
     assert_eq!(score, expected_score);
     Ok(())

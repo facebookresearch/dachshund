@@ -34,7 +34,7 @@ fn get_graph(idx: usize) -> CLQResult<SimpleUndirectedGraph> {
 fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
     match idx {
         3 => Ok(vec![0.1015625, 0.09375, 0.09375, 0.03125]),
-        _ => return Err("Invalid index".to_string()),
+        _ => Err("Invalid index".to_string()),
     }
 }
 

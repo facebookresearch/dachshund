@@ -38,7 +38,7 @@ pub trait TransformerBase {
     fn run(&mut self, input: Input, mut output: Output) -> CLQResult<()> {
         let ret = crossbeam::scope(|scope| {
             let line_processor = self.get_line_processor();
-            let num_processed = Arc::new(AtomicUsize::new(0 as usize));
+            let num_processed = Arc::new(AtomicUsize::new(0_usize));
             let (sender, receiver) = channel();
             let num_processed_clone = num_processed.clone();
             let writer = scope.spawn(move |_| loop {

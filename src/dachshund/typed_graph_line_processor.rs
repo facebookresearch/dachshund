@@ -68,13 +68,12 @@ impl LineProcessorBase for TypedGraphLineProcessor {
         let graph_id: GraphId = vec[0].parse::<i64>()?.into();
         let node_id: NodeId = vec[1].parse::<i64>()?.into();
         let node_type: &str = vec[2].trim_end();
-        let non_core_type: Option<NodeTypeId>;
-        if node_type == self.core_type {
-            non_core_type = None;
+        let non_core_type = if node_type == self.core_type {
+            None
         } else {
             let non_core_type_id: NodeTypeId = *self.non_core_type_ids.require(node_type)?;
-            non_core_type = Some(non_core_type_id);
-        }
+            Some(non_core_type_id)
+        };
         Ok(Box::new(CliqueRow {
             graph_id,
             node_id,

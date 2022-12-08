@@ -44,9 +44,7 @@ pub trait Clustering:
     fn get_avg_clustering(&self) -> f64 {
         let coefs = self
             .get_ids_iter()
-            .map(|x| self.get_clustering_coefficient(*x))
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
+            .filter_map(|x| self.get_clustering_coefficient(*x))
             .collect::<Vec<f64>>();
         Iterator::sum::<f64>(coefs.iter()) / coefs.len() as f64
     }

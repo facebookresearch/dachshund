@@ -253,38 +253,38 @@ fn test_karate_club() -> CLQResult<()> {
     let graph = get_karate_club_graph()?;
     assert_eq!(graph.nodes.len(), 34);
     assert_eq!(graph.count_edges(), 78);
-    assert_eq!(graph.get_node_degree(NodeId::from(1 as i64)), 16);
-    assert_eq!(graph.get_node_degree(NodeId::from(2 as i64)), 9);
-    assert_eq!(graph.get_node_degree(NodeId::from(3 as i64)), 10);
-    assert_eq!(graph.get_node_degree(NodeId::from(27 as i64)), 2);
-    assert_eq!(graph.get_node_degree(NodeId::from(34 as i64)), 17);
+    assert_eq!(graph.get_node_degree(NodeId::from(1_i64)), 16);
+    assert_eq!(graph.get_node_degree(NodeId::from(2_i64)), 9);
+    assert_eq!(graph.get_node_degree(NodeId::from(3_i64)), 10);
+    assert_eq!(graph.get_node_degree(NodeId::from(27_i64)), 2);
+    assert_eq!(graph.get_node_degree(NodeId::from(34_i64)), 17);
 
     assert_eq!(
         graph
-            .get_clustering_coefficient(NodeId::from(1 as i64))
+            .get_clustering_coefficient(NodeId::from(1_i64))
             .unwrap(),
         0.15
     );
     assert!(
         (graph
-            .get_clustering_coefficient(NodeId::from(34 as i64))
+            .get_clustering_coefficient(NodeId::from(34_i64))
             .unwrap()
             - 0.1102941)
             <= 0.00001
     );
     assert_eq!(
         graph
-            .get_clustering_coefficient(NodeId::from(22 as i64))
+            .get_clustering_coefficient(NodeId::from(22_i64))
             .unwrap(),
         1.0
     );
     assert_eq!(
-        graph.get_clustering_coefficient(NodeId::from(12 as i64)),
+        graph.get_clustering_coefficient(NodeId::from(12_i64)),
         None
     );
     assert_eq!(
         graph
-            .get_clustering_coefficient(NodeId::from(10 as i64))
+            .get_clustering_coefficient(NodeId::from(10_i64))
             .unwrap(),
         0.0
     );
@@ -294,24 +294,24 @@ fn test_karate_club() -> CLQResult<()> {
 #[test]
 fn test_shortest_paths() -> CLQResult<()> {
     let graph = get_karate_club_graph()?;
-    let source = NodeId::from(1 as i64);
+    let source = NodeId::from(1_i64);
     let (dist, parents) = graph.get_shortest_paths(source, &None);
-    assert_eq!(dist[&NodeId::from(1 as i64)], Some(0));
-    assert_eq!(parents[&NodeId::from(1 as i64)].len(), 1);
-    assert!(parents[&NodeId::from(1 as i64)].contains(&NodeId::from(1 as i64)));
-    assert_eq!(dist[&NodeId::from(2 as i64)], Some(1));
-    assert_eq!(dist[&NodeId::from(33 as i64)], Some(2));
-    assert_eq!(dist[&NodeId::from(30 as i64)], Some(3));
-    assert!(parents[&NodeId::from(2 as i64)].contains(&NodeId::from(1 as i64)));
-    assert!(parents[&NodeId::from(10 as i64)].contains(&NodeId::from(3 as i64)));
-    assert_eq!(parents[&NodeId::from(10 as i64)].len(), 1);
-    assert!(parents[&NodeId::from(33 as i64)].contains(&NodeId::from(3 as i64)));
-    assert!(parents[&NodeId::from(33 as i64)].contains(&NodeId::from(9 as i64)));
-    assert!(parents[&NodeId::from(33 as i64)].contains(&NodeId::from(32 as i64)));
-    assert_eq!(parents[&NodeId::from(33 as i64)].len(), 3);
-    assert!(parents[&NodeId::from(30 as i64)].contains(&NodeId::from(33 as i64)));
-    assert!(parents[&NodeId::from(30 as i64)].contains(&NodeId::from(34 as i64)));
-    assert_eq!(parents[&NodeId::from(30 as i64)].len(), 2);
+    assert_eq!(dist[&NodeId::from(1_i64)], Some(0));
+    assert_eq!(parents[&NodeId::from(1_i64)].len(), 1);
+    assert!(parents[&NodeId::from(1_i64)].contains(&NodeId::from(1_i64)));
+    assert_eq!(dist[&NodeId::from(2_i64)], Some(1));
+    assert_eq!(dist[&NodeId::from(33_i64)], Some(2));
+    assert_eq!(dist[&NodeId::from(30_i64)], Some(3));
+    assert!(parents[&NodeId::from(2_i64)].contains(&NodeId::from(1_i64)));
+    assert!(parents[&NodeId::from(10_i64)].contains(&NodeId::from(3_i64)));
+    assert_eq!(parents[&NodeId::from(10_i64)].len(), 1);
+    assert!(parents[&NodeId::from(33_i64)].contains(&NodeId::from(3_i64)));
+    assert!(parents[&NodeId::from(33_i64)].contains(&NodeId::from(9_i64)));
+    assert!(parents[&NodeId::from(33_i64)].contains(&NodeId::from(32_i64)));
+    assert_eq!(parents[&NodeId::from(33_i64)].len(), 3);
+    assert!(parents[&NodeId::from(30_i64)].contains(&NodeId::from(33_i64)));
+    assert!(parents[&NodeId::from(30_i64)].contains(&NodeId::from(34_i64)));
+    assert_eq!(parents[&NodeId::from(30_i64)].len(), 2);
 
     let shortest_paths = graph.enumerate_shortest_paths(&dist, &parents, source);
     assert_eq!(shortest_paths.len(), 34);
@@ -327,10 +327,10 @@ fn test_shortest_paths() -> CLQResult<()> {
         }
     }
     assert_eq!(unrolled_paths.len(), 89);
-    assert_eq!(shortest_paths[&NodeId::from(2 as i64)].len(), 1);
-    assert_eq!(shortest_paths[&NodeId::from(2 as i64)][0].len(), 2);
-    assert_eq!(shortest_paths[&NodeId::from(30 as i64)][0].len(), 4);
-    assert_eq!(shortest_paths[&NodeId::from(16 as i64)].len(), 7);
+    assert_eq!(shortest_paths[&NodeId::from(2_i64)].len(), 1);
+    assert_eq!(shortest_paths[&NodeId::from(2_i64)][0].len(), 2);
+    assert_eq!(shortest_paths[&NodeId::from(30_i64)][0].len(), 4);
+    assert_eq!(shortest_paths[&NodeId::from(16_i64)].len(), 7);
     assert!(unrolled_paths.contains("1-9-34-16"));
     assert!(unrolled_paths.contains("1-14-34-16"));
     assert!(unrolled_paths.contains("1-20-34-16"));
@@ -345,7 +345,7 @@ fn test_shortest_paths() -> CLQResult<()> {
 fn bench_shortest_paths(b: &mut Bencher) -> CLQResult<()> {
     b.iter(|| {
         let graph = get_karate_club_graph().unwrap();
-        let source = NodeId::from(1 as i64);
+        let source = NodeId::from(1_i64);
         let (_dist, _parents) = graph.get_shortest_paths(source, &None);
     });
     Ok(())
@@ -355,7 +355,7 @@ fn bench_shortest_paths(b: &mut Bencher) -> CLQResult<()> {
 fn bench_shortest_paths_bfs(b: &mut Bencher) -> CLQResult<()> {
     b.iter(|| {
         let graph = get_karate_club_graph().unwrap();
-        let source = NodeId::from(1 as i64);
+        let source = NodeId::from(1_i64);
         let (_ordered_students, _dist, _preds) = graph.get_shortest_paths_bfs(source);
     });
     Ok(())
@@ -388,10 +388,10 @@ fn test_connectivity() -> CLQResult<()> {
 fn test_betweenness() -> CLQResult<()> {
     let graph = get_karate_club_graph()?;
     let bet = graph.get_node_betweenness()?;
-    assert_eq!(bet[&NodeId::from(8 as i64)], 0.0);
-    assert!((bet[&NodeId::from(34 as i64)] - 160.5515873).abs() <= 0.000001);
-    assert!((bet[&NodeId::from(33 as i64)] - 76.6904762).abs() <= 0.000001);
-    assert!((bet[&NodeId::from(32 as i64)] - 73.0095238).abs() <= 0.000001);
+    assert_eq!(bet[&NodeId::from(8_i64)], 0.0);
+    assert!((bet[&NodeId::from(34_i64)] - 160.5515873).abs() <= 0.000001);
+    assert!((bet[&NodeId::from(33_i64)] - 76.6904762).abs() <= 0.000001);
+    assert!((bet[&NodeId::from(32_i64)] - 73.0095238).abs() <= 0.000001);
     Ok(())
 }
 
@@ -399,10 +399,10 @@ fn test_betweenness() -> CLQResult<()> {
 fn test_betweenness_brandes() -> CLQResult<()> {
     let graph = get_karate_club_graph()?;
     let bet = graph.get_node_betweenness_brandes().unwrap();
-    assert_eq!(bet[&NodeId::from(8 as i64)], 0.0);
-    assert!((bet[&NodeId::from(34 as i64)] - 160.5515873).abs() <= 0.000001);
-    assert!((bet[&NodeId::from(33 as i64)] - 76.6904762).abs() <= 0.000001);
-    assert!((bet[&NodeId::from(32 as i64)] - 73.0095238).abs() <= 0.000001);
+    assert_eq!(bet[&NodeId::from(8_i64)], 0.0);
+    assert!((bet[&NodeId::from(34_i64)] - 160.5515873).abs() <= 0.000001);
+    assert!((bet[&NodeId::from(33_i64)] - 76.6904762).abs() <= 0.000001);
+    assert!((bet[&NodeId::from(32_i64)] - 73.0095238).abs() <= 0.000001);
     Ok(())
 }
 
@@ -454,9 +454,9 @@ fn test_eigen() -> CLQResult<()> {
 
     let eps = 0.001;
     let ev = graph.get_eigenvector_centrality(eps, 1000);
-    assert!((ev[&NodeId::from(34 as i64)] - 1.0).abs() <= eps);
-    assert!((ev[&NodeId::from(1 as i64)] - 0.95213237).abs() <= eps);
-    assert!((ev[&NodeId::from(19 as i64)] - 0.27159396).abs() <= eps);
+    assert!((ev[&NodeId::from(34_i64)] - 1.0).abs() <= eps);
+    assert!((ev[&NodeId::from(1_i64)] - 0.95213237).abs() <= eps);
+    assert!((ev[&NodeId::from(19_i64)] - 0.27159396).abs() <= eps);
     Ok(())
 }
 
@@ -484,7 +484,7 @@ fn test_k_cores() -> CLQResult<()> {
     assert_eq!(core_assignments[2][0].len(), 22);
     assert_eq!(core_assignments[3][0].len(), 10);
 
-    assert_eq!(coreness[&NodeId::from(34 as i64)], 4);
+    assert_eq!(coreness[&NodeId::from(34_i64)], 4);
     Ok(())
 }
 
@@ -711,7 +711,7 @@ fn test_clique_seeding() -> CLQResult<()> {
     let clique = vec![1, 2, 3, 4, 5];
     let cliques = vec![clique
         .into_iter()
-        .map(|x| NodeId::from(x))
+        .map(NodeId::from)
         .collect::<BTreeSet<_>>()];
     let g = get_karate_club_graph_with_cliques(cliques)?;
     // adding 3 edges, from 2 -> 5, 3, -> 5, 4 -> 5
@@ -722,11 +722,11 @@ fn test_clique_seeding() -> CLQResult<()> {
     let cliques = vec![
         clique1
             .into_iter()
-            .map(|x| NodeId::from(x))
+            .map(NodeId::from)
             .collect::<BTreeSet<_>>(),
         clique2
             .into_iter()
-            .map(|x| NodeId::from(x))
+            .map(NodeId::from)
             .collect::<BTreeSet<_>>(),
     ];
     let g = get_karate_club_graph_with_cliques(cliques)?;

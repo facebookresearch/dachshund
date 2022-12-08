@@ -156,7 +156,7 @@ fn test_init_beam_with_clique_rows_input() -> CLQResult<()> {
         )?;
         let text = raw.join("\n");
         let bytes = text.as_bytes();
-        let input = Input::string(&bytes);
+        let input = Input::string(bytes);
         let mut buffer: Vec<u8> = Vec::new();
         let output = Output::string(&mut buffer);
         transformer.run(input, output)?;
@@ -209,7 +209,7 @@ fn test_init_beam_with_clique_rows_input_one_epoch() -> CLQResult<()> {
     )?;
     let text = raw.join("\n");
     let bytes = text.as_bytes();
-    let input = Input::string(&bytes);
+    let input = Input::string(bytes);
     let mut buffer: Vec<u8> = Vec::new();
     let output = Output::string(&mut buffer);
     transformer.run(input, output)?;
@@ -252,7 +252,7 @@ fn test_beam_with_empty_graph_after_pruning() -> CLQResult<()> {
     )?;
     let text = raw.join("\n");
     let bytes = text.as_bytes();
-    let input = Input::string(&bytes);
+    let input = Input::string(bytes);
     let mut buffer: Vec<u8> = Vec::new();
     let output = Output::string(&mut buffer);
     transformer.run(input, output)?;

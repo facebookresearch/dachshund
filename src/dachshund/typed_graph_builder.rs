@@ -205,7 +205,7 @@ pub trait TypedGraphBuilderBase {
     /// new graph, where all nodes are assured to have degree at least min_degree.
     /// The provision of a <Self as GraphBuilderBase>::GraphType is necessary, since the notion of "degree" does
     /// not make sense outside of a graph.
-    fn prune(graph: TypedGraph, rows: &Vec<EdgeRow>, min_degree: usize) -> CLQResult<TypedGraph> {
+    fn prune(graph: TypedGraph, rows: &[EdgeRow], min_degree: usize) -> CLQResult<TypedGraph> {
         let mut target_type_ids: HashMap<NodeLabel, NodeTypeId> = HashMap::new();
         for r in rows.iter() {
             target_type_ids.insert(r.target_id, r.target_type_id);
@@ -231,7 +231,7 @@ pub trait TypedGraphBuilderBase {
     fn get_filtered_sources_targets_rows(
         mut graph: TypedGraph,
         min_degree: usize,
-        rows: &Vec<EdgeRow>,
+        rows: &[EdgeRow],
     ) -> (Vec<NodeLabel>, Vec<NodeLabel>, Vec<EdgeRow>) {
         let exclude_nodes: HashSet<u32> = Self::trim_edges(graph.get_mut_nodes(), &min_degree);
         let filtered_source_ids: Vec<NodeLabel> = graph

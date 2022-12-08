@@ -56,7 +56,7 @@ pub trait Connectivity:
             return Err("Graph is empty");
         }
         let root = self.get_ids_iter().next().unwrap();
-        self.visit_nodes_from_root(&root, &mut visited, &mut Vec::new(), edge_fn);
+        self.visit_nodes_from_root(root, &mut visited, &mut Vec::new(), edge_fn);
         Ok(visited.len() == self.count_nodes())
     }
 }

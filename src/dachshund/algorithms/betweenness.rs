@@ -80,7 +80,7 @@ pub trait Betweenness:
                 let w = stack.pop().unwrap();
                 for pred in &preds[&w] {
                     *dependencies.entry(*pred).or_insert(0.0) += (0.5 + dependencies[&w])
-                        * (shortest_path_counts[&pred] as f64 / shortest_path_counts[&w] as f64)
+                        * (shortest_path_counts[pred] as f64 / shortest_path_counts[&w] as f64)
                 }
                 if w != *source {
                     *betweenness.entry(w).or_insert(0.0) += dependencies[&w]

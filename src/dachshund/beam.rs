@@ -92,8 +92,8 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
         search_problem: Rc<SearchProblem>,
         graph_id: GraphId,
     ) -> CLQResult<Beam<'a, TGraph>> {
-        let core_ids: &Vec<u32> = &graph.get_core_ids();
-        let non_core_ids: &Vec<u32> = &graph.get_non_core_ids().unwrap();
+        let core_ids: &Vec<u32> = graph.get_core_ids();
+        let non_core_ids: &Vec<u32> = graph.get_non_core_ids().unwrap();
 
         let mut candidates: Vec<Candidate<TGraph>> = Vec::with_capacity(search_problem.beam_size);
         let scorer: Scorer = Scorer::new(num_non_core_types, &search_problem);
@@ -106,8 +106,8 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
 
         if !clique_rows.is_empty() {
             let init_clique = Candidate::from_clique_rows(clique_rows, graph, &scorer)?;
-            if init_clique != None {
-                candidates.push(init_clique.unwrap());
+            if let Some(init_clique) = init_clique {
+                candidates.push(init_clique);
             }
         }
 
