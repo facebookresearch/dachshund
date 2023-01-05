@@ -79,7 +79,7 @@ impl LineProcessorBase for WeightedLineProcessor {
         let graph_id = self.record_new_key_or_return_current_one(key);
         let source_id: NodeId = vec[1].parse::<i64>()?.into();
         let target_id: NodeId = vec[2].parse::<i64>()?.into();
-        let weight: f64 = vec[3].parse::<f64>()?.into();
+        let weight: f64 = vec[3].parse::<f64>()?;
         Ok(Box::new(WeightedEdgeRow {
             graph_id,
             source_id,

@@ -55,7 +55,7 @@ fn get_graph(idx: usize) -> CLQResult<WeightedUndirectedGraph> {
     };
     WeightedUndirectedGraphBuilder {}.from_vector(
         v.into_iter()
-            .map(|(x, y, z)| (x as i64, y as i64, z as f64))
+            .map(|(x, y, z)| (x as i64, y as i64, z))
             .collect(),
     )
 }
@@ -68,7 +68,7 @@ fn test_node_weight() {
     assert_eq!(weighted_star_graph.nodes.len(), 4);
     assert_eq!(
         weighted_star_graph
-            .get_node(NodeId::from(0 as i64))
+            .get_node(NodeId::from(0_i64))
             .weight(),
         6.0
     );
@@ -76,12 +76,12 @@ fn test_node_weight() {
     // Only a single edge can exist between a pair of nodes (because the graph is not directed).
     // The graph builder should take the weight from the last value.
     let doubled_edge_graph = get_graph(1).unwrap();
-    let node_zero = doubled_edge_graph.get_node(NodeId::from(0 as i64));
+    let node_zero = doubled_edge_graph.get_node(NodeId::from(0_i64));
     assert_eq!(node_zero.edges.len(), 1);
     assert_eq!(node_zero.edges[0].weight, 2.5);
 
     let doubled_edge_graph_two = get_graph(2).unwrap();
-    let node_zero = doubled_edge_graph_two.get_node(NodeId::from(0 as i64));
+    let node_zero = doubled_edge_graph_two.get_node(NodeId::from(0_i64));
     assert_eq!(node_zero.edges.len(), 1);
     assert_eq!(node_zero.edges[0].weight, 0.1);
 }

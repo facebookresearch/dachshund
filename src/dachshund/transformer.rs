@@ -91,11 +91,11 @@ impl Transformer {
         non_core_types: Vec<String>,
     ) -> CLQResult<NonCoreTypeIds> {
         let mut non_core_type_ids = NonCoreTypeIds::new();
-        non_core_type_ids.insert(core_type, NodeTypeId::from(0 as usize));
+        non_core_type_ids.insert(core_type, NodeTypeId::from(0_usize));
 
         let should_be_only_this_core_type = &typespec[0][0].clone();
         for (non_core_type_ix, non_core_type) in non_core_types.iter().enumerate() {
-            non_core_type_ids.insert(&non_core_type, NodeTypeId::from(non_core_type_ix + 1));
+            non_core_type_ids.insert(non_core_type, NodeTypeId::from(non_core_type_ix + 1));
         }
         for item in typespec {
             let core_type = &item[0];

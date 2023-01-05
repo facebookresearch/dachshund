@@ -35,7 +35,7 @@ pub trait KPeaks: GraphBase + Coreness {
         // If a node is missing from the list of coreness values (not contained in an edge)
         // add a coreness value of 0 to hashmap for that node
         nodes
-            .into_iter()
+            .iter()
             .fold(graph.get_coreness_values(), |mut acc, n_id| {
                 acc.entry(*n_id).or_insert(0);
                 acc
@@ -78,7 +78,7 @@ pub trait KPeaks: GraphBase + Coreness {
                 // For nodes in the k_contour the removal causes its core number to drop to 0,
                 // We check to see if this drop is greater than the drop in core number observed for these
                 // nodes in previous iterations
-                remaining_nodes.remove(&d_id); // Remove the k-contour node and insert peak numbers
+                remaining_nodes.remove(d_id); // Remove the k-contour node and insert peak numbers
                 let curr_core_value = *curr_core_values.get(d_id).unwrap();
                 peak_numbers.entry(*d_id).or_insert(curr_core_value as i32);
                 if let Some(x) = mountain_assignments.get_mut(d_id) {

@@ -38,7 +38,7 @@ pub trait ShortestPaths:
             None => self.get_ids_iter().cloned().collect(),
         };
         for id in &targets {
-            queue.insert(&id);
+            queue.insert(id);
             dist.insert(*id, None);
             parents.insert(*id, HashSet::new());
         }
@@ -50,9 +50,11 @@ pub trait ShortestPaths:
             // find next node u to visit
             for maybe_u in &queue {
                 let d: Option<usize> = dist[maybe_u];
-                if d != None && (min_dist == None || d.unwrap() < min_dist.unwrap()) {
-                    min_dist = Some(d.unwrap());
-                    u = Some(maybe_u);
+                if let Some(d) = d {
+                    if min_dist.is_none() || d < min_dist.unwrap() {
+                        min_dist = Some(d);
+                        u = Some(maybe_u);
+                    }
                 }
             }
             // remove u from queue
@@ -61,7 +63,7 @@ pub trait ShortestPaths:
                 let v = &e.get_neighbor_id();
                 if queue.contains(v) {
                     let alt = min_dist.unwrap() + 1;
-                    if dist[v] == None || alt <= dist[v].unwrap() {
+                    if dist[v].is_none() || alt <= dist[v].unwrap() {
                         *dist.get_mut(v).unwrap() = Some(alt);
                         parents.get_mut(v).unwrap().insert(*u.unwrap());
                     }
@@ -154,7 +156,7 @@ pub trait ShortestPaths:
                 nodes_by_distance.get_mut(&d).unwrap().push(*node_id);
             }
         }
-        nodes_by_distance.insert(0 as usize, vec![destination]);
+        nodes_by_distance.insert(0_usize, vec![destination]);
 
         let mut distances: Vec<usize> = nodes_by_distance.keys().cloned().collect::<Vec<usize>>();
         distances.sort();
@@ -166,7 +168,7 @@ pub trait ShortestPaths:
             let nodes: &Vec<NodeId> = nodes_by_distance.get(&d).unwrap();
             for node_id in nodes {
                 let parent_ids = parents.get(node_id).unwrap();
-                let new_paths = self.retrace_parent_paths(node_id, &parent_ids, &paths);
+                let new_paths = self.retrace_parent_paths(node_id, parent_ids, &paths);
                 paths.insert(*node_id, new_paths);
             }
         }

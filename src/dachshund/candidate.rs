@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-extern crate rustc_serialize;
 
 use std::cmp::{min, Eq, PartialEq, Reverse};
 use std::collections::hash_map::DefaultHasher;
@@ -15,7 +14,6 @@ use std::hash::{Hash, Hasher};
 use fxhash::FxHashMap;
 
 use roaring::RoaringBitmap;
-use rustc_serialize::json;
 
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::id_types::{GraphId, NodeLabel, NodeTypeIdInternal};
@@ -166,7 +164,7 @@ where
             }
         }
         // could be that no nodes overlapped
-        if candidate.checksum == None {
+        if candidate.checksum.is_none() {
             return Ok(None);
         }
         let score = scorer.score(&mut candidate)?;
@@ -185,7 +183,7 @@ where
             checksum: self.checksum,
             node_id,
         });
-        if self.checksum != None {
+        if self.checksum.is_some() {
             self.checksum = Some(self.checksum.unwrap().wrapping_add(node_hash));
         } else {
             self.checksum = Some(node_hash);
@@ -260,7 +258,7 @@ where
     pub fn get_score(&self) -> CLQResult<f32> {
         let score = self
             .score
-            .ok_or_else(|| "Tried to get score from an unscored candidate.")?;
+            .ok_or("Tried to get score from an unscored candidate.")?;
         Ok(score)
     }
 
@@ -293,7 +291,7 @@ where
         target_types: &[String],
         reverse_labels_map: FxHashMap<u32, NodeLabel>,
     ) -> CLQResult<String> {
-        let encode_err_handler = |e: json::EncoderError| Err(CLQError::from(e.to_string()));
+        let encode_err_handler = |e: serde_json::Error| Err(CLQError::from(e.to_string()));
 
         let cliqueness = self.get_cliqueness()?;
         let core_ids: Vec<i64> = self.sorted_core_labels(&reverse_labels_map);
@@ -301,15 +299,15 @@ where
 
         let mut s = String::new();
         s.push_str(&core_ids.len().to_string());
-        s.push_str("\t");
+        s.push('\t');
         s.push_str(&non_core_ids.len().to_string());
-        s.push_str("\t");
+        s.push('\t');
 
-        s.push_str(&json::encode(&core_ids).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push_str(&serde_json::to_string(&core_ids).or_else(encode_err_handler)?);
+        s.push('\t');
 
-        s.push_str(&json::encode(&non_core_ids).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push_str(&serde_json::to_string(&non_core_ids).or_else(encode_err_handler)?);
+        s.push('\t');
 
         let non_core_types_str: Vec<String> = self
             .non_core_ids
@@ -317,14 +315,14 @@ where
             .into_iter()
             .map(|id| target_types[self.get_node(id).non_core_type.unwrap().value() - 1].clone())
             .collect();
-        s.push_str(&json::encode(&non_core_types_str).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push_str(&serde_json::to_string(&non_core_types_str).or_else(encode_err_handler)?);
+        s.push('\t');
         s.push_str(&cliqueness.to_string());
-        s.push_str("\t");
-        s.push_str(&json::encode(&self.get_core_densities()).or_else(encode_err_handler)?);
-        s.push_str("\t");
+        s.push('\t');
+        s.push_str(&serde_json::to_string(&self.get_core_densities()).or_else(encode_err_handler)?);
+        s.push('\t');
         s.push_str(
-            &json::encode(&self.get_non_core_densities(target_types.len())?)
+            &serde_json::to_string(&self.get_non_core_densities(target_types.len())?)
                 .or_else(encode_err_handler)?,
         );
         Ok(s)
@@ -455,11 +453,9 @@ where
             let heap_element = (Reverse(num_ties), node_id);
             if h.len() < num_to_search {
                 h.push(heap_element);
-            } else {
-                if heap_element < *h.peek().unwrap() {
-                    h.pop();
-                    h.push(heap_element);
-                }
+            } else if heap_element < *h.peek().unwrap() {
+                h.pop();
+                h.push(heap_element);
             }
         }
 
@@ -644,22 +640,33 @@ where
     // We use the recipe to make sure that we can safely clone its neighborhood as
     // starting point.
     pub fn set_neigbhorhood_with_hint(&mut self, hints: &HashMap<u64, &Self>) {
-        match self.recipe {
-            None => self.neighborhood = Some(self.calculate_neighborhood()),
-            Some(Recipe { checksum, node_id }) => {
-                if checksum == None || !hints.contains_key(&checksum.unwrap()) {
-                    self.neighborhood = Some(self.calculate_neighborhood());
-                } else {
-                    let hint = hints.get(&checksum.unwrap()).unwrap();
-                    if checksum != hint.checksum || hint.neighborhood == None {
-                        self.neighborhood = Some(self.calculate_neighborhood());
-                    } else {
-                        let mut new_neighborhood = hint.neighborhood.as_ref().unwrap().clone();
-                        self.adjust_neighborhood(&mut new_neighborhood, node_id);
-                        self.neighborhood = Some(new_neighborhood);
-                    }
-                }
-            }
+        let Some(recipe) = self.recipe else {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        };
+
+        let Some(checksum) = recipe.checksum else {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        };
+
+        let Some(hint) = hints.get(&checksum) else {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        };
+
+        if recipe.checksum != hint.checksum {
+            self.neighborhood = Some(self.calculate_neighborhood());
+            return;
+        }
+
+        // At this point we have a hint that matches the checksum of the recipe.
+        // Check if the hint has a neighborhood to use
+        if let Some(mut neighborhood) = hint.neighborhood.clone() {
+            self.adjust_neighborhood(&mut neighborhood, recipe.node_id);
+            self.neighborhood = Some(neighborhood);
+        } else {
+            self.neighborhood = Some(self.calculate_neighborhood());
         }
     }
 

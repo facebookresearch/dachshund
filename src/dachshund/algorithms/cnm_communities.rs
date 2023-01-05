@@ -126,7 +126,7 @@ pub trait CNMCommunities: GraphBase<NodeType = SimpleNode> {
             for id in community {
                 for e in self.get_node(*id).get_edges() {
                     let neighbor_id = e.get_neighbor_id();
-                    let i: &usize = reverse_id_map.get(&id).unwrap();
+                    let i: &usize = reverse_id_map.get(id).unwrap();
                     let j: &usize = reverse_id_map.get(&neighbor_id).unwrap();
                     let k_i: usize = degree_map[i];
                     let k_j: usize = degree_map[j];

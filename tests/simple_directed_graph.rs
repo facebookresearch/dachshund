@@ -122,7 +122,7 @@ fn get_rows(idx: usize) -> CLQResult<Vec<(usize, usize)>> {
             (20, 22),
             (20, 24),
         ]),
-        _ => return Err(CLQError::Generic("Invalid index".to_string())),
+        _ => Err(CLQError::Generic("Invalid index".to_string())),
     }
 }
 

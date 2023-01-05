@@ -259,7 +259,7 @@ fn get_expected_modularity_changes(idx: usize) -> Result<Vec<f64>, String> {
             0.020833333333333336,
             0.007812500000000002,
         ]),
-        _ => return Err("Invalid index".to_string()),
+        _ => Err("Invalid index".to_string()),
     }
 }
 
@@ -273,7 +273,7 @@ fn test_truss_graph() {
             ._get_connected_components(
                 None,
                 Some(&HashSet::from_iter(
-                    vec![(NodeId::from(2 as i64), NodeId::from(3 as i64))].into_iter()
+                    vec![(NodeId::from(2_i64), NodeId::from(3_i64))].into_iter()
                 ))
             )
             .len(),
@@ -320,8 +320,8 @@ fn test_coreness() {
     let two_cores = get_graph(3).unwrap().get_k_cores(2);
     let three_cores = get_graph(3).unwrap().get_k_cores(3);
 
-    assert_eq!(*coreness.get(&NodeId::from(2 as i64)).unwrap(), 2);
-    assert_eq!(*coreness.get(&NodeId::from(5 as i64)).unwrap(), 2);
+    assert_eq!(*coreness.get(&NodeId::from(2_i64)).unwrap(), 2);
+    assert_eq!(*coreness.get(&NodeId::from(5_i64)).unwrap(), 2);
 
     // There are 2 connected components in the 2-cores...
     assert_eq!(two_cores.len(), 2);
@@ -380,7 +380,7 @@ fn test_simple_transformer() {
         .join("\n");
 
     let bytes = text.as_bytes();
-    let input = Input::string(&bytes);
+    let input = Input::string(bytes);
     let mut buffer: Vec<u8> = Vec::new();
     let output = Output::string(&mut buffer);
     transformer.run(input, output).unwrap();
@@ -417,7 +417,7 @@ fn test_parallel_transformer() {
         + "\n";
 
     let bytes = text.as_bytes();
-    let input = Input::string(&bytes);
+    let input = Input::string(bytes);
     let mut buffer: Vec<u8> = Vec::new();
     let output = Output::string(&mut buffer);
     transformer.run(input, output).unwrap();
@@ -449,82 +449,82 @@ fn test_k_peaks() {
         get_graph(8).unwrap().get_k_peak_mountain_assignment();
 
     // Make sure all peak numbers are correct
-    assert_eq!(*peak_numbers.get(&NodeId::from(0 as i64)).unwrap(), 5);
-    assert_eq!(*peak_numbers.get(&NodeId::from(1 as i64)).unwrap(), 5);
-    assert_eq!(*peak_numbers.get(&NodeId::from(2 as i64)).unwrap(), 5);
-    assert_eq!(*peak_numbers.get(&NodeId::from(3 as i64)).unwrap(), 5);
-    assert_eq!(*peak_numbers.get(&NodeId::from(4 as i64)).unwrap(), 5);
-    assert_eq!(*peak_numbers.get(&NodeId::from(5 as i64)).unwrap(), 5);
-    assert_eq!(*peak_numbers.get(&NodeId::from(13 as i64)).unwrap(), 3);
-    assert_eq!(*peak_numbers.get(&NodeId::from(12 as i64)).unwrap(), 3);
-    assert_eq!(*peak_numbers.get(&NodeId::from(11 as i64)).unwrap(), 3);
-    assert_eq!(*peak_numbers.get(&NodeId::from(10 as i64)).unwrap(), 3);
-    assert_eq!(*peak_numbers.get(&NodeId::from(8 as i64)).unwrap(), 3);
-    assert_eq!(*peak_numbers.get(&NodeId::from(6 as i64)).unwrap(), 1);
-    assert_eq!(*peak_numbers.get(&NodeId::from(7 as i64)).unwrap(), 1);
-    assert_eq!(*peak_numbers.get(&NodeId::from(14 as i64)).unwrap(), 0);
-    assert_eq!(*peak_numbers.get(&NodeId::from(9 as i64)).unwrap(), 0);
+    assert_eq!(*peak_numbers.get(&NodeId::from(0_i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(1_i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(2_i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(3_i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(4_i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(5_i64)).unwrap(), 5);
+    assert_eq!(*peak_numbers.get(&NodeId::from(13_i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(12_i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(11_i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(10_i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(8_i64)).unwrap(), 3);
+    assert_eq!(*peak_numbers.get(&NodeId::from(6_i64)).unwrap(), 1);
+    assert_eq!(*peak_numbers.get(&NodeId::from(7_i64)).unwrap(), 1);
+    assert_eq!(*peak_numbers.get(&NodeId::from(14_i64)).unwrap(), 0);
+    assert_eq!(*peak_numbers.get(&NodeId::from(9_i64)).unwrap(), 0);
 
     // Test mountain configurations
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(0 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(0_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(1 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(1_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(2 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(2_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(3 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(3_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(4 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(4_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(5 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(5_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(6 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(6_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(7 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(7_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&0].contains_key(&NodeId::from(9 as i64)),
+        mountain_assignments[&0].contains_key(&NodeId::from(9_i64)),
         true
     );
 
     assert_eq!(
-        mountain_assignments[&1].contains_key(&NodeId::from(8 as i64)),
+        mountain_assignments[&1].contains_key(&NodeId::from(8_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&1].contains_key(&NodeId::from(10 as i64)),
+        mountain_assignments[&1].contains_key(&NodeId::from(10_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&1].contains_key(&NodeId::from(11 as i64)),
+        mountain_assignments[&1].contains_key(&NodeId::from(11_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&1].contains_key(&NodeId::from(12 as i64)),
+        mountain_assignments[&1].contains_key(&NodeId::from(12_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&1].contains_key(&NodeId::from(13 as i64)),
+        mountain_assignments[&1].contains_key(&NodeId::from(13_i64)),
         true
     );
     assert_eq!(
-        mountain_assignments[&1].contains_key(&NodeId::from(14 as i64)),
+        mountain_assignments[&1].contains_key(&NodeId::from(14_i64)),
         true
     );
 }

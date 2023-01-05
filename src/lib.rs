@@ -4,13 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
-#![feature(map_first_last)]
 #![feature(binary_heap_into_iter_sorted)]
 #![feature(associated_type_bounds)]
 extern crate clap;
 extern crate rand;
-extern crate rustc_serialize;
 extern crate thiserror;
 
 pub mod dachshund;

@@ -114,7 +114,7 @@ fn test_process_single_line_clique_row() -> CLQResult<()> {
 
 fn test_expected_clique<F>(transformer: Transformer, raw: Vec<String>, f: F) -> CLQResult<()>
 where
-    F: Fn(&TypedGraph, &Candidate<TypedGraph>) -> (),
+    F: Fn(&TypedGraph, &Candidate<TypedGraph>),
 {
     let graph_id: GraphId = 0.into();
 
@@ -202,7 +202,7 @@ fn test_process_medium_clique() -> CLQResult<()> {
             assert_nodes_have_ids(
                 graph,
                 &res.core_ids,
-                core_ids.iter().map(|x| *x).collect(),
+                core_ids.to_vec(),
                 true,
             );
             assert_nodes_have_ids(

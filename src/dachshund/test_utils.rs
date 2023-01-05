@@ -40,7 +40,7 @@ pub fn gen_test_transformer(
 }
 
 pub fn gen_test_typespec() -> Vec<Vec<String>> {
-    return vec![
+    vec![
         vec![
             "author".to_string(),
             "published_at".into(),
@@ -51,7 +51,7 @@ pub fn gen_test_typespec() -> Vec<Vec<String>> {
             "published_at".into(),
             "journal".into(),
         ],
-    ];
+    ]
 }
 
 pub fn assert_nodes_have_ids<T>(
