@@ -77,9 +77,6 @@ path = "src/simple_graph_featurizer.rs"
 name = "core_miner"
 path = "src/core_miner.rs"
 
-[profile.release]
-debug = true
-
 [[bin]]
 name = "connected_component_extractor"
 path = "src/connected_component_extractor.rs"
