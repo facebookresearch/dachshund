@@ -61,7 +61,6 @@ fn test_init_beam_with_clique_rows() -> CLQResult<()> {
         &clique_rows,
         false,
         &target_types,
-        1,
         transformer.search_problem.clone(),
         graph_id,
     )?;
@@ -104,7 +103,6 @@ fn test_init_beam_with_partially_overlapping_clique_rows() -> CLQResult<()> {
         &clique_rows,
         false,
         &target_types,
-        1,
         transformer.search_problem.clone(),
         graph_id,
     )?;

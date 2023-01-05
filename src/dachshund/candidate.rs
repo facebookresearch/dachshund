@@ -18,7 +18,7 @@ use roaring::RoaringBitmap;
 use rustc_serialize::json;
 
 use crate::dachshund::error::{CLQError, CLQResult};
-use crate::dachshund::id_types::{GraphId, NodeLabel, NodeTypeId};
+use crate::dachshund::id_types::{GraphId, NodeLabel, NodeTypeIdInternal};
 use crate::dachshund::node::{Node, NodeBase};
 use crate::dachshund::row::CliqueRow;
 use crate::dachshund::scorer::Scorer;
@@ -97,7 +97,7 @@ where
     local_guarantee: LocalDensityGuarantee,
     neighborhood: Option<NeigbhorhoodMap>,
     recipe: Option<Recipe>,
-    non_core_counts: HashMap<NodeTypeId, usize>,
+    non_core_counts: Vec<usize>,
 }
 
 impl<'a, T: LabeledGraph> Hash for Candidate<'a, T> {
@@ -122,7 +122,7 @@ where
     TGraph: LabeledGraph<NodeType = Node>,
 {
     /// creates an empty candidate object, refering to a graph.
-    pub fn init_blank(graph: &'a TGraph) -> Self {
+    pub fn init_blank(graph: &'a TGraph, num_non_core_types: usize) -> Self {
         Self {
             graph,
             core_ids: RoaringBitmap::new(),
@@ -137,13 +137,13 @@ where
             },
             neighborhood: Some(HashMap::new()),
             recipe: None,
-            non_core_counts: HashMap::new(),
+            non_core_counts: vec![0; num_non_core_types + 1],
         }
     }
 
     /// creates a Candidate object from a single node ID.
     pub fn new(node_id: u32, graph: &'a TGraph, scorer: &Scorer) -> CLQResult<Self> {
-        let mut candidate: Self = Candidate::init_blank(graph);
+        let mut candidate: Self = Candidate::init_blank(graph, scorer.get_num_non_core_types());
         candidate.add_node(node_id)?;
         let score = scorer.score(&mut candidate)?;
         candidate.set_score(score)?;
@@ -157,7 +157,7 @@ where
         scorer: &Scorer,
     ) -> CLQResult<Option<Self>> {
         assert!(!rows.is_empty());
-        let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph);
+        let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph, scorer.get_num_non_core_types());
         for row in rows {
             if graph.has_node_by_label(row.node_id) {
                 let node = graph.get_node_by_label(row.node_id);
@@ -196,11 +196,7 @@ where
         } else {
             self.non_core_ids.insert(node_id);
             self.increment_max_core_node_edges(node_id)?;
-            let count = self
-                .non_core_counts
-                .entry(self.graph.get_node(node_id).non_core_type.unwrap())
-                .or_default();
-            *count += 1;
+            self.non_core_counts[self.graph.get_node(node_id).non_core_type.unwrap().value()] += 1;
         }
         self.increment_ties_between_nodes(node_id);
         self.reset_score();
@@ -284,9 +280,10 @@ where
         self.local_guarantee.clone()
     }
 
-    /// Get a reference to non_core counts which records the number of noncore
-    /// nodes in the clique.
-    pub fn get_non_core_counts(&self) -> &HashMap<NodeTypeId, usize> {
+    /// Get a reference to non_core counts which is a vector recording
+    /// the number of noncore nodes in the clique by type.
+    /// First element is always 0, since NdodeTypeId is the Core Type.
+    pub fn get_non_core_counts(&self) -> &Vec<usize> {
         &self.non_core_counts
     }
 
@@ -671,17 +668,19 @@ where
     fn get_non_core_densities(&self, num_non_core_types: usize) -> CLQResult<Vec<f32>> {
         let mut non_core_max_counts: Vec<usize> = vec![0; num_non_core_types + 1];
         let mut non_core_out_counts: Vec<usize> = vec![0; num_non_core_types + 1];
+
         for non_core_id in &self.non_core_ids {
             let non_core = self.get_node(non_core_id);
-            let non_core_type_id: NodeTypeId =
-                non_core.non_core_type.ok_or_else(CLQError::err_none)?;
+            let non_core_type_id: NodeTypeIdInternal = non_core
+                .non_core_type
+                .ok_or_else(CLQError::err_none)?
+                .value();
             let num_ties: usize = non_core.count_ties_with_ids(&self.core_ids);
             let max_density = non_core
                 .max_edge_count_with_core_node()?
                 .ok_or_else(CLQError::err_none)?;
-            non_core_max_counts[non_core_type_id.value()] +=
-                max_density * (self.core_ids.len() as usize);
-            non_core_out_counts[non_core_type_id.value()] += num_ties;
+            non_core_max_counts[non_core_type_id] += max_density * (self.core_ids.len() as usize);
+            non_core_out_counts[non_core_type_id] += num_ties;
         }
         let mut non_core_density: Vec<f32> = Vec::new();
         for i in 1..non_core_max_counts.len() {

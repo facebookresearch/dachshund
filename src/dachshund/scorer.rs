@@ -90,11 +90,12 @@ impl Scorer {
         &self,
         candidate: &Candidate<TGraph>,
     ) -> CLQResult<f32> {
-        let non_core_counts = candidate.get_non_core_counts();
-        let mut score: f32 = 0.0;
-        for &non_core_count in non_core_counts.values() {
-            score += (non_core_count as f32 + 1.0).ln();
-        }
+        // Start from index 1 because 0 is the core type.
+        let score: f32 = candidate
+            .get_non_core_counts()[1..]
+            .iter()
+            .map(|x| (*x as f32 + 1.0).ln())
+            .sum();
         Ok(score)
     }
 }
