@@ -261,7 +261,6 @@ impl Transformer {
             clique_rows,
             verbose,
             &self.non_core_types,
-            self.num_non_core_types,
             self.search_problem.clone(),
             graph_id,
         )?;

@@ -88,12 +88,13 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
         clique_rows: &'a Vec<CliqueRow>,
         verbose: bool,
         non_core_types: &'a [String],
-        num_non_core_types: usize,
         search_problem: Rc<SearchProblem>,
         graph_id: GraphId,
     ) -> CLQResult<Beam<'a, TGraph>> {
         let core_ids: &Vec<u32> = graph.get_core_ids();
         let non_core_ids: &Vec<u32> = graph.get_non_core_ids().unwrap();
+
+        let num_non_core_types: usize = non_core_types.len();
 
         let mut candidates: Vec<Candidate<TGraph>> = Vec::with_capacity(search_problem.beam_size);
         let scorer: Scorer = Scorer::new(num_non_core_types, &search_problem);
@@ -173,6 +174,7 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
                 .contains(&candidate.checksum.unwrap())
             {
                 can_continue = true;
+
                 let v: Vec<Candidate<TGraph>> = candidate.one_step_search(
                     num_to_search,
                     &mut self.visited_candidates,

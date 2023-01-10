@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-#![feature(map_first_last)]
 extern crate clap;
 extern crate lib_dachshund;
 
@@ -19,7 +18,7 @@ use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::transformer_base::TransformerBase;
 
 fn get_command_line_args() -> ArgMatches<'static> {
-    let matches: ArgMatches = App::new("Dachshund")
+       let matches: ArgMatches = App::new("Dachshund")
         .version("0.1.0")
         .author("
                 Alex Peysakhovich <alexpeys@fb.com>, \
@@ -28,7 +27,13 @@ fn get_command_line_args() -> ArgMatches<'static> {
                 Michael Chen <mvc@fb.com>,
                 Matthew Menard <mlmenard@fb.com>,
                 Pär Winzell <zell@fb.com>")
-        .about("Finds (quasi-)bicliques in graphs specified from stdin.")
+        .about("Finds (quasi-)bicliques in graphs specified from stdin or file.")
+        .arg(Arg::with_name("input")
+              .short("i")
+              .long("input")
+              .takes_value(true)
+              .help("Input file containing the graph on which to mine bicliques. If not
+                     provided, specify graph via stdin."))
         .arg(Arg::with_name("typespec")
                  .short("ts")
                  .long("typespec")
@@ -101,16 +106,25 @@ fn get_command_line_args() -> ArgMatches<'static> {
                         all candidate nodes have at least this degree w/r to all other nodes in the \
                         graph"))
         .get_matches();
-    matches
+       matches
 }
 
 fn main() -> CLQResult<()> {
-    let matches: ArgMatches = get_command_line_args();
-    let mut transformer = Transformer::from_argmatches(matches)?;
-    let stdio: io::Stdin = io::stdin();
-    let input: Input = Input::console(&stdio);
-    let mut dummy: Vec<u8> = Vec::new();
-    let output: Output = Output::console(&mut dummy);
-    transformer.run(input, output)?;
-    Ok(())
+       let matches: ArgMatches = get_command_line_args();
+
+       let stdio: io::Stdin = io::stdin();
+       let input: Input;
+
+       if let Some(file_path) = matches.value_of("input") {
+              input = Input::file(&file_path)?
+       } else {
+              input = Input::console(&stdio);
+       }
+
+       let mut transformer = Transformer::from_argmatches(matches)?;
+
+       let mut dummy: Vec<u8> = Vec::new();
+       let output: Output = Output::console(&mut dummy);
+       transformer.run(input, output)?;
+       Ok(())
 }

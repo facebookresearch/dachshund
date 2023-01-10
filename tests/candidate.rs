@@ -38,7 +38,7 @@ fn test_output_simple_candidate() -> CLQResult<()> {
     graph.core_ids.push(node_idx);
     graph.labels_map.insert(node_id, node_idx);
 
-    let mut candidate: Candidate<TypedGraph> = Candidate::init_blank(&graph);
+    let mut candidate: Candidate<TypedGraph> = Candidate::init_blank(&graph, 1);
     candidate.add_node(node_idx)?;
     let graph_id: GraphId = 1.into();
     let output_rows: Vec<CliqueRow> =

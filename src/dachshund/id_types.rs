@@ -6,15 +6,19 @@
  */
 use std::fmt;
 
+// Internally the identifier for node types is a usize so we can
+// store counts by type as a vector.
+pub type NodeTypeIdInternal = usize;
+
 /// An opaque identifier for node types, with a little convenience metadata.
 #[derive(Hash, Copy, Clone, Debug, PartialEq, Eq)]
 pub struct NodeTypeId {
-    id: usize,
+    id: NodeTypeIdInternal,
     core: bool,
     max_edge_count_with_core_node: Option<usize>,
 }
 impl NodeTypeId {
-    pub fn value(&self) -> usize {
+    pub fn value(&self) -> NodeTypeIdInternal {
         self.id
     }
     pub fn is_core(&self) -> bool {
@@ -35,7 +39,7 @@ impl NodeTypeId {
 }
 impl<T> From<T> for NodeTypeId
 where
-    T: Into<usize>,
+    T: Into<NodeTypeIdInternal>,
 {
     fn from(n: T) -> Self {
         Self {
