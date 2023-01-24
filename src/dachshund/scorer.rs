@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-use crate::dachshund::candidate::Candidate;
+use crate::dachshund::candidate::{Candidate, Recipe};
 use crate::dachshund::error::CLQResult;
 use crate::dachshund::node::Node;
 use crate::dachshund::search_problem::SearchProblem;
@@ -37,6 +37,7 @@ impl Scorer {
             local_thresh: search_problem.local_thresh,
         }
     }
+
     // computes "cliqueness" score, i.e. the objective the search algorithm is maximizing.
     pub fn score<TGraph: LabeledGraph<NodeType = Node>>(
         &self,
@@ -46,12 +47,9 @@ impl Scorer {
         if candidate.core_ids.is_empty() || candidate.non_core_ids.is_empty() {
             return Ok(-1.0);
         }
-        // the more core nodes we have, the better
-        let mut score = (candidate.core_ids.len() as f32 + 1.0).ln();
-
-        // the more diverse the non-core types, the better
-        let non_core_diversity_score = self.get_non_core_diversity_score(candidate)?;
-        score += non_core_diversity_score;
+        // // the more core nodes we have, the better
+        // // the more diverse the non-core types, the better
+        let mut score = self.get_diversity_score(candidate)?;
 
         // the denser the ties, the better
         let cliqueness: f32 = candidate.get_cliqueness()?;
@@ -62,6 +60,56 @@ impl Scorer {
 
         // enforce a minimum density threshold for each core node.
         score *= self.get_local_thresh_score(candidate);
+        Ok(score)
+    }
+
+    pub fn score_recipe<TGraph: LabeledGraph<NodeType = Node>>(
+        &self,
+        recipe: &mut Recipe,
+        candidate: &Candidate<TGraph>,
+    ) -> CLQResult<f32> {
+        assert_eq!(recipe.checksum, candidate.checksum);
+        if let Some(score) = recipe.score {
+            return Ok(score);
+        }
+
+        let node = candidate.graph.get_node(
+            recipe
+                .node_id
+                .expect("Can't score recipe with no score and no node."),
+        );
+        let node_type_id = if node.is_core() {
+            0
+        } else {
+            node.non_core_type
+                .expect("Node is not core but non_core_type is None")
+                .value()
+        };
+
+        if candidate.get_size_with_node(node)? == 0 {
+            return Ok(-1.0);
+        }
+
+        let mut node_counts: Vec<usize> = candidate.get_node_counts();
+        node_counts[node_type_id] += 1;
+        let mut score: f32 = Self::diversity_score(&node_counts)?;
+
+        let cliqueness: f32 = candidate.get_cliqueness_with_node(node)?;
+        score += cliqueness * self.alpha;
+
+        // enforce a minimum density threshold on cliqueness (1.0 for true cliques)
+        score *= self.get_global_thresh_score(cliqueness);
+
+        if let Some(thresh) = self.local_thresh {
+            // enforce a minimum density threshold for each core node.
+            let (has_enough_edges, new_thresh) =
+                candidate.local_thresh_score_with_node_at_least(thresh, node);
+            if has_enough_edges {
+                recipe.local_guarantee = new_thresh;
+            } else {
+                score = 0.0;
+            }
+        }
         Ok(score)
     }
 
@@ -85,17 +133,25 @@ impl Scorer {
             None => 1.0,
         }
     }
-    /// returns a non-core diversity score that is higher with more diverse non-core types.
-    pub fn get_non_core_diversity_score<TGraph: LabeledGraph<NodeType = Node>>(
+
+    /// returns a diversity score that increases with number of nodes and
+    /// is higher with more diverse types.
+    pub fn get_diversity_score<TGraph: LabeledGraph<NodeType = Node>>(
         &self,
         candidate: &Candidate<TGraph>,
     ) -> CLQResult<f32> {
-        // Start from index 1 because 0 is the core type.
         let score: f32 = candidate
-            .get_non_core_counts()[1..]
+            .get_node_counts()
             .iter()
             .map(|x| (*x as f32 + 1.0).ln())
             .sum();
+        Ok(score)
+    }
+
+    /// returns a diversity score that increases with number of nodes and
+    /// is higher with more diverse types.
+    pub fn diversity_score(node_counts: &Vec<usize>) -> CLQResult<f32> {
+        let score: f32 = node_counts.iter().map(|x| (*x as f32 + 1.0).ln()).sum();
         Ok(score)
     }
 }

@@ -8,7 +8,7 @@ extern crate lib_dachshund;
 
 use std::collections::{HashMap, HashSet};
 
-use lib_dachshund::dachshund::candidate::Candidate;
+use lib_dachshund::dachshund::candidate::{Candidate, Recipe};
 use lib_dachshund::dachshund::error::CLQResult;
 use lib_dachshund::dachshund::id_types::{GraphId, NodeId};
 use lib_dachshund::dachshund::node::Node;
@@ -170,64 +170,8 @@ fn test_neighborhood() -> CLQResult<()> {
     Ok(())
 }
 
-/// Test that a candidate correctly sets its neighborhood, including with a hint.
-///
-///  1 - 2
-///    \\
-///  3 - 4
-///    \
-///  5 - 6
-///
-/// Start with {1}, then add 4, then add 3,  then 2.
-#[test]
-fn test_set_neighborhood() -> CLQResult<()> {
-    let (graph, transformer) = build_sample_graph();
-    assert_eq!(graph.core_ids.len(), 3);
-    assert_eq!(graph.non_core_ids.len(), 3);
-
-    let initial_id: u32 = 1;
-    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
-
-    let node_2: u32 = graph.get_node_by_label(2.into()).node_id;
-    let node_3: u32 = graph.get_node_by_label(3.into()).node_id;
-    let node_4: u32 = graph.get_node_by_label(4.into()).node_id;
-    let node_6: u32 = graph.get_node_by_label(6.into()).node_id;
-
-    let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
-    // Adding 4 to the clique, so 4 is no longer adjacent and 3 should
-    // be added with value 1.
-    candidate.add_node(node_4)?;
-    let mut expected_neighborhood: HashMap<u32, usize> = HashMap::new();
-    expected_neighborhood.insert(node_2, 1);
-    expected_neighborhood.insert(node_3, 1);
-    assert_eq!(candidate.get_neighborhood(), expected_neighborhood);
-    candidate.set_neighborhood();
-    assert_eq!(candidate.get_neighborhood(), expected_neighborhood);
-
-    let mut new_candidate = candidate.replicate(false);
-    let mut hints = HashMap::new();
-    hints.insert(candidate.checksum.unwrap(), &candidate);
-
-    // Adding 3 to the clique, so 3 is no longer adjacent and 6 should
-    // be added with value 1. We pass a useful hint here.
-    new_candidate.add_node(node_3)?;
-    let mut expected_neighborhood: HashMap<u32, usize> = HashMap::new();
-    expected_neighborhood.insert(node_2, 1);
-    expected_neighborhood.insert(node_6, 1);
-    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
-    new_candidate.set_neigbhorhood_with_hint(&hints);
-    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
-
-    // Adding 2 to the clique, so 2 is no longer adjacent.
-    // This time, we pass a useless hint.
-    new_candidate.add_node(node_2)?;
-    let mut expected_neighborhood: HashMap<u32, usize> = HashMap::new();
-    expected_neighborhood.insert(node_6, 1);
-    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
-    new_candidate.set_neigbhorhood_with_hint(&hints);
-    assert_eq!(new_candidate.get_neighborhood(), expected_neighborhood);
-    Ok(())
-}
+// TODO:
+/// Add new test for neigbhorhood / incremental add.
 
 /// Test that a candidate's appropriately calculates its local density.
 /// (Does not inspect the density guarantee itself.)
@@ -370,7 +314,7 @@ fn test_local_density_guarantees() -> CLQResult<()> {
 ///    \
 ///  5 - 6
 ///
-/// Start with {1, 3, 5}. Expansion candidates should rank 1,2,4 g
+/// Start with {1, 3, 5}. Expansion candidates should rank 1,2,4.
 #[test]
 fn test_one_step_search() -> CLQResult<()> {
     let (graph, transformer) = build_sample_graph();
@@ -388,24 +332,24 @@ fn test_one_step_search() -> CLQResult<()> {
     // Adding 3 and 5 to the clique.
     candidate.add_node(node_3)?;
     candidate.add_node(node_5)?;
-    candidate.set_neighborhood();
 
     let mut visited_candidates: HashSet<u64> = HashSet::new();
-    let new_candidates: Vec<Candidate<TypedGraph>> = candidate
+    let recipes: Vec<Recipe> = candidate
         .one_step_search(2, &mut visited_candidates, &scorer)
         .unwrap();
 
     // When we do a one step search, it should respect the num_to_search arugument...
-    assert_eq!(new_candidates.len(), 2);
-    // ... and we should only get new candidates with 4 and 6 added, not 2.
+    assert_eq!(recipes.len(), 2);
+    // ... and we should only get recipes that involve adding 4 and 6 added, not 2.
     // (because of the num_ties with the original 3 nodes.)
     let node_2: u32 = graph.get_node_by_label(2.into()).node_id;
     let node_4: u32 = graph.get_node_by_label(4.into()).node_id;
     let node_6: u32 = graph.get_node_by_label(6.into()).node_id;
 
-    for cand in new_candidates {
-        assert!(!cand.non_core_ids.contains(node_2));
-        assert!(!cand.non_core_ids.contains(node_4) || !cand.non_core_ids.contains(node_6));
+    for recipe in recipes {
+        assert!(recipe.checksum == candidate.checksum);
+        assert!(recipe.node_id != Some(node_2));
+        assert!(recipe.node_id == Some(node_4) || recipe.node_id == Some(node_6));
     }
 
     Ok(())

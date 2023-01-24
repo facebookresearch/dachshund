@@ -42,10 +42,31 @@ pub struct LocalDensityGuarantee {
 /// A recipe for a candidate is a checksum of another and a node id.
 /// This represents the claim that you can generate the candidate in question
 /// by adding node node_id to an existing candidate identified with checksum.
-#[derive(Clone, Copy)]
+/// Recipes allow us to identify the best candidates for the next generation
+/// and only do candidate replication lazily.
+
+#[derive(Clone, Debug)]
 pub struct Recipe {
     pub checksum: Option<u64>,
-    pub node_id: u32,
+    pub node_id: Option<u32>,
+    pub score: Option<f32>,
+    pub local_guarantee: Option<LocalDensityGuarantee>,
+}
+
+impl PartialEq for Recipe {
+    fn eq(&self, other: &Recipe) -> bool {
+        (self.checksum == other.checksum) && (self.node_id == other.node_id)
+    }
+}
+impl Eq for Recipe {}
+impl Hash for Recipe {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        if let Some(node_id) = self.node_id {
+            merge_checksum(self.checksum, node_id).unwrap().hash(state);
+        } else {
+            self.checksum.unwrap().hash(state);
+        }
+    }
 }
 
 type NeigbhorhoodMap = HashMap<u32, usize>;
@@ -72,11 +93,7 @@ type NeigbhorhoodMap = HashMap<u32, usize>;
 ///     the candidate maintains a sufficiently high local density.
 ///     NB: This optimizes for memory consumption and the case where the cliques
 ///     are core-heavy.
-/// - recipe: This consists of a pair of a checksum and a node id that describes
-///     one way to build this candidate from another candidate. This helps the beam
-///     search find a candidate from the previous epoch that can be used as a hint
-///     to build out the other convenience attributes.
-/// - non_core_counts: a counter of the number of noncore nodes by type.
+/// - node_counts: a counter of the number of nodes by type. First entry is always the core type.
 ///
 /// Note that in the current implementation, ``core'' ids must all be of the same type,
 /// whereas non-core ids can be of any type is desired.
@@ -93,9 +110,8 @@ where
     max_core_node_edges: usize,
     ties_between_nodes: usize,
     local_guarantee: LocalDensityGuarantee,
-    neighborhood: Option<NeigbhorhoodMap>,
-    recipe: Option<Recipe>,
-    non_core_counts: Vec<usize>,
+    neighborhood: NeigbhorhoodMap,
+    node_counts: Vec<usize>,
 }
 
 impl<'a, T: LabeledGraph> Hash for Candidate<'a, T> {
@@ -133,9 +149,8 @@ where
                 num_edges: 0,
                 exceptions: RoaringBitmap::new(),
             },
-            neighborhood: Some(HashMap::new()),
-            recipe: None,
-            non_core_counts: vec![0; num_non_core_types + 1],
+            neighborhood: HashMap::new(),
+            node_counts: vec![0; num_non_core_types + 1],
         }
     }
 
@@ -155,7 +170,8 @@ where
         scorer: &Scorer,
     ) -> CLQResult<Option<Self>> {
         assert!(!rows.is_empty());
-        let mut candidate: Candidate<TGraph> = Candidate::init_blank(graph, scorer.get_num_non_core_types());
+        let mut candidate: Candidate<TGraph> =
+            Candidate::init_blank(graph, scorer.get_num_non_core_types());
         for row in rows {
             if graph.has_node_by_label(row.node_id) {
                 let node = graph.get_node_by_label(row.node_id);
@@ -169,41 +185,28 @@ where
         }
         let score = scorer.score(&mut candidate)?;
         candidate.set_score(score)?;
-        candidate.set_neighborhood();
         Ok(Some(candidate))
     }
 
     /// add node to the clique -- this results in the score being reset, and the
     /// clique checksum being changed.
     pub fn add_node(&mut self, node_id: u32) -> CLQResult<()> {
-        let mut s = DefaultHasher::new();
-        node_id.hash(&mut s);
-        let node_hash: u64 = s.finish();
-        self.recipe = Some(Recipe {
-            checksum: self.checksum,
-            node_id,
-        });
-        if self.checksum.is_some() {
-            self.checksum = Some(self.checksum.unwrap().wrapping_add(node_hash));
-        } else {
-            self.checksum = Some(node_hash);
-        }
+        self.checksum = merge_checksum(self.checksum, node_id);
+
         if self.graph.get_node(node_id).is_core() {
             self.core_ids.insert(node_id);
             self.local_guarantee.exceptions.insert(node_id);
+            self.node_counts[0_usize] += 1;
         } else {
             self.non_core_ids.insert(node_id);
             self.increment_max_core_node_edges(node_id)?;
-            self.non_core_counts[self.graph.get_node(node_id).non_core_type.unwrap().value()] += 1;
+            self.node_counts[self.graph.get_node(node_id).non_core_type.unwrap().value()] += 1;
         }
+
         self.increment_ties_between_nodes(node_id);
         self.reset_score();
-        match self.recipe {
-            Some(Recipe { checksum: None, .. }) => {
-                self.neighborhood = Some(self.calculate_neighborhood())
-            }
-            _ => self.neighborhood = None,
-        }
+
+        self.adjust_neighborhood(node_id);
         Ok(())
     }
 
@@ -216,6 +219,15 @@ where
             .collect();
         vec.sort();
         vec
+    }
+
+    pub fn as_recipe(&self) -> Recipe {
+        Recipe {
+            checksum: self.checksum,
+            node_id: None,
+            score: self.score,
+            local_guarantee: Some(self.local_guarantee.clone()),
+        }
     }
 
     /// returns sorted vector of non-core IDs -- useful for printing
@@ -266,10 +278,7 @@ where
     /// every node adjacent to the clique to the number of edges between
     /// that node and the members of the clique.)
     pub fn get_neighborhood(&self) -> NeigbhorhoodMap {
-        match &self.neighborhood {
-            None => self.calculate_neighborhood(),
-            Some(neighbors) => neighbors.clone(),
-        }
+        self.neighborhood.clone()
     }
 
     /// Get a clone of the local guarantee which makes a promise about the
@@ -278,11 +287,11 @@ where
         self.local_guarantee.clone()
     }
 
-    /// Get a reference to non_core counts which is a vector recording
-    /// the number of noncore nodes in the clique by type.
-    /// First element is always 0, since NdodeTypeId is the Core Type.
-    pub fn get_non_core_counts(&self) -> &Vec<usize> {
-        &self.non_core_counts
+    /// Get a reference to node counts which is a vector recording
+    /// the number of nodes in the clique by type.
+    /// First element is the count of core nodes, since NodeTypeId 0 is the Core Type.
+    pub fn get_node_counts(&self) -> Vec<usize> {
+        self.node_counts.clone()
     }
 
     /// encodes self as tab-separated "wide" format
@@ -387,14 +396,13 @@ where
         Ok(())
     }
 
-    /// Create a copy of itself, needed for expand_with_node.
-    /// This happens for every candidate we want to score, not just
+    /// Create a copy of itself, needed for initializing candidate
+    /// from node. This happens for every candidate we want to score,
     /// the ones we plan on expanding, so the performance of the
     /// search is very sensitive to the cost of this operation.
     pub fn replicate(&self, keep_score: bool) -> Self {
         Self {
             graph: self.graph,
-            // Note: These clones are relatively expensive.
             core_ids: self.core_ids.clone(),
             non_core_ids: self.non_core_ids.clone(),
             checksum: self.checksum,
@@ -405,51 +413,47 @@ where
             max_core_node_edges: self.max_core_node_edges,
             ties_between_nodes: self.ties_between_nodes,
             local_guarantee: self.local_guarantee.clone(),
-            // Neighborhood is needed to expand, but not to score,
-            // so to save work, we don't compute the neighborhood
-            // until after the beam decides to keep the candidate.
-            neighborhood: None,
-            recipe: self.recipe,
-            non_core_counts: self.non_core_counts.clone(),
+            neighborhood: self.neighborhood.clone(),
+            node_counts: self.node_counts.clone(),
         }
     }
 
-    /// creates a copy of itself and adds a node to said copy,
-    /// checking that the node does not already belong to itself.
-    fn expand_with_node(&self, node_id: u32) -> CLQResult<Self> {
+    pub fn expand_from_recipe(&self, recipe: &Recipe) -> CLQResult<Self> {
         let mut candidate = self.replicate(false);
-        if self.get_node(node_id).is_core() {
-            assert!(!candidate.core_ids.contains(node_id));
-            assert!(!self.core_ids.contains(node_id));
+
+        if let Some(node_id) = recipe.node_id {
+            if self.get_node(node_id).is_core() {
+                assert!(!candidate.core_ids.contains(node_id));
+                assert!(!self.core_ids.contains(node_id));
+            } else {
+                assert!(!candidate.non_core_ids.contains(node_id));
+                assert!(!self.non_core_ids.contains(node_id));
+            }
+            candidate.add_node(node_id)?;
+            candidate.score = recipe.score;
+            if let Some(local_guarantee) = &recipe.local_guarantee {
+                candidate.local_guarantee = local_guarantee.clone();
+            }
         } else {
-            assert!(!candidate.non_core_ids.contains(node_id));
-            assert!(!self.non_core_ids.contains(node_id));
+            candidate.score = self.score;
         }
-        candidate.add_node(node_id)?;
         Ok(candidate)
     }
 
-    /// finds nodes that are already connected to the candidate's members, but not
-    /// among the members themselves. Sorts in descending order by the number of
-    /// ties with members, returning at most num_to_search expansion candidates.
     fn get_expansion_candidates(
         &self,
         num_to_search: usize,
         visited_candidates: &mut HashSet<u64>,
-    ) -> CLQResult<Vec<Self>> {
+    ) -> CLQResult<Vec<Recipe>> {
         assert!(!visited_candidates.contains(&self.checksum.unwrap()));
         let mut h = BinaryHeap::with_capacity(num_to_search);
-
-        // We only ever need to expand a node with its neighbors calculated.
-        assert!(self.neighborhood.is_some());
-        let neighborhood = self.neighborhood.as_ref().unwrap();
 
         // Use the heap to keep track of the nodes with the most ties to the
         // current candidate: If the heap is already full, look at the max element
         // (the one with fewest ties because of Reverse). If the element we're
         // considering is smaller (more ties) we can remove the max element
         // and push the new element onto the heap.
-        for (node_id, num_ties) in neighborhood.iter() {
+        for (node_id, num_ties) in self.neighborhood.iter() {
             let heap_element = (Reverse(num_ties), node_id);
             if h.len() < num_to_search {
                 h.push(heap_element);
@@ -459,13 +463,19 @@ where
             }
         }
 
-        let mut expansion_candidates: Vec<Self> = Vec::with_capacity(num_to_search);
+        let mut expansion_candidates: Vec<Recipe> = Vec::with_capacity(num_to_search);
 
         for (_num_ties, &node_id) in h.into_sorted_vec().iter() {
-            let candidate = self.expand_with_node(node_id)?;
-            assert!(self.checksum != candidate.checksum);
-            if !visited_candidates.contains(&candidate.checksum.unwrap()) {
-                expansion_candidates.push(candidate);
+            let recipe = Recipe {
+                checksum: self.checksum,
+                node_id: Some(node_id),
+                score: None,
+                local_guarantee: None,
+            };
+
+            let new_checksum = merge_checksum(self.checksum, node_id).unwrap();
+            if !visited_candidates.contains(&new_checksum) {
+                expansion_candidates.push(recipe);
             }
         }
         assert!(self.checksum.unwrap() != 0);
@@ -479,14 +489,14 @@ where
         num_to_search: usize,
         visited_candidates: &mut HashSet<u64>,
         scorer: &Scorer,
-    ) -> CLQResult<Vec<Self>> {
-        let mut expansion_candidates: Vec<Self> =
+    ) -> CLQResult<Vec<Recipe>> {
+        let mut expansion_recipes: Vec<Recipe> =
             self.get_expansion_candidates(num_to_search, visited_candidates)?;
-        for candidate in &mut expansion_candidates {
-            let score = scorer.score(candidate)?;
-            candidate.set_score(score)?;
+        for recipe in &mut expansion_recipes {
+            let score = scorer.score_recipe(recipe, self)?;
+            recipe.score = Some(score);
         }
-        Ok(expansion_candidates)
+        Ok(expansion_recipes)
     }
 
     /// Returns ``size'' of candidate, defined as the maximum number of edges
@@ -495,6 +505,19 @@ where
     /// in the candidates.
     pub fn get_size(&self) -> CLQResult<usize> {
         Ok(self.core_ids.len() as usize * self.max_core_node_edges)
+    }
+
+    /// Returns size of candidate if the given node were to be added. Assumes that
+    /// node is not currently part of the candidate.
+    pub fn get_size_with_node(&self, node: &Node) -> CLQResult<usize> {
+        if node.is_core() {
+            Ok((self.core_ids.len() as usize + 1) * self.max_core_node_edges)
+        } else {
+            let new_edge_count = node
+                .max_edge_count_with_core_node()?
+                .ok_or_else(CLQError::err_none)?;
+            Ok(self.core_ids.len() as usize * (self.max_core_node_edges + new_edge_count))
+        }
     }
 
     // Update the size to account for for adding node_id. Can be called immediately before
@@ -518,6 +541,100 @@ where
             1.0
         };
         Ok(cliqueness)
+    }
+
+    /// computes "cliqueness", the density of ties between core and non-core nodes.
+    pub fn get_cliqueness_with_node(&self, node: &Node) -> CLQResult<f32> {
+        let size = self.get_size_with_node(node)?;
+
+        let new_ties = if node.is_core() {
+            node.count_ties_with_ids(&self.non_core_ids)
+        } else {
+            node.count_ties_with_ids(&self.core_ids)
+        };
+
+        let ties_between_nodes = self.count_ties_between_nodes()? + new_ties;
+        let cliqueness: f32 = if size > 0 {
+            ties_between_nodes as f32 / size as f32
+        } else {
+            1.0
+        };
+        Ok(cliqueness)
+    }
+
+    // Returns true if every core node has at least thresh fraction
+    // of the possible edges (when node is added), using the
+    // local density guarantee as applicable.
+    pub fn local_thresh_score_with_node_at_least(
+        &self,
+        thresh: f32,
+        node: &Node,
+    ) -> (bool, Option<LocalDensityGuarantee>) {
+        if thresh == 0.0 {
+            return (true, None);
+        }
+
+        let new_max_core_node_edges = if node.is_core() {
+            self.max_core_node_edges
+        } else {
+            self.max_core_node_edges + node.max_edge_count_with_core_node().unwrap().unwrap()
+        };
+
+        let implied_edge_thresh = (thresh * new_max_core_node_edges as f32).ceil() as usize;
+        // If the existing local guarantee is stricter than the threshold we're
+        // we're checking now, we only need to check the (newly added) exceptions.
+        let check_all = self.local_guarantee.num_edges < implied_edge_thresh;
+        let nodes_to_check = if !check_all {
+            &self.local_guarantee.exceptions
+        } else {
+            &self.core_ids
+        };
+
+        let mut min_edges = None;
+        for node_id in nodes_to_check {
+            let mut edge_count = self
+                .get_node(node_id)
+                .count_ties_with_ids(&self.non_core_ids);
+            if !node.is_core() {
+                edge_count += node.count_ties_with_id(node_id)
+            }
+            if edge_count < implied_edge_thresh {
+                return (false, None);
+            }
+            match min_edges {
+                Some(num) => min_edges = Some(min(edge_count, num)),
+                None => min_edges = Some(edge_count),
+            }
+        }
+
+        // If this is a core node; we also need to check it.
+        if node.is_core() {
+            let new_edge_count = node.count_ties_with_ids(&self.non_core_ids);
+            if new_edge_count < implied_edge_thresh {
+                return (false, None);
+            }
+            match min_edges {
+                Some(num) => min_edges = Some(min(new_edge_count, num)),
+                None => min_edges = Some(new_edge_count),
+            }
+        }
+
+        // If we passed the local density check, we can update the guarantee.
+        // In practice, we tend to call this function repeatedly with the same
+        // threshold, so we opt for fewer exceptions instead of guaranteeing
+        // a higher number of edges.
+        let mut new_num_edges = min_edges.unwrap_or(self.local_guarantee.num_edges);
+        if !check_all {
+            new_num_edges = min(self.local_guarantee.num_edges, new_num_edges);
+        }
+
+        (
+            true,
+            Some(LocalDensityGuarantee {
+                num_edges: new_num_edges,
+                exceptions: RoaringBitmap::new(),
+            }),
+        )
     }
 
     // Returns true if every core node has at least thresh fraction
@@ -591,24 +708,11 @@ where
         self.ties_between_nodes += new_ties;
     }
 
-    // Recalculates the candidate's neighborhood from scratch.
-    fn calculate_neighborhood(&self) -> NeigbhorhoodMap {
-        let mut neighborhood = HashMap::new();
-        for node_id in &self.core_ids {
-            self.adjust_neighborhood(&mut neighborhood, node_id);
-        }
-
-        for node_id in &self.non_core_ids {
-            self.adjust_neighborhood(&mut neighborhood, node_id);
-        }
-        neighborhood
-    }
-
     // Adjust the neighborhood hashmap to account for adding added_node:
     // Any neighbor that isn't already in our graph should have its
     // edges count in self.neighborhood increased by one, and the node we're
     // adding needs to be removed, since it is no longer adjacent to the clique.
-    fn adjust_neighborhood(&self, neighborhood: &mut NeigbhorhoodMap, node_id: u32) {
+    fn adjust_neighborhood(&mut self, node_id: u32) {
         let opposite_shore = if self.graph.get_node(node_id).is_core() {
             &self.non_core_ids
         } else {
@@ -624,50 +728,11 @@ where
 
         for target_id in neighbors {
             if !opposite_shore.contains(target_id) {
-                let counter = neighborhood.entry(target_id).or_insert(0);
+                let counter = self.neighborhood.entry(target_id).or_insert(0);
                 *counter += 1;
             }
         }
-        neighborhood.remove(&node_id);
-    }
-
-    // Recalculates the candidate's neighborhood from scratch.
-    pub fn set_neighborhood(&mut self) {
-        self.neighborhood = Some(self.calculate_neighborhood());
-    }
-
-    // Set the neighborhood property with another candidate as a hint to crib from.
-    // We use the recipe to make sure that we can safely clone its neighborhood as
-    // starting point.
-    pub fn set_neigbhorhood_with_hint(&mut self, hints: &HashMap<u64, &Self>) {
-        let Some(recipe) = self.recipe else {
-            self.neighborhood = Some(self.calculate_neighborhood());
-            return;
-        };
-
-        let Some(checksum) = recipe.checksum else {
-            self.neighborhood = Some(self.calculate_neighborhood());
-            return;
-        };
-
-        let Some(hint) = hints.get(&checksum) else {
-            self.neighborhood = Some(self.calculate_neighborhood());
-            return;
-        };
-
-        if recipe.checksum != hint.checksum {
-            self.neighborhood = Some(self.calculate_neighborhood());
-            return;
-        }
-
-        // At this point we have a hint that matches the checksum of the recipe.
-        // Check if the hint has a neighborhood to use
-        if let Some(mut neighborhood) = hint.neighborhood.clone() {
-            self.adjust_neighborhood(&mut neighborhood, recipe.node_id);
-            self.neighborhood = Some(neighborhood);
-        } else {
-            self.neighborhood = Some(self.calculate_neighborhood());
-        }
+        self.neighborhood.remove(&node_id);
     }
 
     /// TODO: Can this use the non_core_counts?
@@ -715,5 +780,16 @@ where
             counts.push(num_ties as f32 / max_size as f32);
         }
         counts
+    }
+}
+
+fn merge_checksum(checksum: Option<u64>, node_id: u32) -> Option<u64> {
+    let mut s = DefaultHasher::new();
+    node_id.hash(&mut s);
+    let node_hash: u64 = s.finish();
+    if checksum.is_some() {
+        Some(checksum.unwrap().wrapping_add(node_hash))
+    } else {
+        Some(node_hash)
     }
 }

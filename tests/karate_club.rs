@@ -278,10 +278,7 @@ fn test_karate_club() -> CLQResult<()> {
             .unwrap(),
         1.0
     );
-    assert_eq!(
-        graph.get_clustering_coefficient(NodeId::from(12_i64)),
-        None
-    );
+    assert_eq!(graph.get_clustering_coefficient(NodeId::from(12_i64)), None);
     assert_eq!(
         graph
             .get_clustering_coefficient(NodeId::from(10_i64))

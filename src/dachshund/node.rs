@@ -153,7 +153,6 @@ impl Node {
         edges: Vec<NodeEdge>,
         neighbors_sets: HashMap<EdgeTypeId, RoaringBitmap>,
     ) -> Node {
-
         Node {
             node_id,
             is_core,
@@ -174,6 +173,13 @@ impl Node {
             ))
         })?;
         Ok(non_core_type.max_edge_count_with_core_node())
+    }
+
+    pub fn count_ties_with_id(&self, id: u32) -> usize {
+        self.neighbors_sets
+            .values()
+            .filter(|neighbors| neighbors.contains(id))
+            .count()
     }
 }
 
