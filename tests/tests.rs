@@ -199,12 +199,7 @@ fn test_process_medium_clique() -> CLQResult<()> {
         gen_test_transformer(ts, "author".to_string()).unwrap(),
         clique_rows,
         |graph, res| {
-            assert_nodes_have_ids(
-                graph,
-                &res.core_ids,
-                core_ids.to_vec(),
-                true,
-            );
+            assert_nodes_have_ids(graph, &res.core_ids, core_ids.to_vec(), true);
             assert_nodes_have_ids(
                 graph,
                 &res.non_core_ids,

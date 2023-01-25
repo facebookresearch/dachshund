@@ -12,7 +12,7 @@ use std::hash::{Hash, Hasher};
 
 use rand::prelude::*;
 
-use crate::dachshund::candidate::Candidate;
+use crate::dachshund::candidate::{Candidate, Recipe};
 use crate::dachshund::error::{CLQError, CLQResult};
 use crate::dachshund::id_types::GraphId;
 use crate::dachshund::node::Node;
@@ -147,7 +147,7 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
         num_to_search: usize,
         beam_size: usize,
     ) -> CLQResult<(Candidate<'a, TGraph>, bool)> {
-        let mut scored_expansion_candidates: HashSet<Candidate<TGraph>> = HashSet::new();
+        let mut scored_expansion_recipes: HashSet<Recipe> = HashSet::new();
         let mut new_candidates: Vec<Candidate<TGraph>> = Vec::new();
         let mut can_continue: bool = false;
         // A map from a checksum to a reference to a candidate from the previous generation.
@@ -175,7 +175,7 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
             {
                 can_continue = true;
 
-                let v: Vec<Candidate<TGraph>> = candidate.one_step_search(
+                let v: Vec<Recipe> = candidate.one_step_search(
                     num_to_search,
                     &mut self.visited_candidates,
                     &self.scorer,
@@ -184,32 +184,37 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
                     eprintln!("Have {} visited candidates:", self.visited_candidates.len());
                     eprintln!("Found the following expansion candidates:");
                 }
-                for ell in v {
+                for recipe in v {
                     if self.verbose {
                         eprintln!(
                             "(score = {}): {}",
-                            ell.get_score()?,
-                            ell.to_printable_row(
+                            recipe.score.unwrap_or(0.0),
+                            candidate.expand_from_recipe(&recipe)?.to_printable_row(
                                 self.non_core_types,
                                 self.graph.get_reverse_labels_map()
                             )?,
                         );
                     }
-                    scored_expansion_candidates.insert(ell);
+                    scored_expansion_recipes.insert(recipe);
                 }
             }
-            previous_candidates.insert(candidate.checksum.unwrap(), candidate);
-            scored_expansion_candidates.insert(candidate.replicate(true));
+            previous_candidates.insert(
+                candidate
+                    .checksum
+                    .expect("Previous candidate had no checksum"),
+                candidate,
+            );
+            scored_expansion_recipes.insert(candidate.as_recipe());
         }
 
         // sort by score, with node_id as tie breaker for deterministic behaviour
-        let mut v: Vec<Candidate<TGraph>> = scored_expansion_candidates.into_iter().collect();
+        let mut v: Vec<Recipe> = scored_expansion_recipes.into_iter().collect();
 
         let mut bad_sort = false;
         v.sort_by(|a, b| {
-            if let (Ok(a_score), Ok(b_score)) = (a.get_score(), b.get_score()) {
-                let key_a = (a_score, a.checksum);
-                let key_b = (b_score, b.checksum);
+            if let (Some(a_score), Some(b_score)) = (a.score, b.score) {
+                let key_a = (a_score, a.checksum, a.node_id);
+                let key_b = (b_score, b.checksum, b.node_id);
                 if let Some(comparison) = key_a.partial_cmp(&key_b) {
                     return comparison.reverse();
                 }
@@ -226,12 +231,15 @@ impl<'a, TGraph: LabeledGraph<NodeType = Node>> Beam<'a, TGraph> {
         if self.verbose {
             eprintln!("Beam now contains:");
         }
-        for mut ell in v {
+        for recipe in v {
             if new_candidates.len() < beam_size {
-                ell.set_neigbhorhood_with_hint(&previous_candidates);
-                new_candidates.push(ell);
+                let new_candidate = previous_candidates
+                    [&recipe.checksum.expect("Recipe had no checksum")]
+                    .expand_from_recipe(&recipe)?;
+                new_candidates.push(new_candidate);
             }
         }
+
         self.candidates = new_candidates;
         Ok((self.candidates[0].replicate(true), can_continue))
     }

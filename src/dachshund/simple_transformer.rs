@@ -135,7 +135,7 @@ impl TransformerBase for SimpleTransformer {
         let original_id = self
             .line_processor
             .get_original_id(graph_id.value() as usize);
-        let line: String = format!("{}\t{}", original_id, stats);
+        let line: String = format!("{original_id}\t{stats}");
         output.send((Some(line), false)).unwrap();
         Ok(())
     }

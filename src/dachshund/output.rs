@@ -35,7 +35,7 @@ impl<'a> Output<'a> {
             self.flush()?;
             return Ok(());
         }
-        println!("{}", text);
+        println!("{text}");
         Ok(())
     }
 }

@@ -67,9 +67,7 @@ fn test_node_weight() {
     let weighted_star_graph = get_graph(0).unwrap();
     assert_eq!(weighted_star_graph.nodes.len(), 4);
     assert_eq!(
-        weighted_star_graph
-            .get_node(NodeId::from(0_i64))
-            .weight(),
+        weighted_star_graph.get_node(NodeId::from(0_i64)).weight(),
         6.0
     );
 

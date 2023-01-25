@@ -72,7 +72,7 @@ pub trait TransformerBase {
                         current_graph_id = Some(new_graph_id);
                         self.process_row(row)?;
                     }
-                    Err(error) => eprintln!("I/O error: {}", error),
+                    Err(error) => eprintln!("I/O error: {error}"),
                 }
             }
             if let Some(some_current_graph_id) = current_graph_id {

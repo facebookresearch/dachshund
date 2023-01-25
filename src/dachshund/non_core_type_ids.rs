@@ -25,14 +25,14 @@ impl NonCoreTypeIds {
         let id = self
             .data
             .get(type_str)
-            .ok_or_else(|| CLQError::from(format!("No mapping for non-core type: {}", type_str)))?;
+            .ok_or_else(|| CLQError::from(format!("No mapping for non-core type: {type_str}")))?;
         Ok(id)
     }
     pub fn require_mut(&mut self, type_str: &str) -> CLQResult<&mut NodeTypeId> {
         let id = self
             .data
             .get_mut(type_str)
-            .ok_or_else(|| CLQError::from(format!("No mapping for non-core type: {}", type_str)))?;
+            .ok_or_else(|| CLQError::from(format!("No mapping for non-core type: {type_str}")))?;
         Ok(id)
     }
     pub fn insert(&mut self, type_str: &str, type_id: NodeTypeId) {

@@ -18,7 +18,7 @@ use lib_dachshund::dachshund::transformer::Transformer;
 use lib_dachshund::dachshund::transformer_base::TransformerBase;
 
 fn get_command_line_args() -> ArgMatches<'static> {
-       let matches: ArgMatches = App::new("Dachshund")
+    let matches: ArgMatches = App::new("Dachshund")
         .version("0.1.0")
         .author("
                 Alex Peysakhovich <alexpeys@fb.com>, \
@@ -106,25 +106,25 @@ fn get_command_line_args() -> ArgMatches<'static> {
                         all candidate nodes have at least this degree w/r to all other nodes in the \
                         graph"))
         .get_matches();
-       matches
+    matches
 }
 
 fn main() -> CLQResult<()> {
-       let matches: ArgMatches = get_command_line_args();
+    let matches: ArgMatches = get_command_line_args();
 
-       let stdio: io::Stdin = io::stdin();
-       let input: Input;
+    let stdio: io::Stdin = io::stdin();
+    let input: Input;
 
-       if let Some(file_path) = matches.value_of("input") {
-              input = Input::file(&file_path)?
-       } else {
-              input = Input::console(&stdio);
-       }
+    if let Some(file_path) = matches.value_of("input") {
+        input = Input::file(file_path)?
+    } else {
+        input = Input::console(&stdio);
+    }
 
-       let mut transformer = Transformer::from_argmatches(matches)?;
+    let mut transformer = Transformer::from_argmatches(matches)?;
 
-       let mut dummy: Vec<u8> = Vec::new();
-       let output: Output = Output::console(&mut dummy);
-       transformer.run(input, output)?;
-       Ok(())
+    let mut dummy: Vec<u8> = Vec::new();
+    let output: Output = Output::console(&mut dummy);
+    transformer.run(input, output)?;
+    Ok(())
 }
