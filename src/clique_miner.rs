@@ -116,7 +116,7 @@ fn main() -> CLQResult<()> {
     let input: Input;
 
     if let Some(file_path) = matches.value_of("input") {
-        input = Input::file(&file_path)?
+        input = Input::file(file_path)?
     } else {
         input = Input::console(&stdio);
     }

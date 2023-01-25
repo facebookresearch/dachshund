@@ -198,7 +198,7 @@ impl Transformer {
         let arg_value = |name: &str| -> CLQResult<&str> {
             matches
                 .value_of(name)
-                .ok_or_else(|| CLQError::from(format!("Missing required argument: {}", name)))
+                .ok_or_else(|| CLQError::from(format!("Missing required argument: {name}")))
         };
         let typespec_str: &str = arg_value("typespec")?;
         let typespec: Vec<Vec<String>> = serde_json::from_str(typespec_str)?;

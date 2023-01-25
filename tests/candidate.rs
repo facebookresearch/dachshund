@@ -144,7 +144,7 @@ fn test_neighborhood() -> CLQResult<()> {
     let node_6: u32 = graph.get_node_by_label(6.into()).node_id;
 
     let neighborhood = candidate.get_neighborhood();
-    let mut expected_neighborhood: HashMap<u32, usize> = HashMap::new();
+    let mut expected_neighborhood: HashMap<u32, u32> = HashMap::new();
     expected_neighborhood.insert(node_2, 1);
     expected_neighborhood.insert(node_4, 2);
     assert_eq!(neighborhood, expected_neighborhood);
@@ -153,7 +153,7 @@ fn test_neighborhood() -> CLQResult<()> {
     // be added with value 1.
     candidate.add_node(node_4)?;
     let neighborhood = candidate.get_neighborhood();
-    let mut expected_neighborhood: HashMap<u32, usize> = HashMap::new();
+    let mut expected_neighborhood: HashMap<u32, u32> = HashMap::new();
     expected_neighborhood.insert(node_2, 1);
     expected_neighborhood.insert(node_3, 1);
     assert_eq!(neighborhood, expected_neighborhood);
@@ -162,7 +162,7 @@ fn test_neighborhood() -> CLQResult<()> {
     // be added with value 1.
     candidate.add_node(node_3)?;
     let neighborhood = candidate.get_neighborhood();
-    let mut expected_neighborhood: HashMap<u32, usize> = HashMap::new();
+    let mut expected_neighborhood: HashMap<u32, u32> = HashMap::new();
     expected_neighborhood.insert(node_2, 1);
     expected_neighborhood.insert(node_6, 1);
     assert_eq!(neighborhood, expected_neighborhood);
@@ -170,8 +170,56 @@ fn test_neighborhood() -> CLQResult<()> {
     Ok(())
 }
 
-// TODO:
-/// Add new test for neigbhorhood / incremental add.
+/// Tests incremental versions of the candidate functioins.
+/// (Does not inspect the density guarantee itself.)
+///
+///  1 - 2
+///    \\
+///  3 - 4
+///    \
+///  5 - 6
+///
+/// Start with {1, 4}, then add 3, then add 6.
+#[test]
+fn test_incremental() -> CLQResult<()> {
+    let (graph, transformer) = build_sample_graph();
+    assert_eq!(graph.core_ids.len(), 3);
+    assert_eq!(graph.non_core_ids.len(), 3);
+
+    let initial_id: u32 = 1;
+    let scorer: Scorer = Scorer::new(2, &transformer.search_problem);
+
+    let node_3 = graph.get_node_by_label(3.into());
+    let node_4 = graph.get_node_by_label(4.into());
+    let node_6 = graph.get_node_by_label(6.into());
+
+    let mut candidate: Candidate<TypedGraph> = Candidate::new(initial_id, &graph, &scorer)?;
+
+    // Adding 4 to the clique, so both of the possible edges should exist.
+    let new_size = candidate.get_size_with_node(&node_4)?;
+    let new_cliqueness = candidate.get_cliqueness_with_node(&node_4)?;
+    assert!(candidate.local_thresh_score_with_node_at_least(1.0, &node_4).0);
+    candidate.add_node(node_4.node_id)?;
+    assert_eq!(new_size, candidate.get_size()?);
+    assert_eq!(new_cliqueness, candidate.get_cliqueness()?);
+
+    // Adding 3 to the clique. Expected local densities: {1: 1.0, 3: 0.5}
+    let new_size = candidate.get_size_with_node(&node_3)?;
+    let new_cliqueness = candidate.get_cliqueness_with_node(&node_3)?;
+    assert!(candidate.local_thresh_score_with_node_at_least(0.5, &node_3).0);
+    assert!(!candidate.local_thresh_score_with_node_at_least(0.51, &node_3).0);
+    candidate.add_node(node_3.node_id)?;
+    assert_eq!(new_size, candidate.get_size()?);
+    assert_eq!(new_cliqueness, candidate.get_cliqueness()?);
+
+    // Adding 6 to the clique. Expected local densities: {1: 0.5, 3: 0.5}
+    let new_size = candidate.get_size_with_node(&node_6)?;
+    let new_cliqueness = candidate.get_cliqueness_with_node(&node_6)?;
+    candidate.add_node(node_6.node_id)?;
+    assert_eq!(new_size, candidate.get_size()?);
+    assert_eq!(new_cliqueness, candidate.get_cliqueness()?);
+    Ok(())
+}
 
 /// Test that a candidate's appropriately calculates its local density.
 /// (Does not inspect the density guarantee itself.)

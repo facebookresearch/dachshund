@@ -45,7 +45,7 @@ pub struct LocalDensityGuarantee {
 /// Recipes allow us to identify the best candidates for the next generation
 /// and only do candidate replication lazily.
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Recipe {
     pub checksum: Option<u64>,
     pub node_id: Option<u32>,
@@ -69,7 +69,7 @@ impl Hash for Recipe {
     }
 }
 
-type NeigbhorhoodMap = HashMap<u32, usize>;
+type NeigbhorhoodMap = HashMap<u32, u32>;
 
 /// This data structure contains everything that identifies a candidate (fuzzy) clique. To
 /// reiterate, a (fuzzy) clique is a subgraph of edges going from some set of "core" nodes
@@ -397,10 +397,17 @@ where
     }
 
     /// Create a copy of itself, needed for initializing candidate
-    /// from node. This happens for every candidate we want to score,
-    /// the ones we plan on expanding, so the performance of the
-    /// search is very sensitive to the cost of this operation.
+    /// from node. This happens for every candidate we want to add to
+    /// the beam for the next epoch. So the performance of the
+    /// search is sensitive to the cost of this operation.
     pub fn replicate(&self, keep_score: bool) -> Self {
+        // We clone these hashmaps very frequently so
+        // we keep capacity artificially low.
+        let mut new_neighborhood = self.neighborhood.clone();
+        if 2 * new_neighborhood.capacity() > new_neighborhood.len() {
+           new_neighborhood.shrink_to_fit()
+        }
+
         Self {
             graph: self.graph,
             core_ids: self.core_ids.clone(),
@@ -413,7 +420,7 @@ where
             max_core_node_edges: self.max_core_node_edges,
             ties_between_nodes: self.ties_between_nodes,
             local_guarantee: self.local_guarantee.clone(),
-            neighborhood: self.neighborhood.clone(),
+            neighborhood: new_neighborhood,
             node_counts: self.node_counts.clone(),
         }
     }
@@ -787,8 +794,8 @@ fn merge_checksum(checksum: Option<u64>, node_id: u32) -> Option<u64> {
     let mut s = DefaultHasher::new();
     node_id.hash(&mut s);
     let node_hash: u64 = s.finish();
-    if checksum.is_some() {
-        Some(checksum.unwrap().wrapping_add(node_hash))
+    if let Some(candidate_hash) = checksum {
+        Some(candidate_hash.wrapping_add(node_hash))
     } else {
         Some(node_hash)
     }
