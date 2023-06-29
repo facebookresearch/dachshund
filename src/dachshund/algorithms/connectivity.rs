@@ -14,8 +14,10 @@ use std::collections::BTreeSet;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 
-pub trait Connectivity:
-    GraphBase<NodeType: NodeBase<NodeIdType = NodeId, NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>>>
+pub trait Connectivity: GraphBase
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn visit_nodes_from_root<'a>(
         &'a self,
@@ -60,20 +62,21 @@ pub trait Connectivity:
         Ok(visited.len() == self.count_nodes())
     }
 }
-pub trait ConnectivityUndirected: GraphBase
+
+pub trait ConnectivityUndirected: GraphBase + Connectivity + UndirectedGraph
 where
-    Self: Connectivity,
-    Self: UndirectedGraph,
+    Self::NodeType: NodeBase<NodeIdType = NodeId>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_is_connected(&self) -> Result<bool, &'static str> {
         self._get_is_connected(Self::NodeType::get_edges)
     }
 }
-pub trait ConnectivityDirected: GraphBase
+
+pub trait ConnectivityDirected: GraphBase + Connectivity + DirectedGraph
 where
-    Self: Connectivity,
-    Self: DirectedGraph,
-    <Self as GraphBase>::NodeType: DirectedNodeBase,
+    Self::NodeType: DirectedNodeBase,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_is_weakly_connected(&self) -> Result<bool, &'static str> {
         self._get_is_connected(Self::NodeType::get_edges)

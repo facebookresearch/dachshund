@@ -7,11 +7,16 @@
 use crate::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::NodeBase;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use nalgebra::{DMatrix, DVector};
 
 type GraphMatrix = DMatrix<f64>;
-pub trait Laplacian: GraphBase + AdjacencyMatrix {
+
+pub trait Laplacian: GraphBase + AdjacencyMatrix
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+{
     fn get_degree_matrix(&self) -> (GraphMatrix, Vec<NodeId>) {
         let node_ids = self.get_ordered_node_ids();
         let diag: Vec<f64> = node_ids

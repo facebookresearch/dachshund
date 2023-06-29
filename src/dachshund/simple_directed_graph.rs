@@ -12,15 +12,15 @@ use crate::dachshund::algorithms::connected_components::{
 use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityDirected};
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{DirectedNodeBase, NodeBase, SimpleDirectedNode};
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase, SimpleDirectedNode};
 use fxhash::FxHashMap;
 use std::collections::hash_map::{Keys, Values};
 use std::collections::HashSet;
 
-pub trait DirectedGraph
+pub trait DirectedGraph: GraphBase
 where
-    Self: GraphBase,
-    <Self as GraphBase>::NodeType: DirectedNodeBase,
+    Self::NodeType: DirectedNodeBase,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn is_acyclic(&self) -> bool {
         // from https://www.cs.hmc.edu/~keller/courses/cs60/s98/examples/acyclic/

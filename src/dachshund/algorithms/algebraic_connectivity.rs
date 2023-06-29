@@ -6,8 +6,14 @@
  */
 use crate::dachshund::algorithms::laplacian::Laplacian;
 use crate::dachshund::graph_base::GraphBase;
+use crate::dachshund::id_types::NodeId;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 
-pub trait AlgebraicConnectivity: GraphBase + Laplacian {
+pub trait AlgebraicConnectivity: GraphBase + Laplacian
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+{
     // Algebraic Connectivity, or the Fiedler Measure, is the second-smallest eigenvalue of the graph Laplacian.
     // The lower the value, the less decomposable the graph's adjacency matrix is. Thanks to the nalgebra
     // crate computing this is quite straightforward.

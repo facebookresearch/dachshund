@@ -7,11 +7,15 @@
 use crate::dachshund::algorithms::connectivity::{Connectivity, ConnectivityUndirected};
 use crate::dachshund::algorithms::shortest_paths::ShortestPaths;
 use crate::dachshund::id_types::NodeId;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use crate::dachshund::simple_undirected_graph::UndirectedGraph;
 use std::collections::HashMap;
 
 pub trait Betweenness:
     UndirectedGraph + Connectivity + ShortestPaths + ConnectivityUndirected
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_node_betweenness_starting_from_sources(
         &self,

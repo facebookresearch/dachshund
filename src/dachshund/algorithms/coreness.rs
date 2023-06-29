@@ -21,7 +21,11 @@ use priority_queue::PriorityQueue;
 type OrderedNodeSet = BTreeSet<NodeId>;
 type OrderedEdgeSet = BTreeSet<(NodeId, NodeId)>;
 
-pub trait Coreness: GraphBase + ConnectedComponents {
+pub trait Coreness: GraphBase + ConnectedComponents
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId, NodeSetType = FxHashSet<NodeId>>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+{
     fn _get_k_cores(&self, k: usize, removed: &mut FxHashSet<NodeId>) -> Vec<Vec<NodeId>> {
         // [BUG] This algorithm has a bug. See simple_graph.rs tests.
         let mut queue: OrderedNodeSet = self.get_ids_iter().cloned().collect();
