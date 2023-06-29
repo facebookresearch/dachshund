@@ -405,7 +405,7 @@ where
         // we keep capacity artificially low.
         let mut new_neighborhood = self.neighborhood.clone();
         if 2 * new_neighborhood.capacity() > new_neighborhood.len() {
-           new_neighborhood.shrink_to_fit()
+            new_neighborhood.shrink_to_fit()
         }
 
         Self {

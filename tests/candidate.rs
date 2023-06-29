@@ -198,7 +198,11 @@ fn test_incremental() -> CLQResult<()> {
     // Adding 4 to the clique, so both of the possible edges should exist.
     let new_size = candidate.get_size_with_node(&node_4)?;
     let new_cliqueness = candidate.get_cliqueness_with_node(&node_4)?;
-    assert!(candidate.local_thresh_score_with_node_at_least(1.0, &node_4).0);
+    assert!(
+        candidate
+            .local_thresh_score_with_node_at_least(1.0, &node_4)
+            .0
+    );
     candidate.add_node(node_4.node_id)?;
     assert_eq!(new_size, candidate.get_size()?);
     assert_eq!(new_cliqueness, candidate.get_cliqueness()?);
@@ -206,8 +210,16 @@ fn test_incremental() -> CLQResult<()> {
     // Adding 3 to the clique. Expected local densities: {1: 1.0, 3: 0.5}
     let new_size = candidate.get_size_with_node(&node_3)?;
     let new_cliqueness = candidate.get_cliqueness_with_node(&node_3)?;
-    assert!(candidate.local_thresh_score_with_node_at_least(0.5, &node_3).0);
-    assert!(!candidate.local_thresh_score_with_node_at_least(0.51, &node_3).0);
+    assert!(
+        candidate
+            .local_thresh_score_with_node_at_least(0.5, &node_3)
+            .0
+    );
+    assert!(
+        !candidate
+            .local_thresh_score_with_node_at_least(0.51, &node_3)
+            .0
+    );
     candidate.add_node(node_3.node_id)?;
     assert_eq!(new_size, candidate.get_size()?);
     assert_eq!(new_cliqueness, candidate.get_cliqueness()?);
