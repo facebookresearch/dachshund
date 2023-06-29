@@ -11,14 +11,10 @@ use fxhash::FxHashSet;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 
-pub trait Transitivity:
-    GraphBase<
-    NodeType: NodeBase<
-        NodeIdType = NodeId,
-        NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
-        NodeSetType = FxHashSet<NodeId>,
-    >,
->
+pub trait Transitivity: GraphBase
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId, NodeSetType = FxHashSet<NodeId>>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     // Triangles : Number of triangles a node participates in.
     fn triangle_count(&self, node_id: NodeId) -> usize {

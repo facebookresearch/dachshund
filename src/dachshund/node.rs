@@ -223,8 +223,9 @@ impl NodeBase for SimpleNode {
     }
 }
 
-pub trait DirectedNodeBase:
-    NodeBase<NodeIdType = NodeId, NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>>
+pub trait DirectedNodeBase: NodeBase<NodeIdType = NodeId>
+where
+    Self::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_in_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;
     fn get_out_neighbors(&self) -> Box<dyn Iterator<Item = &Self::NodeEdgeType> + '_>;

@@ -14,7 +14,13 @@ use crate::dachshund::simple_undirected_graph_builder::SimpleUndirectedGraphBuil
 use crate::GraphBuilderBase;
 use std::collections::{HashMap, HashSet};
 
-pub trait KPeaks: GraphBase + Coreness {
+use fxhash::FxHashSet;
+
+pub trait KPeaks: GraphBase + Coreness
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId, NodeSetType = FxHashSet<NodeId>>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+{
     // Function that computes new coreness values from the set of nodes provided
     fn get_new_coreness_values(&self, nodes: &HashSet<NodeId>) -> HashMap<NodeId, usize> {
         let mut edges: Vec<(i64, i64)> = Vec::new();

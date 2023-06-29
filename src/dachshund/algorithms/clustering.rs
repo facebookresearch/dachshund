@@ -12,14 +12,10 @@ use fxhash::FxHashSet;
 use rand::prelude::*;
 use rand::Rng;
 
-pub trait Clustering:
-    GraphBase<
-    NodeType: NodeBase<
-        NodeIdType = NodeId,
-        NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
-        NodeSetType = FxHashSet<NodeId>,
-    >,
->
+pub trait Clustering: GraphBase
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId, NodeSetType = FxHashSet<NodeId>>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_clustering_coefficient(&self, id: NodeId) -> Option<f64> {
         let node = self.get_node(id);

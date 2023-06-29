@@ -7,12 +7,17 @@
 use crate::dachshund::algorithms::adjacency_matrix::AdjacencyMatrix;
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
+use crate::dachshund::node::{NodeBase, NodeEdgeBase};
 use nalgebra::DMatrix;
 use std::collections::HashMap;
 
 type GraphMatrix = DMatrix<f64>;
 
-pub trait EigenvectorCentrality: GraphBase + AdjacencyMatrix {
+pub trait EigenvectorCentrality: GraphBase + AdjacencyMatrix
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
+{
     fn get_eigenvector_centrality(&self, eps: f64, max_iter: usize) -> HashMap<NodeId, f64> {
         let (adj_mat, node_ids) = self.get_adjacency_matrix();
         // Power iteration adaptation from

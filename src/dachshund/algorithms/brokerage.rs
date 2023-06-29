@@ -6,7 +6,7 @@
  */
 use crate::dachshund::graph_base::GraphBase;
 use crate::dachshund::id_types::NodeId;
-use crate::dachshund::node::{DirectedNodeBase, NodeEdgeBase};
+use crate::dachshund::node::{DirectedNodeBase, NodeBase, NodeEdgeBase};
 use std::collections::HashMap;
 
 pub struct BrokerageScores {
@@ -18,10 +18,10 @@ pub struct BrokerageScores {
     pub total_open_twopaths: usize,
 }
 
-pub trait Brokerage: GraphBase<NodeType: DirectedNodeBase>
+pub trait Brokerage: GraphBase
 where
-    Self: GraphBase,
-    <Self as GraphBase>::NodeType: DirectedNodeBase,
+    Self::NodeType: DirectedNodeBase,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_brokerage_scores_for_node(
         &self,

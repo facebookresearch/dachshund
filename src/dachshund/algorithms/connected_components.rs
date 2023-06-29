@@ -16,14 +16,10 @@ use std::iter::FromIterator;
 
 type OrderedNodeSet = BTreeSet<NodeId>;
 
-pub trait ConnectedComponents:
-    GraphBase<
-    NodeType: NodeBase<
-        NodeIdType = NodeId,
-        NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
-        NodeSetType = FxHashSet<NodeId>,
-    >,
->
+pub trait ConnectedComponents: GraphBase
+where
+    Self::NodeType: NodeBase<NodeIdType = NodeId, NodeSetType = FxHashSet<NodeId>>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     // returns a hashmap of the form node_id => component_id -- can be turned
     // in to a vector of node_ids inside _get_connected_components.
@@ -92,19 +88,17 @@ pub trait ConnectedComponents:
     }
 }
 
-pub trait ConnectedComponentsUndirected: GraphBase
+pub trait ConnectedComponentsUndirected: GraphBase + ConnectedComponents + UndirectedGraph
 where
-    Self: ConnectedComponents,
-    Self: UndirectedGraph,
+    Self::NodeType: NodeBase<NodeIdType = NodeId, NodeSetType = FxHashSet<NodeId>>,
+    <Self::NodeType as NodeBase>::NodeEdgeType: NodeEdgeBase<NodeIdType = NodeId>,
 {
     fn get_connected_components(&self) -> Vec<Vec<NodeId>> {
         self._get_connected_components(None, None)
     }
 }
-pub trait ConnectedComponentsDirected: GraphBase<NodeType = SimpleDirectedNode>
-where
-    Self: ConnectedComponents,
-    Self: Connectivity,
+pub trait ConnectedComponentsDirected:
+    GraphBase<NodeType = SimpleDirectedNode> + ConnectedComponents + Connectivity
 {
     fn get_weakly_connected_components(&self) -> Vec<Vec<NodeId>> {
         self._get_connected_components(None, None)
